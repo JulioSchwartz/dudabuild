@@ -52,45 +52,49 @@ export default function RootLayout({
 }
 
 /* =========================
-   🎨 ESTILOS
+   🎨 ESTILOS (CORRIGIDOS)
 ========================= */
 
-const body: React.CSSProperties = {
+const body = {
   margin: 0,
   fontFamily: 'Arial, sans-serif',
-  background: '#f1f5f9',
+  background: '#f1f5f9', // fundo suave
+  color: '#0f172a', // 🔥 garante contraste global
 }
 
-const header: React.CSSProperties = {
+const header = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
   padding: '15px 25px',
   background: '#1e293b',
-  color: '#fff',
+  color: '#ffffff',
   boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
 }
 
-const logo: React.CSSProperties = {
+const logo = {
   fontSize: '18px',
   fontWeight: 'bold',
+  color: '#ffffff', // 🔥 força branco forte
 }
 
-const nav: React.CSSProperties = {
+const nav = {
   display: 'flex',
   gap: '10px',
 }
 
-const btn: React.CSSProperties = {
+const btn = {
   background: '#334155',
-  color: '#fff',
+  color: '#ffffff',
   border: 'none',
-  padding: '10px',
+  padding: '10px 14px',
   borderRadius: '6px',
   textAlign: 'left',
   cursor: 'pointer',
+  fontWeight: '500',
 }
 
-const main: React.CSSProperties = {
+const main = {
   padding: '20px',
+  background: '#f1f5f9', // 🔥 melhora contraste com cards brancos
 }
