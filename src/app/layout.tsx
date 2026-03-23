@@ -10,9 +10,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body style={body}>
-        
-        {/* MENU SUPERIOR */}
-        <header style={menu}>
+
+        {/* HEADER / MENU */}
+        <header style={header}>
           <div style={logo}>
             DudaBuild
           </div>
@@ -41,8 +41,8 @@ export default function RootLayout({
           </nav>
         </header>
 
-        {/* CONTEÚDO */}
-        <main style={conteudo}>
+        {/* CONTEÚDO PRINCIPAL */}
+        <main style={main}>
           {children}
         </main>
 
@@ -51,13 +51,17 @@ export default function RootLayout({
   )
 }
 
-const body = {
+/* =========================
+   🎨 ESTILOS
+========================= */
+
+const body: React.CSSProperties = {
   margin: 0,
   fontFamily: 'Arial, sans-serif',
   background: '#f1f5f9',
 }
 
-const menu = {
+const header: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -67,17 +71,17 @@ const menu = {
   boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
 }
 
-const logo = {
+const logo: React.CSSProperties = {
   fontSize: '18px',
   fontWeight: 'bold',
 }
 
-const nav = {
+const nav: React.CSSProperties = {
   display: 'flex',
   gap: '10px',
 }
 
-const btn = {
+const btn: React.CSSProperties = {
   background: '#2563eb',
   color: '#fff',
   border: 'none',
@@ -87,6 +91,6 @@ const btn = {
   transition: '0.2s',
 }
 
-const conteudo = {
+const main: React.CSSProperties = {
   padding: '20px',
 }
