@@ -54,9 +54,9 @@ export default function Login() {
   )
 }
 
-const container = {
+const container: React.CSSProperties = {
   display: 'flex',
-  flexDirection: 'column' as const,
+  flexDirection: 'column',
   alignItems: 'center',
   marginTop: '50px',
 }
