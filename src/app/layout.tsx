@@ -90,5 +90,5 @@ const content: React.CSSProperties = {
 const content: React.CSSProperties = {
   flex: 1,
   padding: '20px',
-  background: '#f1f5f9', // 🔥 antes estava claro demais
+  background: '#f1f5f9',
 }
