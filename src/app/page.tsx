@@ -150,3 +150,7 @@ const linha = {
   justifyContent: 'space-between',
   marginBottom: '8px',
 }
+
+<button onClick={() => router.push('/financeiro')}>
+  Financeiro Geral
+</button>
