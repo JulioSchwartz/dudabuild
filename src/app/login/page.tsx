@@ -26,69 +26,56 @@ export default function Login() {
     }
 
     localStorage.setItem('empresa_id', data.empresa_id)
-
     router.push('/')
   }
 
   return (
     <div
-  style={{
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginTop: '50px',
-  }}
->
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        marginTop: '50px',
+      }}
+    >
       <h1>Login</h1>
 
       <form onSubmit={entrar}>
         <input
           placeholder="Email"
           onChange={(e) => setEmail(e.target.value)}
-          style={input}
+          style={{
+            display: 'block',
+            marginBottom: '10px',
+            padding: '10px',
+            width: '250px',
+          }}
         />
 
         <input
-  placeholder="Email"
-  onChange={(e) => setEmail(e.target.value)}
-  style={{
-    display: 'block',
-    marginBottom: '10px',
-    padding: '10px',
-    width: '250px',
-  }}
-/>
+          placeholder="Senha"
+          type="password"
+          onChange={(e) => setSenha(e.target.value)}
+          style={{
+            display: 'block',
+            marginBottom: '10px',
+            padding: '10px',
+            width: '250px',
+          }}
+        />
 
         <button
-  style={{
-    background: '#2563eb',
-    color: '#fff',
-    padding: '10px',
-    border: 'none',
-    borderRadius: '6px',
-  }}
->
-  Entrar
-</button>
-
-const container = {
-  display: 'flex',
-  flexDirection: 'column' as 'column',
-  alignItems: 'center',
-  marginTop: '50px',
+          style={{
+            background: '#2563eb',
+            color: '#fff',
+            padding: '10px',
+            border: 'none',
+            borderRadius: '6px',
+          }}
+        >
+          Entrar
+        </button>
+      </form>
+    </div>
+  )
 }
-
-const input = {
-  display: 'block',
-  marginBottom: '10px',
-  padding: '10px',
-  width: '250px',
-} as React.CSSProperties
-
-const botao = {
-  background: '#2563eb',
-  color: '#fff',
-  padding: '10px',
-  border: 'none',
-  borderRadius: '6px',
-} as React.CSSProperties
