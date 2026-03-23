@@ -11,31 +11,40 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body style={body}>
 
-        <div style={container}>
-          
-          {/* MENU LATERAL */}
-          <aside style={sidebar}>
-            <h2 style={logo}>DudaBuild</h2>
+        {/* HEADER / MENU */}
+        <header style={header}>
+          <div style={logo}>
+            DudaBuild
+          </div>
 
-            <button style={btn} onClick={() => window.location.href = '/'}>
+          <nav style={nav}>
+            <button
+              style={btn}
+              onClick={() => window.location.href = '/'}
+            >
               Dashboard
             </button>
 
-            <button style={btn} onClick={() => window.location.href = '/obras'}>
+            <button
+              style={btn}
+              onClick={() => window.location.href = '/obras'}
+            >
               Obras
             </button>
 
-            <button style={btn} onClick={() => window.location.href = '/financeiro'}>
+            <button
+              style={btn}
+              onClick={() => window.location.href = '/financeiro'}
+            >
               Financeiro
             </button>
-          </aside>
+          </nav>
+        </header>
 
-          {/* CONTEÚDO */}
-          <main style={content}>
-            {children}
-          </main>
-
-        </div>
+        {/* CONTEÚDO PRINCIPAL */}
+        <main style={main}>
+          {children}
+        </main>
 
       </body>
     </html>
@@ -43,35 +52,36 @@ export default function RootLayout({
 }
 
 /* =========================
-   🎨 ESTILO (mantendo padrão antigo)
+   🎨 ESTILOS
 ========================= */
 
-const body = {
+const body: React.CSSProperties = {
   margin: 0,
   fontFamily: 'Arial, sans-serif',
-  background: '#e5e7eb', // cinza claro (igual antes)
+  background: '#f1f5f9',
 }
 
-const container = {
+const header: React.CSSProperties = {
   display: 'flex',
-  minHeight: '100vh',
-}
-
-const sidebar = {
-  width: '220px',
-  background: '#1e293b', // azul escuro
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '15px 25px',
+  background: '#1e293b',
   color: '#fff',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+}
+
+const logo: React.CSSProperties = {
+  fontSize: '18px',
+  fontWeight: 'bold',
+}
+
+const nav: React.CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
-  padding: '20px',
   gap: '10px',
 }
 
-const logo = {
-  marginBottom: '20px',
-}
-
-const btn = {
+const btn: React.CSSProperties = {
   background: '#334155',
   color: '#fff',
   border: 'none',
@@ -81,14 +91,6 @@ const btn = {
   cursor: 'pointer',
 }
 
-const content = {
-  flex: 1,
+const main: React.CSSProperties = {
   padding: '20px',
-  background: '#f5f5f5',
-}
-
-const content = {
-  flex: 1,
-  padding: '20px',
-  background: '#f1f5f9',
 }
