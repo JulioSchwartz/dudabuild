@@ -61,14 +61,14 @@ const container: React.CSSProperties = {
   marginTop: '50px',
 }
 
-const input = {
+const input: React.CSSProperties = {
   display: 'block',
   marginBottom: '10px',
   padding: '10px',
   width: '250px',
 }
 
-const botao = {
+const botao: React.CSSProperties = {
   background: '#2563eb',
   color: '#fff',
   padding: '10px',
