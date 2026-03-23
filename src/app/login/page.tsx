@@ -31,7 +31,14 @@ export default function Login() {
   }
 
   return (
-    <div style={container}>
+    <div
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginTop: '50px',
+  }}
+>
       <h1>Login</h1>
 
       <form onSubmit={entrar}>
@@ -42,17 +49,27 @@ export default function Login() {
         />
 
         <input
-          placeholder="Senha"
-          type="password"
-          onChange={(e) => setSenha(e.target.value)}
-          style={input}
-        />
+  placeholder="Email"
+  onChange={(e) => setEmail(e.target.value)}
+  style={{
+    display: 'block',
+    marginBottom: '10px',
+    padding: '10px',
+    width: '250px',
+  }}
+/>
 
-        <button style={botao}>Entrar</button>
-      </form>
-    </div>
-  )
-}
+        <button
+  style={{
+    background: '#2563eb',
+    color: '#fff',
+    padding: '10px',
+    border: 'none',
+    borderRadius: '6px',
+  }}
+>
+  Entrar
+</button>
 
 const container = {
   display: 'flex',
