@@ -1,7 +1,6 @@
 'use client'
 
 import './globals.css'
-import React from 'react'
 
 export default function RootLayout({
   children,
@@ -88,7 +87,7 @@ const content: React.CSSProperties = {
   background: '#f5f5f5',
 }
 
-const content: React.CSSProperties = {
+const content = {
   flex: 1,
   padding: '20px',
   background: '#f1f5f9',
