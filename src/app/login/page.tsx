@@ -54,24 +54,24 @@ export default function Login() {
   )
 }
 
-const container: React.CSSProperties = {
+const container = {
   display: 'flex',
-  flexDirection: 'column',
+  flexDirection: 'column' as 'column',
   alignItems: 'center',
   marginTop: '50px',
 }
 
-const input: React.CSSProperties = {
+const input = {
   display: 'block',
   marginBottom: '10px',
   padding: '10px',
   width: '250px',
-}
+} as React.CSSProperties
 
-const botao: React.CSSProperties = {
+const botao = {
   background: '#2563eb',
   color: '#fff',
   padding: '10px',
   border: 'none',
   borderRadius: '6px',
-}
+} as React.CSSProperties
