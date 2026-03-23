@@ -17,14 +17,44 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <body style={{ margin: 0, fontFamily: 'Arial' }}>
-        <div style={{ display: 'flex' }}>
-          
-          {/* SIDEBAR */}
-          <div style={sidebar}>
-            <h2>DudaBuild</h2>
+  
+  {/* MENU SUPERIOR */}
+  <div style={{
+    display: 'flex',
+    gap: '10px',
+    padding: '15px',
+    background: '#1e293b',
+  }}>
+    
+    <button
+      onClick={() => window.location.href = '/'}
+      style={btn}
+    >
+      Dashboard
+    </button>
 
-            <a href="/" style={link}>Dashboard</a>
-            <a href="/obras" style={link}>Obras</a>
+    <button
+      onClick={() => window.location.href = '/obras'}
+      style={btn}
+    >
+      Obras
+    </button>
+
+    <button
+      onClick={() => window.location.href = '/financeiro'}
+      style={btn}
+    >
+      Financeiro
+    </button>
+
+  </div>
+
+  {/* CONTEÚDO ORIGINAL */}
+  <div style={{ padding: '20px' }}>
+    {children}
+  </div>
+
+</body>
 
             <button onClick={sair} style={btnLogout}>
               Sair
@@ -62,6 +92,15 @@ const btnLogout = {
   color: '#fff',
   border: 'none',
   padding: '10px',
+  borderRadius: '6px',
+  cursor: 'pointer',
+}
+
+const btn = {
+  background: '#2563eb',
+  color: '#fff',
+  border: 'none',
+  padding: '10px 15px',
   borderRadius: '6px',
   cursor: 'pointer',
 }
