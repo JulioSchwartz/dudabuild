@@ -58,7 +58,6 @@ function DashboardInterno() {
 
   const lucro = totalEntradas - totalSaidas
 
-  // 🔥 LUCRO POR OBRA
   const lucroPorObra = obras.map((obra) => {
     const entradas = financeiro
       .filter((f) => f.obra_id === obra.id && f.tipo === 'entrada')
@@ -78,9 +77,8 @@ function DashboardInterno() {
 
   return (
     <div>
-      <h1>Dashboard Geral</h1>
+      <h1 style={{ color: '#0f172a' }}>Dashboard Geral</h1>
 
-      {/* CARDS */}
       <div style={grid}>
         <Card titulo="Obras" valor={obras.length} cor="#2563eb" />
         <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
@@ -88,14 +86,17 @@ function DashboardInterno() {
         <Card titulo="Lucro" valor={lucro} cor="#9333ea" />
       </div>
 
-      {/* RANKING */}
-      <h2 style={{ marginTop: '30px' }}>Ranking de Obras</h2>
+      <h2 style={{ marginTop: '30px', color: '#0f172a' }}>
+        Ranking de Obras
+      </h2>
 
       <div style={box}>
         {ranking.map((obra, index) => (
           <div key={index} style={linha}>
-            <span>{index + 1}º - {obra.nome}</span>
-            <strong>
+            <span style={{ color: '#334155' }}>
+              {index + 1}º - {obra.nome}
+            </span>
+            <strong style={{ color: '#0f172a' }}>
               {Number(obra.lucro).toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
@@ -111,8 +112,9 @@ function DashboardInterno() {
 function Card({ titulo, valor, cor }: any) {
   return (
     <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
-      <p>{titulo}</p>
-      <h2>
+      <p style={{ color: '#64748b', marginBottom: '5px' }}>{titulo}</p>
+
+      <h2 style={{ color: '#0f172a' }}>
         {typeof valor === 'number'
           ? valor.toLocaleString('pt-BR', {
               style: titulo === 'Obras' ? 'decimal' : 'currency',
@@ -132,16 +134,16 @@ const grid = {
 }
 
 const card = {
-  background: '#fff',
+  background: '#ffffff',
   padding: '20px',
-  borderRadius: '10px',
-  boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+  borderRadius: '12px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
 }
 
 const box = {
-  background: '#fff',
+  background: '#ffffff',
   padding: '20px',
-  borderRadius: '10px',
+  borderRadius: '12px',
   marginTop: '10px',
 }
 

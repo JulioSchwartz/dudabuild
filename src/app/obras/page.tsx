@@ -44,7 +44,7 @@ export default function Obras() {
   return (
     <div>
       <div style={header}>
-        <h1>Obras</h1>
+        <h1 style={{ color: '#0f172a' }}>Obras</h1>
 
         <Link href="/obras/nova">
           <button style={btnNova}>+ Nova Obra</button>
@@ -54,8 +54,8 @@ export default function Obras() {
       <div style={grid}>
         {obras.map((obra) => (
           <div key={obra.id} style={card}>
-            <h3>{obra.nome}</h3>
-            <p>{obra.cliente}</p>
+            <h3 style={{ color: '#0f172a' }}>{obra.nome}</h3>
+            <p style={{ color: '#64748b' }}>{obra.cliente}</p>
 
             <div style={botoes}>
               <Link href={`/obras/${obra.id}`}>
@@ -90,11 +90,10 @@ const grid = {
 }
 
 const card = {
-  background: '#fff',
+  background: '#ffffff',
   padding: '20px',
-  borderRadius: '10px',
-  boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-  transition: '0.2s',
+  borderRadius: '12px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
 }
 
 const botoes = {

@@ -86,3 +86,9 @@ const content: React.CSSProperties = {
   padding: '20px',
   background: '#f5f5f5',
 }
+
+const content: React.CSSProperties = {
+  flex: 1,
+  padding: '20px',
+  background: '#f1f5f9', // 🔥 antes estava claro demais
+}
