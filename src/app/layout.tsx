@@ -46,18 +46,18 @@ export default function RootLayout({
    🎨 ESTILO (mantendo padrão antigo)
 ========================= */
 
-const body: React.CSSProperties = {
+const body = {
   margin: 0,
   fontFamily: 'Arial, sans-serif',
   background: '#e5e7eb', // cinza claro (igual antes)
 }
 
-const container: React.CSSProperties = {
+const container = {
   display: 'flex',
   minHeight: '100vh',
 }
 
-const sidebar: React.CSSProperties = {
+const sidebar = {
   width: '220px',
   background: '#1e293b', // azul escuro
   color: '#fff',
@@ -67,11 +67,11 @@ const sidebar: React.CSSProperties = {
   gap: '10px',
 }
 
-const logo: React.CSSProperties = {
+const logo = {
   marginBottom: '20px',
 }
 
-const btn: React.CSSProperties = {
+const btn = {
   background: '#334155',
   color: '#fff',
   border: 'none',
@@ -81,7 +81,7 @@ const btn: React.CSSProperties = {
   cursor: 'pointer',
 }
 
-const content: React.CSSProperties = {
+const content = {
   flex: 1,
   padding: '20px',
   background: '#f5f5f5',
