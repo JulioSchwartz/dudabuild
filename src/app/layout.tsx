@@ -1,100 +1,117 @@
 'use client'
 
 import './globals.css'
+import { usePathname } from 'next/navigation'
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
+
   return (
     <html lang="pt-BR">
       <body style={body}>
+        <div style={container}>
 
-        {/* HEADER / MENU */}
-        <header style={header}>
-          <div style={logo}>
-            DudaBuild
-          </div>
+          {/* SIDEBAR */}
+          <aside style={sidebar}>
+            <div style={logo}>DudaBuild</div>
 
-          <nav style={nav}>
-            <button
-              style={btn}
-              onClick={() => window.location.href = '/'}
-            >
-              Dashboard
-            </button>
+            <NavItem
+              label="Dashboard"
+              path="/"
+              active={pathname === '/'}
+            />
 
-            <button
-              style={btn}
-              onClick={() => window.location.href = '/obras'}
-            >
-              Obras
-            </button>
+            <NavItem
+              label="Obras"
+              path="/obras"
+              active={pathname.startsWith('/obras')}
+            />
 
-            <button
-              style={btn}
-              onClick={() => window.location.href = '/financeiro'}
-            >
-              Financeiro
-            </button>
-          </nav>
-        </header>
+            <NavItem
+              label="Financeiro"
+              path="/financeiro"
+              active={pathname.startsWith('/financeiro')}
+            />
+          </aside>
 
-        {/* CONTEÚDO PRINCIPAL */}
-        <main style={main}>
-          {children}
-        </main>
+          {/* CONTEÚDO */}
+          <main style={content}>
+            {children}
+          </main>
 
+        </div>
       </body>
     </html>
   )
 }
 
 /* =========================
-   🎨 ESTILOS (CORRIGIDOS)
+   🧩 COMPONENTE MENU
+========================= */
+
+function NavItem({ label, path, active }: any) {
+  return (
+    <button
+      onClick={() => window.location.href = path}
+      style={{
+        ...navItem,
+        background: active ? '#2563eb' : 'transparent',
+        color: active ? '#fff' : '#cbd5f5',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+/* =========================
+   🎨 ESTILO PREMIUM
 ========================= */
 
 const body = {
   margin: 0,
-  fontFamily: 'Arial, sans-serif',
-  background: '#f1f5f9', // fundo suave
-  color: '#0f172a', // 🔥 garante contraste global
+  fontFamily: 'Inter, Arial, sans-serif',
+  background: '#f1f5f9',
 }
 
-const header = {
+const container = {
   display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '15px 25px',
-  background: '#1e293b',
-  color: '#ffffff',
-  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+  minHeight: '100vh',
+}
+
+const sidebar = {
+  width: '240px',
+  background: '#0f172a',
+  color: '#fff',
+  display: 'flex',
+  flexDirection: 'column',
+  padding: '25px 15px',
+  gap: '8px',
 }
 
 const logo = {
-  fontSize: '18px',
+  fontSize: '20px',
   fontWeight: 'bold',
-  color: '#ffffff', // 🔥 força branco forte
+  marginBottom: '20px',
+  color: '#fff',
 }
 
-const nav = {
-  display: 'flex',
-  gap: '10px',
-}
-
-const btn = {
-  background: '#334155',
-  color: '#ffffff',
+const navItem = {
+  padding: '12px',
+  borderRadius: '8px',
   border: 'none',
-  padding: '10px 14px',
-  borderRadius: '6px',
   textAlign: 'left',
   cursor: 'pointer',
-  fontWeight: '500',
+  fontSize: '14px',
+  transition: '0.2s',
 }
 
-const main = {
-  padding: '20px',
-  background: '#f1f5f9', // 🔥 melhora contraste com cards brancos
+const content = {
+  flex: 1,
+  padding: '25px',
+  background: '#f8fafc',
 }
