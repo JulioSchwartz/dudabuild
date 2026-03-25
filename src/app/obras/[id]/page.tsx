@@ -154,9 +154,9 @@ export default function DetalheObra() {
           <button onClick={salvarEdicao} style={btnSalvar}>Salvar</button>
         </div>
       ) : (
-        <div>
-          <h1>{obra.nome}</h1>
-          <p>{obra.cliente}</p>
+        <div style={{ marginBottom: '20px' }}>
+          <h1 style={titulo}>{obra.nome}</h1>
+          <p style={subtitulo}>{obra.cliente}</p>
           <button onClick={() => setEditando(true)} style={btnEditar}>Editar</button>
         </div>
       )}
@@ -165,12 +165,12 @@ export default function DetalheObra() {
       <div style={grid}>
         <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
         <Card titulo="Custos" valor={totalSaidas} cor="#ef4444" />
-        <Card titulo="Lucro" valor={lucro} cor="#2563eb" />
-        <Card titulo="Margem" valor={margem} cor="#9333ea" tipo="porcentagem" />
+        <Card titulo="Lucro" valor={lucro} cor="#3b82f6" />
+        <Card titulo="Margem" valor={margem} cor="#a855f7" tipo="porcentagem" />
       </div>
 
       {/* FORM */}
-      <h3 style={{ marginTop: '20px' }}>Adicionar lançamento</h3>
+      <h3 style={sectionTitle}>Adicionar lançamento</h3>
 
       <form onSubmit={adicionar} style={box}>
         <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={input}>
@@ -200,23 +200,25 @@ export default function DetalheObra() {
       </form>
 
       {/* GRÁFICO */}
-      <h2 style={{ marginTop: '30px' }}>Gráfico de custos</h2>
+      <h2 style={sectionTitle}>Gráfico de custos</h2>
 
-      <div style={{ height: 300 }}>
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie data={dadosGrafico} dataKey="value" nameKey="name" outerRadius={100}>
-              {dadosGrafico.map((_, i) => (
-                <Cell key={i} fill={cores[i % cores.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
+      <div style={box}>
+        <div style={{ height: 300 }}>
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie data={dadosGrafico} dataKey="value" nameKey="name" outerRadius={100}>
+                {dadosGrafico.map((_, i) => (
+                  <Cell key={i} fill={cores[i % cores.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* CATEGORIAS */}
-      <h2 style={{ marginTop: '30px' }}>Custos por categoria</h2>
+      <h2 style={sectionTitle}>Custos por categoria</h2>
 
       <div style={box}>
         {Object.entries(categorias).map(([nome, valor]: any) => (
@@ -233,7 +235,7 @@ export default function DetalheObra() {
       </div>
 
       {/* LANÇAMENTOS */}
-      <h3 style={{ marginTop: '20px' }}>Lançamentos</h3>
+      <h3 style={sectionTitle}>Lançamentos</h3>
 
       <div style={box}>
         {financeiro.map((item) => (
@@ -260,8 +262,8 @@ export default function DetalheObra() {
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
     <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
-      <p>{titulo}</p>
-      <h2>
+      <p style={{ color: '#64748b' }}>{titulo}</p>
+      <h2 style={{ color: '#0f172a' }}>
         {tipo === 'porcentagem'
           ? valor.toFixed(2) + '%'
           : Number(valor).toLocaleString('pt-BR', {
@@ -273,6 +275,22 @@ function Card({ titulo, valor, cor, tipo }: any) {
   )
 }
 
+/* 🎨 ESTILO PROFISSIONAL */
+
+const titulo = {
+  color: '#0f172a',
+}
+
+const subtitulo = {
+  color: '#64748b',
+}
+
+const sectionTitle = {
+  marginTop: '30px',
+  marginBottom: '10px',
+  color: '#0f172a',
+}
+
 const grid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -281,30 +299,34 @@ const grid = {
 }
 
 const card = {
-  background: '#fff',
+  background: '#ffffff',
   padding: '20px',
-  borderRadius: '10px',
-  boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+  borderRadius: '12px',
+  boxShadow: '0 6px 20px rgba(0,0,0,0.05)',
 }
 
 const box = {
-  background: '#fff',
+  background: '#ffffff',
   padding: '20px',
-  borderRadius: '10px',
+  borderRadius: '12px',
   marginTop: '10px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
 }
 
 const linha = {
   display: 'flex',
   justifyContent: 'space-between',
-  marginBottom: '8px',
+  marginBottom: '10px',
+  color: '#1e293b',
 }
 
 const input = {
   display: 'block',
   marginBottom: '10px',
   padding: '10px',
-  width: '250px',
+  width: '100%',
+  borderRadius: '6px',
+  border: '1px solid #cbd5f5',
 }
 
 const btnAdicionar = {
@@ -313,6 +335,7 @@ const btnAdicionar = {
   padding: '10px',
   border: 'none',
   borderRadius: '6px',
+  cursor: 'pointer',
 }
 
 const btnEditar = {
@@ -321,6 +344,7 @@ const btnEditar = {
   padding: '8px',
   border: 'none',
   borderRadius: '6px',
+  cursor: 'pointer',
 }
 
 const btnSalvar = {
@@ -329,6 +353,7 @@ const btnSalvar = {
   padding: '10px',
   border: 'none',
   borderRadius: '6px',
+  cursor: 'pointer',
 }
 
 const btnExcluir = {
@@ -340,4 +365,4 @@ const btnExcluir = {
   cursor: 'pointer',
 }
 
-const cores = ['#22c55e', '#ef4444', '#2563eb', '#f59e0b', '#9333ea']
+const cores = ['#22c55e', '#ef4444', '#3b82f6', '#f59e0b', '#a855f7']

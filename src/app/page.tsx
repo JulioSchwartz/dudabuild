@@ -77,26 +77,31 @@ function DashboardInterno() {
 
   return (
     <div>
-      <h1 style={{ color: '#0f172a' }}>Dashboard Geral</h1>
+      {/* HEADER */}
+      <h1 style={titulo}>Dashboard Geral</h1>
+      <p style={subtitulo}>
+        Visão geral financeira das obras
+      </p>
 
+      {/* CARDS */}
       <div style={grid}>
-        <Card titulo="Obras" valor={obras.length} cor="#2563eb" />
+        <Card titulo="Obras" valor={obras.length} cor="#3b82f6" />
         <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
         <Card titulo="Custos" valor={totalSaidas} cor="#ef4444" />
-        <Card titulo="Lucro" valor={lucro} cor="#9333ea" />
+        <Card titulo="Lucro" valor={lucro} cor="#a855f7" destaque />
       </div>
 
-      <h2 style={{ marginTop: '30px', color: '#0f172a' }}>
-        Ranking de Obras
-      </h2>
+      {/* RANKING */}
+      <h2 style={sectionTitle}>Ranking de Obras</h2>
 
       <div style={box}>
         {ranking.map((obra, index) => (
           <div key={index} style={linha}>
-            <span style={{ color: '#334155' }}>
+            <span style={nomeObra}>
               {index + 1}º - {obra.nome}
             </span>
-            <strong style={{ color: '#0f172a' }}>
+
+            <strong style={valorObra}>
               {Number(obra.lucro).toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
@@ -109,12 +114,18 @@ function DashboardInterno() {
   )
 }
 
-function Card({ titulo, valor, cor }: any) {
+function Card({ titulo, valor, cor, destaque }: any) {
   return (
-    <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
-      <p style={{ color: '#64748b', marginBottom: '5px' }}>{titulo}</p>
+    <div
+      style={{
+        ...card,
+        borderLeft: `6px solid ${cor}`,
+        transform: destaque ? 'scale(1.03)' : 'scale(1)',
+      }}
+    >
+      <p style={cardTitulo}>{titulo}</p>
 
-      <h2 style={{ color: '#0f172a' }}>
+      <h2 style={cardValor}>
         {typeof valor === 'number'
           ? valor.toLocaleString('pt-BR', {
               style: titulo === 'Obras' ? 'decimal' : 'currency',
@@ -126,9 +137,28 @@ function Card({ titulo, valor, cor }: any) {
   )
 }
 
+/* 🎨 ESTILO PROFISSIONAL */
+
+const titulo = {
+  color: '#0f172a',
+  fontSize: '26px',
+  marginBottom: '5px',
+}
+
+const subtitulo = {
+  color: '#64748b',
+  marginBottom: '20px',
+}
+
+const sectionTitle = {
+  marginTop: '30px',
+  marginBottom: '10px',
+  color: '#0f172a',
+}
+
 const grid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
   gap: '20px',
   marginTop: '20px',
 }
@@ -136,19 +166,42 @@ const grid = {
 const card = {
   background: '#ffffff',
   padding: '20px',
-  borderRadius: '12px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+  borderRadius: '14px',
+  boxShadow: '0 8px 25px rgba(0,0,0,0.06)',
+  transition: '0.2s',
+}
+
+const cardTitulo = {
+  color: '#64748b',
+  fontSize: '14px',
+}
+
+const cardValor = {
+  color: '#0f172a',
+  fontSize: '22px',
+  fontWeight: 'bold',
 }
 
 const box = {
   background: '#ffffff',
   padding: '20px',
-  borderRadius: '12px',
+  borderRadius: '14px',
   marginTop: '10px',
+  boxShadow: '0 6px 18px rgba(0,0,0,0.05)',
 }
 
 const linha = {
   display: 'flex',
   justifyContent: 'space-between',
-  marginBottom: '8px',
+  marginBottom: '12px',
+  paddingBottom: '8px',
+  borderBottom: '1px solid #e2e8f0',
+}
+
+const nomeObra = {
+  color: '#334155',
+}
+
+const valorObra = {
+  color: '#0f172a',
 }
