@@ -44,7 +44,7 @@ export default function Obras() {
   return (
     <div>
       <div style={header}>
-        <h1 style={{ color: '#0f172a' }}>Obras</h1>
+        <h1 style={titulo}>Obras</h1>
 
         <Link href="/obras/nova">
           <button style={btnNova}>+ Nova Obra</button>
@@ -54,8 +54,8 @@ export default function Obras() {
       <div style={grid}>
         {obras.map((obra) => (
           <div key={obra.id} style={card}>
-            <h3 style={{ color: '#0f172a' }}>{obra.nome}</h3>
-            <p style={{ color: '#64748b' }}>{obra.cliente}</p>
+            <h3 style={nome}>{obra.nome}</h3>
+            <p style={cliente}>{obra.cliente}</p>
 
             <div style={botoes}>
               <Link href={`/obras/${obra.id}`}>
@@ -76,11 +76,19 @@ export default function Obras() {
   )
 }
 
+/* =========================
+   🎨 ESTILO PROFISSIONAL
+========================= */
+
 const header = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
   marginBottom: '20px',
+}
+
+const titulo = {
+  color: '#0f172a', // 🔥 escuro forte
 }
 
 const grid = {
@@ -94,6 +102,16 @@ const card = {
   padding: '20px',
   borderRadius: '12px',
   boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+  border: '1px solid #e2e8f0',
+}
+
+const nome = {
+  color: '#0f172a', // 🔥 título visível
+  marginBottom: '5px',
+}
+
+const cliente = {
+  color: '#64748b', // 🔥 cinza médio (legível)
 }
 
 const botoes = {
@@ -105,16 +123,17 @@ const botoes = {
 const btnNova = {
   background: '#2563eb',
   color: '#fff',
-  padding: '10px',
+  padding: '10px 14px',
   border: 'none',
-  borderRadius: '6px',
+  borderRadius: '8px',
+  fontWeight: '500',
 }
 
 const btnVer = {
   background: '#22c55e',
   color: '#fff',
   border: 'none',
-  padding: '8px',
+  padding: '8px 12px',
   borderRadius: '6px',
   cursor: 'pointer',
 }
@@ -123,7 +142,7 @@ const btnExcluir = {
   background: '#ef4444',
   color: '#fff',
   border: 'none',
-  padding: '8px',
+  padding: '8px 12px',
   borderRadius: '6px',
   cursor: 'pointer',
 }
