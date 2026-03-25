@@ -15,12 +15,17 @@ export default function Financeiro() {
   const [progressoReal, setProgressoReal] = useState(0)
   const [acidentes, setAcidentes] = useState(0)
 
+  const [configId, setConfigId] = useState<string | null>(null)
+
   useEffect(() => {
     carregarObras()
   }, [])
 
   useEffect(() => {
-    if (obraId) carregarFinanceiro()
+    if (obraId) {
+      carregarFinanceiro()
+      carregarConfig()
+    }
   }, [obraId])
 
   async function carregarObras() {
@@ -44,6 +49,67 @@ export default function Financeiro() {
       .eq('obra_id', obraId)
 
     setFinanceiro(data || [])
+  }
+
+  async function carregarConfig() {
+    const empresa_id = localStorage.getItem('empresa_id')
+
+    const { data } = await supabase
+      .from('financeiro_config')
+      .select('*')
+      .eq('empresa_id', empresa_id)
+      .eq('obra_id', obraId)
+      .single()
+
+    if (data) {
+      setConfigId(data.id)
+      setArea(data.area || 0)
+      setPrazoPlanejado(data.prazo_planejado || 0)
+      setPrazoReal(data.prazo_real || 0)
+      setProgressoPlanejado(data.progresso_planejado || 0)
+      setProgressoReal(data.progresso_real || 0)
+      setAcidentes(data.acidentes || 0)
+    } else {
+      // limpa se trocar de obra
+      setConfigId(null)
+      setArea(0)
+      setPrazoPlanejado(0)
+      setPrazoReal(0)
+      setProgressoPlanejado(0)
+      setProgressoReal(0)
+      setAcidentes(0)
+    }
+  }
+
+  async function salvar() {
+    const empresa_id = localStorage.getItem('empresa_id')
+
+    const payload = {
+      empresa_id,
+      obra_id: obraId,
+      area,
+      prazo_planejado: prazoPlanejado,
+      prazo_real: prazoReal,
+      progresso_planejado: progressoPlanejado,
+      progresso_real: progressoReal,
+      acidentes,
+    }
+
+    if (configId) {
+      await supabase
+        .from('financeiro_config')
+        .update(payload)
+        .eq('id', configId)
+    } else {
+      const { data } = await supabase
+        .from('financeiro_config')
+        .insert([payload])
+        .select()
+
+      if (data) setConfigId(data[0].id)
+    }
+
+    alert('Dados salvos com sucesso!')
   }
 
   // =========================
@@ -84,7 +150,6 @@ export default function Financeiro() {
     <div>
       <h1 style={titulo}>Financeiro por Obra</h1>
 
-      {/* SELECT OBRA */}
       <select
         value={obraId}
         onChange={(e) => setObraId(e.target.value)}
@@ -100,7 +165,6 @@ export default function Financeiro() {
 
       {obraId && (
         <>
-          {/* RESUMO */}
           <div style={grid}>
             <Card titulo="Receita" valor={formatar(receita)} cor="#22c55e" />
             <Card titulo="Custos" valor={formatar(custo)} cor="#ef4444" />
@@ -108,8 +172,7 @@ export default function Financeiro() {
             <Card titulo="Margem" valor={formatarPercent(margem)} cor="#a855f7" />
           </div>
 
-          {/* KPIs */}
-          <h2 style={subtitulo}>Indicadores da Obra</h2>
+          <h2 style={subtitulo}>Indicadores</h2>
 
           <div style={grid}>
             <Card titulo="CPI" valor={cpi.toFixed(2)} cor="#0ea5e9" />
@@ -118,7 +181,6 @@ export default function Financeiro() {
             <Card titulo="Acidentes" valor={acidentes} cor="#ef4444" />
           </div>
 
-          {/* DADOS */}
           <h2 style={subtitulo}>Dados da Obra</h2>
 
           <div style={form}>
@@ -129,6 +191,10 @@ export default function Financeiro() {
             <Input label="% Real" value={progressoReal} setValue={setProgressoReal} />
             <Input label="Acidentes" value={acidentes} setValue={setAcidentes} />
           </div>
+
+          <button style={botaoSalvar} onClick={salvar}>
+            Salvar Dados da Obra
+          </button>
         </>
       )}
     </div>
@@ -207,4 +273,14 @@ const input = {
   padding: '10px',
   borderRadius: '8px',
   border: '1px solid #e2e8f0',
+}
+
+const botaoSalvar = {
+  marginTop: '20px',
+  background: '#2563eb',
+  color: '#fff',
+  padding: '10px',
+  border: 'none',
+  borderRadius: '8px',
+  cursor: 'pointer',
 }
