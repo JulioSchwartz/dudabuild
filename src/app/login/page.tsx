@@ -9,9 +9,15 @@ export default function Login() {
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [erro, setErro] = useState('')
+  const [loading, setLoading] = useState(false)
 
   async function entrar(e: any) {
     e.preventDefault()
+
+    setErro('')
+    setLoading(true)
 
     const { data } = await supabase
       .from('usuarios')
@@ -21,7 +27,8 @@ export default function Login() {
       .single()
 
     if (!data) {
-      alert('Login inválido')
+      setErro('Email ou senha inválidos')
+      setLoading(false)
       return
     }
 
@@ -33,7 +40,7 @@ export default function Login() {
     <div style={container}>
       <div style={card}>
         <h1 style={titulo}>DudaBuild</h1>
-        <p style={subtitulo}>Acesse sua plataforma</p>
+        <p style={subtitulo}>Acesse sua conta</p>
 
         <form onSubmit={entrar}>
           <input
@@ -42,21 +49,34 @@ export default function Login() {
             style={input}
           />
 
-          <input
-            placeholder="Senha"
-            type="password"
-            onChange={(e) => setSenha(e.target.value)}
-            style={input}
-          />
+          <div style={senhaBox}>
+            <input
+              placeholder="Senha"
+              type={mostrarSenha ? 'text' : 'password'}
+              onChange={(e) => setSenha(e.target.value)}
+              style={{ ...input, marginBottom: 0 }}
+            />
 
-          <button style={botao}>Entrar</button>
+            <span
+              onClick={() => setMostrarSenha(!mostrarSenha)}
+              style={toggleSenha}
+            >
+              {mostrarSenha ? '🙈' : '👁'}
+            </span>
+          </div>
+
+          {erro && <p style={erroStyle}>{erro}</p>}
+
+          <button style={botao} disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
         </form>
       </div>
     </div>
   )
 }
 
-/* 🎨 ESTILO PROFISSIONAL */
+/* 🎨 ESTILO PREMIUM */
 
 const container = {
   height: '100vh',
@@ -70,8 +90,8 @@ const card = {
   background: '#ffffff',
   padding: '40px',
   borderRadius: '16px',
-  width: '320px',
-  boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+  width: '340px',
+  boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
   textAlign: 'center' as const,
 }
 
@@ -94,6 +114,26 @@ const input = {
   borderRadius: '8px',
   border: '1px solid #e2e8f0',
   outline: 'none',
+  transition: '0.2s',
+}
+
+const senhaBox = {
+  position: 'relative' as const,
+  marginBottom: '12px',
+}
+
+const toggleSenha = {
+  position: 'absolute' as const,
+  right: '10px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  cursor: 'pointer',
+}
+
+const erroStyle = {
+  color: '#ef4444',
+  fontSize: '13px',
+  marginBottom: '10px',
 }
 
 const botao = {
@@ -105,4 +145,5 @@ const botao = {
   borderRadius: '8px',
   fontWeight: 'bold',
   cursor: 'pointer',
+  transition: '0.2s',
 }
