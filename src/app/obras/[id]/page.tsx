@@ -53,6 +53,7 @@ export default function DetalheObra() {
       .select('*')
       .eq('obra_id', id)
       .eq('empresa_id', empresa_id)
+      .order('created_at', { ascending: false })
 
     setObra(obraData)
     setFinanceiro(financeiroData || [])
@@ -62,23 +63,6 @@ export default function DetalheObra() {
       setCliente(obraData.cliente)
       setValorObra(obraData.valor)
     }
-  }
-
-  async function salvarEdicao() {
-    const empresa_id = localStorage.getItem('empresa_id')
-
-    await supabase
-      .from('obras')
-      .update({
-        nome,
-        cliente,
-        valor: Number(valorObra),
-        empresa_id,
-      })
-      .eq('id', id)
-
-    setEditando(false)
-    carregar()
   }
 
   async function adicionar(e: any) {
@@ -103,6 +87,7 @@ export default function DetalheObra() {
         descricao,
         valor: Number(valor),
         empresa_id,
+        created_at: new Date(), // 🔥 NOVO
       },
     ])
 
@@ -130,11 +115,18 @@ export default function DetalheObra() {
   const lucro = totalEntradas - totalSaidas
   const margem = totalEntradas > 0 ? (lucro / totalEntradas) * 100 : 0
 
+  // 🔥 SAÍDAS
   const categorias: any = {}
-
   saidas.forEach((s) => {
     if (!categorias[s.descricao]) categorias[s.descricao] = 0
     categorias[s.descricao] += Number(s.valor)
+  })
+
+  // 🔥 ENTRADAS
+  const categoriasEntrada: any = {}
+  entradas.forEach((e) => {
+    if (!categoriasEntrada[e.descricao]) categoriasEntrada[e.descricao] = 0
+    categoriasEntrada[e.descricao] += Number(e.valor)
   })
 
   const dadosGrafico = Object.entries(categorias).map(([nome, valor]) => ({
@@ -145,21 +137,8 @@ export default function DetalheObra() {
   return (
     <div>
       {/* HEADER */}
-      {editando ? (
-        <div style={box}>
-          <input value={nome} onChange={(e) => setNome(e.target.value)} style={input} />
-          <input value={cliente} onChange={(e) => setCliente(e.target.value)} style={input} />
-          <input value={valorObra} onChange={(e) => setValorObra(e.target.value)} style={input} />
-
-          <button onClick={salvarEdicao} style={btnSalvar}>Salvar</button>
-        </div>
-      ) : (
-        <div style={{ marginBottom: '20px' }}>
-          <h1 style={titulo}>{obra.nome}</h1>
-          <p style={subtitulo}>{obra.cliente}</p>
-          <button onClick={() => setEditando(true)} style={btnEditar}>Editar</button>
-        </div>
-      )}
+      <h1 style={titulo}>{obra.nome}</h1>
+      <p style={subtitulo}>{obra.cliente}</p>
 
       {/* DASHBOARD */}
       <div style={grid}>
@@ -180,7 +159,6 @@ export default function DetalheObra() {
 
         <select value={descricao} onChange={(e) => setDescricao(e.target.value)} style={input}>
           <option value="">Selecione...</option>
-
           {(tipo === 'entrada'
             ? opcoesFinanceiro.entrada
             : opcoesFinanceiro.saida
@@ -189,69 +167,62 @@ export default function DetalheObra() {
           ))}
         </select>
 
-        <input
-          type="number"
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          style={input}
-        />
+        <input type="number" value={valor} onChange={(e) => setValor(e.target.value)} style={input} />
 
         <button style={btnAdicionar}>Adicionar</button>
       </form>
 
-      {/* GRÁFICO */}
-      <h2 style={sectionTitle}>Gráfico de custos</h2>
-
+      {/* RECEITAS */}
+      <h2 style={sectionTitle}>Receitas por categoria</h2>
       <div style={box}>
-        <div style={{ height: 300 }}>
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie data={dadosGrafico} dataKey="value" nameKey="name" outerRadius={100}>
-                {dadosGrafico.map((_, i) => (
-                  <Cell key={i} fill={cores[i % cores.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        {Object.entries(categoriasEntrada).map(([nome, valor]: any) => (
+          <div key={nome} style={linha}>
+            <span>{nome}</span>
+            <strong style={{ color: '#22c55e' }}>
+              {Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </strong>
+          </div>
+        ))}
       </div>
 
-      {/* CATEGORIAS */}
+      {/* CUSTOS */}
       <h2 style={sectionTitle}>Custos por categoria</h2>
-
       <div style={box}>
         {Object.entries(categorias).map(([nome, valor]: any) => (
           <div key={nome} style={linha}>
             <span>{nome}</span>
             <strong>
-              {Number(valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
+              {Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </strong>
           </div>
         ))}
       </div>
 
       {/* LANÇAMENTOS */}
-      <h3 style={sectionTitle}>Lançamentos</h3>
-
+      <h3 style={sectionTitle}>Entradas</h3>
       <div style={box}>
-        {financeiro.map((item) => (
-          <div key={item.id} style={linha}>
+        {entradas.map((item) => (
+          <div key={item.id} style={linhaLancamento}>
             <div>
-              <strong>{item.tipo === 'entrada' ? 'Entrada' : 'Saída'}</strong> - {item.descricao}
-              <br />
-              {Number(item.valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
+              <strong style={{ color: '#22c55e' }}>{item.descricao}</strong><br />
+              <span style={data}>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span><br />
+              {Number(item.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </div>
+            <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>Excluir</button>
+          </div>
+        ))}
+      </div>
 
-            <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
-              Excluir
-            </button>
+      <h3 style={sectionTitle}>Saídas</h3>
+      <div style={box}>
+        {saidas.map((item) => (
+          <div key={item.id} style={linhaLancamento}>
+            <div>
+              <strong style={{ color: '#ef4444' }}>{item.descricao}</strong><br />
+              <span style={data}>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span><br />
+              {Number(item.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </div>
+            <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>Excluir</button>
           </div>
         ))}
       </div>
@@ -259,110 +230,18 @@ export default function DetalheObra() {
   )
 }
 
-function Card({ titulo, valor, cor, tipo }: any) {
-  return (
-    <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
-      <p style={{ color: '#64748b' }}>{titulo}</p>
-      <h2 style={{ color: '#0f172a' }}>
-        {tipo === 'porcentagem'
-          ? valor.toFixed(2) + '%'
-          : Number(valor).toLocaleString('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            })}
-      </h2>
-    </div>
-  )
-}
-
-/* 🎨 ESTILO PROFISSIONAL */
-
-const titulo = {
-  color: '#0f172a',
-}
-
-const subtitulo = {
-  color: '#64748b',
-}
-
-const sectionTitle = {
-  marginTop: '30px',
-  marginBottom: '10px',
-  color: '#0f172a',
-}
-
-const grid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-  gap: '20px',
-  marginTop: '20px',
-}
-
-const card = {
-  background: '#ffffff',
-  padding: '20px',
-  borderRadius: '12px',
-  boxShadow: '0 6px 20px rgba(0,0,0,0.05)',
-}
-
-const box = {
-  background: '#ffffff',
-  padding: '20px',
-  borderRadius: '12px',
-  marginTop: '10px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-}
-
-const linha = {
+/* 🔧 ESTILO NOVO */
+const linhaLancamento = {
   display: 'flex',
   justifyContent: 'space-between',
-  marginBottom: '10px',
-  color: '#1e293b',
-}
-
-const input = {
-  display: 'block',
-  marginBottom: '10px',
+  alignItems: 'center',
+  marginBottom: '12px',
   padding: '10px',
-  width: '100%',
-  borderRadius: '6px',
-  border: '1px solid #cbd5f5',
+  borderRadius: '8px',
+  background: '#f8fafc',
 }
 
-const btnAdicionar = {
-  background: '#2563eb',
-  color: '#fff',
-  padding: '10px',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
+const data = {
+  fontSize: '12px',
+  color: '#64748b',
 }
-
-const btnEditar = {
-  background: '#f59e0b',
-  color: '#fff',
-  padding: '8px',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-}
-
-const btnSalvar = {
-  background: '#22c55e',
-  color: '#fff',
-  padding: '10px',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-}
-
-const btnExcluir = {
-  background: '#ef4444',
-  color: '#fff',
-  border: 'none',
-  padding: '6px 10px',
-  borderRadius: '6px',
-  cursor: 'pointer',
-}
-
-const cores = ['#22c55e', '#ef4444', '#3b82f6', '#f59e0b', '#a855f7']
