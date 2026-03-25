@@ -30,52 +30,79 @@ export default function Login() {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        marginTop: '50px',
-      }}
-    >
-      <h1>Login</h1>
+    <div style={container}>
+      <div style={card}>
+        <h1 style={titulo}>DudaBuild</h1>
+        <p style={subtitulo}>Acesse sua plataforma</p>
 
-      <form onSubmit={entrar}>
-        <input
-          placeholder="Email"
-          onChange={(e) => setEmail(e.target.value)}
-          style={{
-            display: 'block',
-            marginBottom: '10px',
-            padding: '10px',
-            width: '250px',
-          }}
-        />
+        <form onSubmit={entrar}>
+          <input
+            placeholder="Email"
+            onChange={(e) => setEmail(e.target.value)}
+            style={input}
+          />
 
-        <input
-          placeholder="Senha"
-          type="password"
-          onChange={(e) => setSenha(e.target.value)}
-          style={{
-            display: 'block',
-            marginBottom: '10px',
-            padding: '10px',
-            width: '250px',
-          }}
-        />
+          <input
+            placeholder="Senha"
+            type="password"
+            onChange={(e) => setSenha(e.target.value)}
+            style={input}
+          />
 
-        <button
-          style={{
-            background: '#2563eb',
-            color: '#fff',
-            padding: '10px',
-            border: 'none',
-            borderRadius: '6px',
-          }}
-        >
-          Entrar
-        </button>
-      </form>
+          <button style={botao}>Entrar</button>
+        </form>
+      </div>
     </div>
   )
+}
+
+/* 🎨 ESTILO PROFISSIONAL */
+
+const container = {
+  height: '100vh',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+}
+
+const card = {
+  background: '#ffffff',
+  padding: '40px',
+  borderRadius: '16px',
+  width: '320px',
+  boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+  textAlign: 'center' as const,
+}
+
+const titulo = {
+  marginBottom: '5px',
+  color: '#0f172a',
+}
+
+const subtitulo = {
+  marginBottom: '20px',
+  color: '#64748b',
+  fontSize: '14px',
+}
+
+const input = {
+  display: 'block',
+  width: '100%',
+  marginBottom: '12px',
+  padding: '12px',
+  borderRadius: '8px',
+  border: '1px solid #e2e8f0',
+  outline: 'none',
+}
+
+const botao = {
+  width: '100%',
+  background: '#2563eb',
+  color: '#fff',
+  padding: '12px',
+  border: 'none',
+  borderRadius: '8px',
+  fontWeight: 'bold',
+  cursor: 'pointer',
 }
