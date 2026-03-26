@@ -97,29 +97,21 @@ export default function DetalheObra() {
       return
     }
 
-    await supabase.from('financeiro').insert([
+    const { error } = await supabase.from('financeiro').insert([
       {
         obra_id: id,
         tipo,
         descricao,
         valor: Number(valor),
         empresa_id,
-       const { error } = await supabase.from('financeiro').insert([
-  {
-    obra_id: id,
-    tipo,
-    descricao,
-    valor: Number(valor),
-    empresa_id,
-  },
-])
-
-if (error) {
-  console.log(error)
-  alert('Erro ao salvar lançamento')
-}
       },
     ])
+
+    if (error) {
+      console.log(error)
+      alert('Erro ao salvar lançamento')
+      return
+    }
 
     setDescricao('')
     setValor('')
@@ -164,24 +156,9 @@ if (error) {
 
   return (
     <div>
-      {/* HEADER */}
-      {editando ? (
-        <div style={box}>
-          <input value={nome} onChange={(e) => setNome(e.target.value)} style={input} />
-          <input value={cliente} onChange={(e) => setCliente(e.target.value)} style={input} />
-          <input value={valorObra} onChange={(e) => setValorObra(e.target.value)} style={input} />
+      <h1 style={titulo}>{obra.nome}</h1>
+      <p style={subtitulo}>{obra.cliente}</p>
 
-          <button onClick={salvarEdicao} style={btnSalvar}>Salvar</button>
-        </div>
-      ) : (
-        <div style={{ marginBottom: '20px' }}>
-          <h1 style={titulo}>{obra.nome}</h1>
-          <p style={subtitulo}>{obra.cliente}</p>
-          <button onClick={() => setEditando(true)} style={btnEditar}>Editar</button>
-        </div>
-      )}
-
-      {/* DASHBOARD */}
       <div style={grid}>
         <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
         <Card titulo="Custos" valor={totalSaidas} cor="#ef4444" />
@@ -189,7 +166,6 @@ if (error) {
         <Card titulo="Margem" valor={margem} cor="#a855f7" tipo="porcentagem" />
       </div>
 
-      {/* FORM */}
       <h3 style={sectionTitle}>Adicionar lançamento</h3>
 
       <form onSubmit={adicionar} style={box}>
@@ -219,25 +195,6 @@ if (error) {
         <button style={btnAdicionar}>Adicionar</button>
       </form>
 
-      {/* GRÁFICO */}
-      <h2 style={sectionTitle}>Gráfico de custos</h2>
-
-      <div style={box}>
-        <div style={{ height: 300 }}>
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie data={dadosGrafico} dataKey="value" nameKey="name" outerRadius={100}>
-                {dadosGrafico.map((_, i) => (
-                  <Cell key={i} fill={cores[i % cores.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* RECEITAS */}
       <h2 style={sectionTitle}>Receitas por categoria</h2>
 
       <div style={box}>
@@ -254,7 +211,6 @@ if (error) {
         ))}
       </div>
 
-      {/* CUSTOS */}
       <h2 style={sectionTitle}>Custos por categoria</h2>
 
       <div style={box}>
@@ -271,7 +227,6 @@ if (error) {
         ))}
       </div>
 
-      {/* ENTRADAS */}
       <h3 style={sectionTitle}>Entradas</h3>
 
       <div style={box}>
@@ -279,7 +234,11 @@ if (error) {
           <div key={item.id} style={linhaLancamento}>
             <div>
               <strong style={{ color: '#22c55e' }}>{item.descricao}</strong><br />
-              <span style={data}>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span><br />
+              <span style={data}>
+                {item.created_at
+                  ? new Date(item.created_at).toLocaleDateString('pt-BR')
+                  : ''}
+              </span><br />
               {Number(item.valor).toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
@@ -293,7 +252,6 @@ if (error) {
         ))}
       </div>
 
-      {/* SAÍDAS */}
       <h3 style={sectionTitle}>Saídas</h3>
 
       <div style={box}>
@@ -301,7 +259,11 @@ if (error) {
           <div key={item.id} style={linhaLancamento}>
             <div>
               <strong style={{ color: '#ef4444' }}>{item.descricao}</strong><br />
-              <span style={data}>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span><br />
+              <span style={data}>
+                {item.created_at
+                  ? new Date(item.created_at).toLocaleDateString('pt-BR')
+                  : ''}
+              </span><br />
               {Number(item.valor).toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
@@ -348,8 +310,6 @@ const data = {
   fontSize: '12px',
   color: '#64748b',
 }
-
-/* 🎨 ESTILO */
 
 const titulo = { color: '#0f172a' }
 const subtitulo = { color: '#64748b' }
