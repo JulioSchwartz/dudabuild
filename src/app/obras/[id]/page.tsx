@@ -99,7 +99,7 @@ export default function DetalheObra() {
 
     const { error } = await supabase.from('financeiro').insert([
       {
-        obra_id: Number(id), // 🔥 CORRIGIDO
+        obra_id: Number(id),
         tipo,
         descricao,
         valor: Number(valor),
@@ -108,10 +108,6 @@ export default function DetalheObra() {
     ])
 
     if (error) {
-      console.log(error)
-      alert(error.message)
-      return
-    }
 
     setDescricao('')
     setValor('')
