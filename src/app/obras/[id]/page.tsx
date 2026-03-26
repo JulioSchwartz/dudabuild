@@ -230,11 +230,11 @@ export default function DetalheObra() {
 
       <h3 style={sectionTitle}>Entradas</h3>
 
-      <div style={box}>
-        {entradas.map((item) => (
+      {entradas.map((item) => (
   <div key={item.id} style={linhaLancamento}>
     <div>
       <strong style={{ color: '#22c55e' }}>{item.descricao}</strong><br />
+
       <span style={data}>
         {item.created_at
           ? new Date(item.created_at).toLocaleDateString('pt-BR')
@@ -247,22 +247,21 @@ export default function DetalheObra() {
           currency: 'BRL',
         })}
       </span>
-    </div> 
+    </div>
 
     <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
       Excluir
     </button>
   </div>
 ))}
-      </div>
 
       <h3 style={sectionTitle}>Saídas</h3>
 
-      <div style={box}>
-        {saidas.map((item) => (
+     {saidas.map((item) => (
   <div key={item.id} style={linhaLancamento}>
     <div>
       <strong style={{ color: '#ef4444' }}>{item.descricao}</strong><br />
+
       <span style={data}>
         {item.created_at
           ? new Date(item.created_at).toLocaleDateString('pt-BR')
@@ -275,14 +274,13 @@ export default function DetalheObra() {
           currency: 'BRL',
         })}
       </span>
-    </div> 
+    </div>
 
     <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
       Excluir
     </button>
   </div>
 ))}
-    
 
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
