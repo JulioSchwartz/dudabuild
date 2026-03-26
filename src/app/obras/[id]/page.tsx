@@ -4,13 +4,6 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { opcoesFinanceiro } from '@/lib/financeiro'
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
 
 export default function DetalheObra() {
   const { id } = useParams()
@@ -18,11 +11,6 @@ export default function DetalheObra() {
 
   const [obra, setObra] = useState<any>(null)
   const [financeiro, setFinanceiro] = useState<any[]>([])
-
-  const [editando, setEditando] = useState(false)
-  const [nome, setNome] = useState('')
-  const [cliente, setCliente] = useState('')
-  const [valorObra, setValorObra] = useState('')
 
   const [tipo, setTipo] = useState('entrada')
   const [descricao, setDescricao] = useState('')
@@ -57,29 +45,6 @@ export default function DetalheObra() {
 
     setObra(obraData)
     setFinanceiro(financeiroData || [])
-
-    if (obraData) {
-      setNome(obraData.nome)
-      setCliente(obraData.cliente)
-      setValorObra(obraData.valor)
-    }
-  }
-
-  async function salvarEdicao() {
-    const empresa_id = localStorage.getItem('empresa_id')
-
-    await supabase
-      .from('obras')
-      .update({
-        nome,
-        cliente,
-        valor: Number(valorObra),
-        empresa_id,
-      })
-      .eq('id', Number(id))
-
-    setEditando(false)
-    carregar()
   }
 
   async function adicionar(e: any) {
@@ -87,15 +52,8 @@ export default function DetalheObra() {
 
     const empresa_id = localStorage.getItem('empresa_id')
 
-    if (!descricao) {
-      alert('Selecione uma descrição')
-      return
-    }
-
-    if (!valor || Number(valor) <= 0) {
-      alert('Informe um valor válido')
-      return
-    }
+    if (!descricao) return alert('Selecione uma descrição')
+    if (!valor || Number(valor) <= 0) return alert('Valor inválido')
 
     const { error } = await supabase.from('financeiro').insert([
       {
@@ -104,7 +62,6 @@ export default function DetalheObra() {
         descricao,
         valor: Number(valor),
         empresa_id,
-        created_at: new Date().toISOString(),
       },
     ])
 
@@ -120,9 +77,6 @@ export default function DetalheObra() {
   }
 
   async function excluirLancamento(idLancamento: number) {
-    const confirmar = confirm('Deseja excluir este lançamento?')
-    if (!confirmar) return
-
     await supabase.from('financeiro').delete().eq('id', idLancamento)
     carregar()
   }
@@ -138,7 +92,6 @@ export default function DetalheObra() {
   const lucro = totalEntradas - totalSaidas
   const margem = totalEntradas > 0 ? (lucro / totalEntradas) * 100 : 0
 
-  // 🔥 NOVAS MÉTRICAS
   const roi = totalSaidas > 0 ? lucro / totalSaidas : 0
   const custoPorMetro = obra?.area ? totalSaidas / obra.area : 0
 
@@ -228,63 +181,58 @@ export default function DetalheObra() {
         ))}
       </div>
 
-     <h3 style={sectionTitle}>Entradas</h3>
+      <h3 style={sectionTitle}>Entradas</h3>
 
-<div style={box}>
-  {entradas.map((item) => (
-    <div key={item.id} style={linhaLancamento}>
-      <div>
-        <strong style={{ color: '#22c55e' }}>{item.descricao}</strong><br />
+      <div style={box}>
+        {entradas.map((item) => (
+          <div key={item.id} style={linhaLancamento}>
+            <div>
+              <strong style={{ color: '#22c55e' }}>{item.descricao}</strong><br />
+              <span style={data}>
+                {new Date(item.created_at).toLocaleDateString('pt-BR')}
+              </span><br />
+              <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
+                {Number(item.valor).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </span>
+            </div>
 
-        <span style={data}>
-          {item.created_at
-            ? new Date(item.created_at).toLocaleDateString('pt-BR')
-            : ''}
-        </span><br />
-
-        <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
-          {Number(item.valor).toLocaleString('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-          })}
-        </span>
+            <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
+              Excluir
+            </button>
+          </div>
+        ))}
       </div>
-
-      <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
-        Excluir
-      </button>
-    </div>
-  ))}
-</div>
 
       <h3 style={sectionTitle}>Saídas</h3>
 
-<div style={box}>
-  {saidas.map((item) => (
-    <div key={item.id} style={linhaLancamento}>
-      <div>
-        <strong style={{ color: '#ef4444' }}>{item.descricao}</strong><br />
+      <div style={box}>
+        {saidas.map((item) => (
+          <div key={item.id} style={linhaLancamento}>
+            <div>
+              <strong style={{ color: '#ef4444' }}>{item.descricao}</strong><br />
+              <span style={data}>
+                {new Date(item.created_at).toLocaleDateString('pt-BR')}
+              </span><br />
+              <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
+                {Number(item.valor).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </span>
+            </div>
 
-        <span style={data}>
-          {item.created_at
-            ? new Date(item.created_at).toLocaleDateString('pt-BR')
-            : ''}
-        </span><br />
-
-        <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
-          {Number(item.valor).toLocaleString('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-          })}
-        </span>
+            <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
+              Excluir
+            </button>
+          </div>
+        ))}
       </div>
-
-      <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
-        Excluir
-      </button>
     </div>
-  ))}
-</div>
+  )
+}
 
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
@@ -388,5 +336,3 @@ const btnExcluir = {
   borderRadius: '6px',
   cursor: 'pointer',
 }
-
-const cores = ['#22c55e', '#ef4444', '#3b82f6', '#f59e0b', '#a855f7']
