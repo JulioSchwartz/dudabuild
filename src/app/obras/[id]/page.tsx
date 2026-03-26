@@ -240,12 +240,12 @@ export default function DetalheObra() {
                   ? new Date(item.created_at).toLocaleDateString('pt-BR')
                   : ''}
               </span><br />
-              <div style={{ color: '#16a34a', fontWeight: 'bold' }}>
-  {Number(item.valor).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  )}}
-</div>
+            <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
+              {Number(item.valor).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </span>
 
             <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
               Excluir
@@ -266,12 +266,12 @@ export default function DetalheObra() {
                   ? new Date(item.created_at).toLocaleDateString('pt-BR')
                   : ''}
               </span><br />
-              <div style={{ color: '#dc2626', fontWeight: 'bold' }}>
-  {Number(item.valor).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  )}}
-</div>
+            <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
+              {Number(item.valor).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </span>
 
             <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
               Excluir
