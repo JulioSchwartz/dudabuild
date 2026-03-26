@@ -244,7 +244,7 @@ export default function DetalheObra() {
   {Number(item.valor).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  })}
+  )}}
 </div>
 
             <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
@@ -270,7 +270,7 @@ export default function DetalheObra() {
   {Number(item.valor).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  })}
+  )}}
 </div>
 
             <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
