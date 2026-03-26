@@ -90,6 +90,15 @@ export default function DetalheObra() {
   const entradas = financeiro.filter((f) => f.tipo === 'entrada')
   const saidas = financeiro.filter((f) => f.tipo === 'saida')
 
+const categoriasEntrada: any = {}
+
+entradas.forEach((e) => {
+  if (!categoriasEntrada[e.descricao]) {
+    categoriasEntrada[e.descricao] = 0
+  }
+  categoriasEntrada[e.descricao] += Number(e.valor)
+})
+
   const totalEntradas = entradas.reduce((acc, e) => acc + Number(e.valor), 0)
   const totalSaidas = saidas.reduce((acc, s) => acc + Number(s.valor), 0)
 
