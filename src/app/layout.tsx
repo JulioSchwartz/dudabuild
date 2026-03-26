@@ -1,7 +1,9 @@
 'use client'
 
 import './globals.css'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export default function RootLayout({
   children,
@@ -9,6 +11,43 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [liberado, setLiberado] = useState(false)
+
+  useEffect(() => {
+    verificarAcesso()
+  }, [])
+
+  async function verificarAcesso() {
+    const empresa_id = localStorage.getItem('empresa_id')
+
+    // libera login sempre
+    if (pathname === '/login') {
+      setLiberado(true)
+      return
+    }
+
+    if (!empresa_id) {
+      router.push('/login')
+      return
+    }
+
+    const { data } = await supabase
+      .from('assinaturas')
+      .select('*')
+      .eq('empresa_id', empresa_id)
+      .eq('status', 'ativa')
+      .single()
+
+    if (!data) {
+      router.push('/pagar')
+      return
+    }
+
+    setLiberado(true)
+  }
+
+  if (!liberado) return null
 
   return (
     <html lang="pt-BR">
@@ -36,6 +75,17 @@ export default function RootLayout({
               path="/financeiro"
               active={pathname.startsWith('/financeiro')}
             />
+
+            {/* 🔥 BOTÃO PAGAMENTO */}
+            <div style={{ marginTop: '20px' }}>
+              <button
+                style={btnUpgrade}
+                onClick={() => router.push('/pagar')}
+              >
+                💎 Assinar Plano
+              </button>
+            </div>
+
           </aside>
 
           {/* CONTEÚDO */}
@@ -50,7 +100,7 @@ export default function RootLayout({
 }
 
 /* =========================
-   🧩 COMPONENTE MENU
+   MENU
 ========================= */
 
 function NavItem({ label, path, active }: any) {
@@ -69,7 +119,7 @@ function NavItem({ label, path, active }: any) {
 }
 
 /* =========================
-   🎨 ESTILO PREMIUM
+   ESTILO
 ========================= */
 
 const body = {
@@ -108,6 +158,16 @@ const navItem = {
   cursor: 'pointer',
   fontSize: '14px',
   transition: '0.2s',
+}
+
+const btnUpgrade = {
+  background: '#22c55e',
+  color: '#fff',
+  border: 'none',
+  padding: '12px',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontWeight: 'bold',
 }
 
 const content = {
