@@ -99,7 +99,7 @@ export default function DetalheObra() {
 
     const { error } = await supabase.from('financeiro').insert([
       {
-        obra_id: id,
+        obra_id: Number(id), // 🔥 CORRIGIDO
         tipo,
         descricao,
         valor: Number(valor),
@@ -109,7 +109,7 @@ export default function DetalheObra() {
 
     if (error) {
       console.log(error)
-      alert('Erro ao salvar lançamento')
+      alert(error.message)
       return
     }
 
@@ -168,7 +168,7 @@ export default function DetalheObra() {
 
       <h3 style={sectionTitle}>Adicionar lançamento</h3>
 
-      <form onSubmit={adicionar} style={box}>
+      <form onSubmit={adicionar} style={form}>
         <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={input}>
           <option value="entrada">Entrada</option>
           <option value="saida">Saída</option>
@@ -176,7 +176,6 @@ export default function DetalheObra() {
 
         <select value={descricao} onChange={(e) => setDescricao(e.target.value)} style={input}>
           <option value="">Selecione...</option>
-
           {(tipo === 'entrada'
             ? opcoesFinanceiro.entrada
             : opcoesFinanceiro.saida
@@ -296,6 +295,16 @@ function Card({ titulo, valor, cor, tipo }: any) {
   )
 }
 
+const form = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 2fr 1fr auto',
+  gap: '10px',
+  background: '#fff',
+  padding: '20px',
+  borderRadius: '12px',
+  marginTop: '10px',
+}
+
 const linhaLancamento = {
   display: 'flex',
   justifyContent: 'space-between',
@@ -350,10 +359,7 @@ const linha = {
 }
 
 const input = {
-  display: 'block',
-  marginBottom: '10px',
   padding: '10px',
-  width: '100%',
   borderRadius: '6px',
   border: '1px solid #cbd5f5',
 }
@@ -361,7 +367,7 @@ const input = {
 const btnAdicionar = {
   background: '#2563eb',
   color: '#fff',
-  padding: '10px',
+  padding: '10px 15px',
   border: 'none',
   borderRadius: '6px',
   cursor: 'pointer',
