@@ -232,56 +232,57 @@ export default function DetalheObra() {
 
       <div style={box}>
         {entradas.map((item) => (
-          <div key={item.id} style={linhaLancamento}>
-            <div>
-              <strong style={{ color: '#22c55e' }}>{item.descricao}</strong><br />
-              <span style={data}>
-                {item.created_at
-                  ? new Date(item.created_at).toLocaleDateString('pt-BR')
-                  : ''}
-              </span><br />
-            <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
-              {Number(item.valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </span>
+  <div key={item.id} style={linhaLancamento}>
+    <div>
+      <strong style={{ color: '#22c55e' }}>{item.descricao}</strong><br />
+      <span style={data}>
+        {item.created_at
+          ? new Date(item.created_at).toLocaleDateString('pt-BR')
+          : ''}
+      </span><br />
 
-            <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
-              Excluir
-            </button>
-          </div>
-        ))}
+      <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
+        {Number(item.valor).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })}
+      </span>
+    </div> 
+
+    <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
+      Excluir
+    </button>
+  </div>
+))}
       </div>
 
       <h3 style={sectionTitle}>Saídas</h3>
 
       <div style={box}>
         {saidas.map((item) => (
-          <div key={item.id} style={linhaLancamento}>
-            <div>
-              <strong style={{ color: '#ef4444' }}>{item.descricao}</strong><br />
-              <span style={data}>
-                {item.created_at
-                  ? new Date(item.created_at).toLocaleDateString('pt-BR')
-                  : ''}
-              </span><br />
-            <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
-              {Number(item.valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </span>
+  <div key={item.id} style={linhaLancamento}>
+    <div>
+      <strong style={{ color: '#ef4444' }}>{item.descricao}</strong><br />
+      <span style={data}>
+        {item.created_at
+          ? new Date(item.created_at).toLocaleDateString('pt-BR')
+          : ''}
+      </span><br />
 
-            <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
-              Excluir
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+      <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
+        {Number(item.valor).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })}
+      </span>
+    </div> 
+
+    <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
+      Excluir
+    </button>
+  </div>
+))}
+    
 
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
