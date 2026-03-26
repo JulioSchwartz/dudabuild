@@ -51,7 +51,7 @@ export default function DetalheObra() {
     const { data: financeiroData } = await supabase
       .from('financeiro')
       .select('*')
-      .eq('obra_id', id)
+      .eq('obra_id', Number(id))
       .eq('empresa_id', empresa_id)
       .order('created_at', { ascending: false })
 
