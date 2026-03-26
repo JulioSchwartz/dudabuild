@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { opcoesFinanceiro } from '@/lib/financeiro'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts'
 
 export default function DetalheObra() {
   const { id } = useParams()
@@ -41,7 +50,7 @@ export default function DetalheObra() {
       .select('*')
       .eq('obra_id', Number(id))
       .eq('empresa_id', empresa_id)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
 
     setObra(obraData)
     setFinanceiro(financeiroData || [])
@@ -55,21 +64,16 @@ export default function DetalheObra() {
     if (!descricao) return alert('Selecione uma descrição')
     if (!valor || Number(valor) <= 0) return alert('Valor inválido')
 
-    const { error } = await supabase.from('financeiro').insert([
+    await supabase.from('financeiro').insert([
       {
         obra_id: Number(id),
         tipo,
         descricao,
         valor: Number(valor),
         empresa_id,
+        created_at: new Date().toISOString(),
       },
     ])
-
-    if (error) {
-      console.log(error)
-      alert(error.message)
-      return
-    }
 
     setDescricao('')
     setValor('')
@@ -95,17 +99,27 @@ export default function DetalheObra() {
   const roi = totalSaidas > 0 ? lucro / totalSaidas : 0
   const custoPorMetro = obra?.area ? totalSaidas / obra.area : 0
 
-  const categorias: any = {}
-  saidas.forEach((s) => {
-    if (!categorias[s.descricao]) categorias[s.descricao] = 0
-    categorias[s.descricao] += Number(s.valor)
+  // 🔥 AGRUPAMENTO MENSAL (FLUXO DE CAIXA)
+  const fluxoMensal: any = {}
+
+  financeiro.forEach((item) => {
+    if (!item.created_at) return
+
+    const data = new Date(item.created_at)
+    const mes = data.toLocaleDateString('pt-BR', { month: 'short' })
+
+    if (!fluxoMensal[mes]) {
+      fluxoMensal[mes] = { mes, entrada: 0, saida: 0 }
+    }
+
+    if (item.tipo === 'entrada') {
+      fluxoMensal[mes].entrada += Number(item.valor)
+    } else {
+      fluxoMensal[mes].saida += Number(item.valor)
+    }
   })
 
-  const categoriasEntrada: any = {}
-  entradas.forEach((e) => {
-    if (!categoriasEntrada[e.descricao]) categoriasEntrada[e.descricao] = 0
-    categoriasEntrada[e.descricao] += Number(e.valor)
-  })
+  const dadosGrafico = Object.values(fluxoMensal)
 
   return (
     <div>
@@ -119,6 +133,22 @@ export default function DetalheObra() {
         <Card titulo="Margem" valor={margem} cor="#a855f7" tipo="porcentagem" />
         <Card titulo="ROI" valor={roi} cor="#0ea5e9" tipo="porcentagem" />
         <Card titulo="Custo/m²" valor={custoPorMetro} cor="#f59e0b" />
+      </div>
+
+      {/* 🔥 GRÁFICO */}
+      <h2 style={sectionTitle}>Fluxo de Caixa Mensal</h2>
+
+      <div style={box}>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={dadosGrafico}>
+            <XAxis dataKey="mes" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="entrada" stroke="#22c55e" name="Entradas" />
+            <Line type="monotone" dataKey="saida" stroke="#ef4444" name="Saídas" />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
 
       <h3 style={sectionTitle}>Adicionar lançamento</h3>
