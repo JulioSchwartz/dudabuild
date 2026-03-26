@@ -240,7 +240,7 @@ function Card({ titulo, valor, cor, tipo }: any) {
       <p style={{ color: '#64748b' }}>{titulo}</p>
       <h2 style={{ color: '#0f172a' }}>
         {tipo === 'porcentagem'
-          ? (valor * 100).toFixed(2) + '%'
+          ? valor.toFixed(2) + '%'
           : Number(valor).toLocaleString('pt-BR', {
               style: 'currency',
               currency: 'BRL',
