@@ -108,6 +108,10 @@ export default function DetalheObra() {
     ])
 
     if (error) {
+      console.log(error)
+      alert(error.message)
+      return
+    }
 
     setDescricao('')
     setValor('')
@@ -396,6 +400,4 @@ const btnExcluir = {
   cursor: 'pointer',
 }
 
-const cores = {
-  ['#22c55e', '#ef4444', '#3b82f6', '#f59e0b', '#a855f7'],
-}
+const cores = ['#22c55e', '#ef4444', '#3b82f6', '#f59e0b', '#a855f7']
