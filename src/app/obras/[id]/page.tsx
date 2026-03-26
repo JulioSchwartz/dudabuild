@@ -104,7 +104,20 @@ export default function DetalheObra() {
         descricao,
         valor: Number(valor),
         empresa_id,
-        created_at: new Date(), // 🔥 NOVO
+       const { error } = await supabase.from('financeiro').insert([
+  {
+    obra_id: id,
+    tipo,
+    descricao,
+    valor: Number(valor),
+    empresa_id,
+  },
+])
+
+if (error) {
+  console.log(error)
+  alert('Erro ao salvar lançamento')
+}
       },
     ])
 
