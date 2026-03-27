@@ -29,7 +29,7 @@ export default function FotosObra() {
       .from('obra_fotos')
       .select('*')
       .eq('obra_id', Number(id))
-      .eq('empresa_id', Number(empresa_id)) // ✅ CORRIGIDO
+      .eq('empresa_id', empresa_id) // ✅ UUID = STRING
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -79,7 +79,7 @@ export default function FotosObra() {
     await supabase.from('obra_fotos').insert([
       {
         obra_id: Number(id),
-        empresa_id: Number(empresa_id), // ✅ CORRIGIDO
+        empresa_id: empresa_id, // ✅ UUID STRING
         url: urlData.publicUrl,
         tipo,
       },
@@ -182,10 +182,7 @@ export default function FotosObra() {
       </div>
 
       {fotoSelecionada && (
-        <div
-          style={modal}
-          onClick={() => setFotoSelecionada(null)}
-        >
+        <div style={modal} onClick={() => setFotoSelecionada(null)}>
           <img src={fotoSelecionada} style={imagemModal} />
         </div>
       )}
