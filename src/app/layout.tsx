@@ -16,30 +16,30 @@ export default function RootLayout({
 
   useEffect(() => {
     verificarAcesso()
-  }, [])
+  }, [pathname])
 
   async function verificarAcesso() {
     const empresa_id = localStorage.getItem('empresa_id')
 
-    // libera login sempre
+    // 🔓 liberar páginas públicas
     if (pathname === '/login' || pathname === '/pagar') {
-  setLiberado(true)
-  return
-}
+      setLiberado(true)
+      return
+    }
 
     if (!empresa_id) {
       router.push('/login')
       return
     }
 
+    // 🔥 valida assinatura (SEM .single)
     const { data } = await supabase
       .from('assinaturas')
       .select('*')
       .eq('empresa_id', empresa_id)
       .eq('status', 'ativa')
-      .single()
 
-    if (!data) {
+    if (!data || data.length === 0) {
       router.push('/pagar')
       return
     }
@@ -47,52 +47,29 @@ export default function RootLayout({
     setLiberado(true)
   }
 
-if (!liberado) return <div>Carregando...</div>
+  if (!liberado) return <div>Carregando...</div>
 
   return (
     <html lang="pt-BR">
       <body style={body}>
         <div style={container}>
-
           {/* SIDEBAR */}
           <aside style={sidebar}>
             <div style={logo}>DudaBuild</div>
 
-            <NavItem
-              label="Dashboard"
-              path="/"
-              active={pathname === '/'}
-            />
+            <NavItem label="Dashboard" path="/dashboard" active={pathname === '/dashboard'} />
+            <NavItem label="Obras" path="/obras" active={pathname.startsWith('/obras')} />
+            <NavItem label="Financeiro" path="/financeiro" active={pathname.startsWith('/financeiro')} />
 
-            <NavItem
-              label="Obras"
-              path="/obras"
-              active={pathname.startsWith('/obras')}
-            />
-
-            <NavItem
-              label="Financeiro"
-              path="/financeiro"
-              active={pathname.startsWith('/financeiro')}
-            />
-
-            {/* 🔥 BOTÃO PAGAMENTO */}
             <div style={{ marginTop: '20px' }}>
-              <button
-                style={btnUpgrade}
-                onClick={() => router.push('/pagar')}
-              >
+              <button style={btnUpgrade} onClick={() => router.push('/pagar')}>
                 💎 Assinar Plano
               </button>
             </div>
-
           </aside>
 
           {/* CONTEÚDO */}
-          <main style={content}>
-            {children}
-          </main>
-
+          <main style={content}>{children}</main>
         </div>
       </body>
     </html>
@@ -104,9 +81,11 @@ if (!liberado) return <div>Carregando...</div>
 ========================= */
 
 function NavItem({ label, path, active }: any) {
+  const router = useRouter()
+
   return (
     <button
-      onClick={() => window.location.href = path}
+      onClick={() => router.push(path)}
       style={{
         ...navItem,
         background: active ? '#2563eb' : 'transparent',
@@ -138,7 +117,7 @@ const sidebar = {
   background: '#0f172a',
   color: '#fff',
   display: 'flex',
-  flexDirection: 'column',
+  flexDirection: 'column' as const,
   padding: '25px 15px',
   gap: '8px',
 }
@@ -154,7 +133,7 @@ const navItem = {
   padding: '12px',
   borderRadius: '8px',
   border: 'none',
-  textAlign: 'left',
+  textAlign: 'left' as const,
   cursor: 'pointer',
   fontSize: '14px',
   transition: '0.2s',
