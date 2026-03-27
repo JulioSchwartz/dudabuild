@@ -19,27 +19,30 @@ export default function Login() {
     setErro('')
     setLoading(true)
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('usuarios')
       .select('*')
       .eq('email', email)
       .eq('senha', senha)
       .single()
 
-    if (!data) {
+    if (error || !data) {
       setErro('Email ou senha inválidos')
       setLoading(false)
       return
     }
 
+    // salva empresa
     localStorage.setItem('empresa_id', data.empresa_id)
+
+    // 🔥 REDIRECIONA PRA CAPA (NOVO FLUXO)
     router.push('/')
   }
 
   return (
     <div style={container}>
       <div style={card}>
-        <h1 style={titulo}>DudaBuild</h1>
+        <h1 style={titulo}>🏗️ DudaBuild</h1>
         <p style={subtitulo}>Acesse sua conta</p>
 
         <form onSubmit={entrar}>
@@ -98,6 +101,8 @@ const card = {
 const titulo = {
   marginBottom: '5px',
   color: '#0f172a',
+  fontSize: '24px',
+  fontWeight: '700',
 }
 
 const subtitulo = {
