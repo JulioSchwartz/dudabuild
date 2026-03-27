@@ -11,13 +11,16 @@ export default function NovoOrcamento() {
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
   const [descricao, setDescricao] = useState('')
+  const [endereco, setEndereco] = useState('')
+  const [responsavel, setResponsavel] = useState('')
+  const [memorial, setMemorial] = useState('')
 
   const [itens, setItens] = useState([
-    { descricao: '', quantidade: 1, valor_unitario: 0 }
+    { descricao: '', unidade: 'm²', quantidade: 1, valor_unitario: 0 }
   ])
 
   function adicionarItem() {
-    setItens([...itens, { descricao: '', quantidade: 1, valor_unitario: 0 }])
+    setItens([...itens, { descricao: '', unidade: 'm²', quantidade: 1, valor_unitario: 0 }])
   }
 
   function removerItem(index: number) {
@@ -33,19 +36,14 @@ export default function NovoOrcamento() {
   }
 
   function calcularTotal() {
-    return itens.reduce((acc, item) => {
-      return acc + (item.quantidade * item.valor_unitario)
-    }, 0)
+    return itens.reduce((acc, item) => acc + item.quantidade * item.valor_unitario, 0)
   }
 
   async function salvar() {
     const empresa_id = localStorage.getItem('empresa_id')
-
-    if (!clienteNome) return alert('Nome do cliente obrigatório')
-
     const total = calcularTotal()
 
-    const { data: orcamento, error } = await supabase
+    const { data: orcamento } = await supabase
       .from('orcamentos')
       .insert([{
         empresa_id,
@@ -59,11 +57,6 @@ export default function NovoOrcamento() {
       .select()
       .single()
 
-    if (error) {
-      alert('Erro ao salvar orçamento')
-      return
-    }
-
     const itensFormatados = itens.map(item => ({
       orcamento_id: orcamento.id,
       descricao: item.descricao,
@@ -74,145 +67,171 @@ export default function NovoOrcamento() {
 
     await supabase.from('orcamento_itens').insert(itensFormatados)
 
-    alert('Orçamento criado com sucesso!')
-    router.push('/orcamentos')
+    alert('Orçamento salvo!')
+  }
+
+  function gerarPDF() {
+    window.print()
   }
 
   const total = calcularTotal()
 
   return (
-    <div>
-      <h1 style={titulo}>Novo Orçamento</h1>
+    <div style={container}>
+      <h1 style={titulo}>📄 Novo Orçamento</h1>
 
-      {/* CLIENTE */}
-      <div style={box}>
+      {/* CABEÇALHO */}
+      <div style={card}>
         <h3>Dados do Cliente</h3>
 
-        <input placeholder="Nome" value={clienteNome} onChange={e => setClienteNome(e.target.value)} style={input} />
-        <input placeholder="WhatsApp" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} style={input} />
-        <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={input} />
+        <div style={grid}>
+          <input placeholder="Nome do cliente" value={clienteNome} onChange={e => setClienteNome(e.target.value)} style={input}/>
+          <input placeholder="WhatsApp" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} style={input}/>
+          <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={input}/>
+          <input placeholder="Endereço da obra" value={endereco} onChange={e => setEndereco(e.target.value)} style={input}/>
+          <input placeholder="Responsável técnico" value={responsavel} onChange={e => setResponsavel(e.target.value)} style={input}/>
+        </div>
       </div>
 
       {/* DESCRIÇÃO */}
-      <div style={box}>
+      <div style={card}>
         <h3>Descrição do Projeto</h3>
-        <textarea value={descricao} onChange={e => setDescricao(e.target.value)} style={textarea} />
+        <textarea value={descricao} onChange={e => setDescricao(e.target.value)} style={textarea}/>
       </div>
 
       {/* ITENS */}
-      <div style={box}>
-        <h3>Itens do Orçamento</h3>
+      <div style={card}>
+        <h3>Planilha Orçamentária</h3>
 
-        {itens.map((item, index) => (
-          <div key={index} style={linha}>
-            <input
-              placeholder="Descrição"
-              value={item.descricao}
-              onChange={e => atualizarItem(index, 'descricao', e.target.value)}
-              style={input}
-            />
+        <table style={tabela}>
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Un</th>
+              <th>Qtd</th>
+              <th>Valor Unit.</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
 
-            <input
-              type="number"
-              value={item.quantidade}
-              onChange={e => atualizarItem(index, 'quantidade', Number(e.target.value))}
-              style={inputPequeno}
-            />
+          <tbody>
+            {itens.map((item, index) => (
+              <tr key={index}>
+                <td>
+                  <input value={item.descricao} onChange={e => atualizarItem(index, 'descricao', e.target.value)} style={input}/>
+                </td>
 
-            <input
-              type="number"
-              value={item.valor_unitario}
-              onChange={e => atualizarItem(index, 'valor_unitario', Number(e.target.value))}
-              style={inputPequeno}
-            />
+                <td>
+                  <input value={item.unidade} onChange={e => atualizarItem(index, 'unidade', e.target.value)} style={inputPequeno}/>
+                </td>
 
-            <strong>
-              R$ {(item.quantidade * item.valor_unitario).toFixed(2)}
-            </strong>
+                <td>
+                  <input type="number" value={item.quantidade} onChange={e => atualizarItem(index, 'quantidade', Number(e.target.value))} style={inputPequeno}/>
+                </td>
 
-            <button onClick={() => removerItem(index)} style={btnRemover}>
-              X
-            </button>
-          </div>
-        ))}
+                <td>
+                  <input type="number" value={item.valor_unitario} onChange={e => atualizarItem(index, 'valor_unitario', Number(e.target.value))} style={inputPequeno}/>
+                </td>
 
-        <button onClick={adicionarItem} style={btnAdd}>
-          + Adicionar Item
-        </button>
+                <td>
+                  R$ {(item.quantidade * item.valor_unitario).toFixed(2)}
+                </td>
+
+                <td>
+                  <button onClick={() => removerItem(index)} style={btnRemover}>X</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <button onClick={adicionarItem} style={btnAdd}>+ Adicionar Item</button>
+      </div>
+
+      {/* MEMORIAL */}
+      <div style={card}>
+        <h3>Memorial Descritivo</h3>
+        <textarea value={memorial} onChange={e => setMemorial(e.target.value)} style={textarea}/>
       </div>
 
       {/* TOTAL */}
       <div style={totalBox}>
-        Total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+        💰 Total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
       </div>
 
-      <button onClick={salvar} style={btnSalvar}>
-        Salvar Orçamento
-      </button>
+      {/* AÇÕES */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={salvar} style={btnSalvar}>Salvar</button>
+        <button onClick={gerarPDF} style={btnPDF}>📄 Gerar PDF</button>
+      </div>
     </div>
   )
 }
 
 /* ESTILO */
 
-const titulo = { fontSize: '26px', marginBottom: '20px' }
+const container = { maxWidth: 1100, margin: '0 auto' }
+const titulo = { fontSize: 28, marginBottom: 20 }
 
-const box = {
+const card = {
   background: '#fff',
-  padding: '20px',
-  borderRadius: '12px',
-  marginBottom: '20px'
+  padding: 20,
+  borderRadius: 12,
+  marginBottom: 20,
+  boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
 }
 
-const input = {
+const grid = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: 10
+}
+
+const input = { padding: 10, width: '100%' }
+const inputPequeno = { padding: 8, width: 80 }
+
+const textarea = { width: '100%', height: 100, padding: 10 }
+
+const tabela = {
   width: '100%',
-  padding: '10px',
-  marginBottom: '10px'
-}
-
-const inputPequeno = {
-  width: '80px',
-  padding: '8px'
-}
-
-const textarea = {
-  width: '100%',
-  height: '80px',
-  padding: '10px'
-}
-
-const linha = {
-  display: 'flex',
-  gap: '10px',
-  alignItems: 'center',
-  marginBottom: '10px'
+  borderCollapse: 'collapse' as const,
+  marginBottom: 10
 }
 
 const btnAdd = {
   background: '#22c55e',
   color: '#fff',
-  padding: '10px',
+  padding: 10,
   border: 'none',
-  borderRadius: '6px'
+  borderRadius: 6
 }
 
 const btnRemover = {
   background: '#ef4444',
   color: '#fff',
   border: 'none',
-  padding: '6px'
+  padding: 6
 }
 
 const totalBox = {
-  fontSize: '20px',
+  fontSize: 22,
   fontWeight: 'bold',
-  marginBottom: '20px'
+  marginBottom: 20
 }
 
 const btnSalvar = {
   background: '#2563eb',
   color: '#fff',
-  padding: '14px',
+  padding: 14,
   border: 'none',
-  borderRadius: '8px'
+  borderRadius: 8
+}
+
+const btnPDF = {
+  background: '#111827',
+  color: '#fff',
+  padding: 14,
+  border: 'none',
+  borderRadius: 8
 }
