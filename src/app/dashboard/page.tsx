@@ -48,10 +48,6 @@ function DashboardInterno() {
     setFinanceiro(financeiroData || [])
   }
 
-  // =========================
-  // 📊 BASE
-  // =========================
-
   const entradas = financeiro.filter(f => f.tipo === 'entrada')
   const saidas = financeiro.filter(f => f.tipo === 'saida')
 
@@ -61,16 +57,8 @@ function DashboardInterno() {
   const lucro = totalEntradas - totalSaidas
   const margem = totalEntradas > 0 ? (lucro / totalEntradas) * 100 : 0
 
-  // =========================
-  // 📈 MÉTRICAS AVANÇADAS
-  // =========================
-
   const ticketMedio = entradas.length > 0 ? totalEntradas / entradas.length : 0
   const custoMedio = saidas.length > 0 ? totalSaidas / saidas.length : 0
-
-  // =========================
-  // 🏗️ POR OBRA
-  // =========================
 
   const resumoObras = obras.map((obra) => {
     const entradas = financeiro
@@ -105,7 +93,6 @@ function DashboardInterno() {
       <h1 style={titulo}>Dashboard Executivo</h1>
       <p style={subtitulo}>Controle inteligente da sua empresa</p>
 
-      {/* KPIs */}
       <div style={grid}>
         <Card titulo="Obras Ativas" valor={obras.length} cor="#3b82f6" />
         <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
@@ -114,7 +101,6 @@ function DashboardInterno() {
         <Card titulo="Margem" valor={margem} cor="#0ea5e9" tipo="percent" />
       </div>
 
-      {/* Indicadores */}
       <h2 style={sectionTitle}>Indicadores Estratégicos</h2>
 
       <div style={grid}>
@@ -122,14 +108,12 @@ function DashboardInterno() {
         <Card titulo="Custo Médio" valor={custoMedio} cor="#f59e0b" />
       </div>
 
-      {/* ALERTA */}
       {prejuizos.length > 0 && (
         <div style={alerta}>
           ⚠️ {prejuizos.length} obra(s) com prejuízo
         </div>
       )}
 
-      {/* RANKING */}
       <h2 style={sectionTitle}>Ranking de Obras</h2>
 
       <div style={box}>
@@ -137,13 +121,7 @@ function DashboardInterno() {
           const percentual = (obra.lucro / maxLucro) * 100
 
           return (
-            <div
-              key={index}
-              style={{
-                ...linha,
-                background: index === 0 ? '#f0fdf4' : '#fff',
-              }}
-            >
+            <div key={index} style={{ ...linha, background: index === 0 ? '#f0fdf4' : '#fff' }}>
               <div style={{ flex: 1 }}>
                 <span style={nomeObra}>
                   {medalha(index)} {obra.nome}
@@ -192,7 +170,7 @@ function Card({ titulo, valor, cor, destaque, tipo }: any) {
   )
 }
 
-/* ESTILO */
+/* ESTILO ORIGINAL MANTIDO */
 
 const titulo = { fontSize: '28px', color: '#0f172a' }
 const subtitulo = { color: '#64748b', marginBottom: '20px' }

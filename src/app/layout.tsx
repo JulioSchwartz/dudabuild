@@ -21,8 +21,8 @@ export default function RootLayout({
   async function verificarAcesso() {
     const empresa_id = localStorage.getItem('empresa_id')
 
-    // 🔓 liberar páginas públicas
-    if (pathname === '/login' || pathname === '/pagar') {
+    // 🔓 páginas públicas
+    if (pathname === '/login') {
       setLiberado(true)
       return
     }
@@ -32,7 +32,6 @@ export default function RootLayout({
       return
     }
 
-    // 🔥 valida assinatura (SEM .single)
     const { data } = await supabase
       .from('assinaturas')
       .select('*')
@@ -47,7 +46,12 @@ export default function RootLayout({
     setLiberado(true)
   }
 
-  if (!liberado) return <div>Carregando...</div>
+  function logout() {
+    localStorage.removeItem('empresa_id')
+    router.push('/login')
+  }
+
+  if (!liberado) return <div style={{ padding: 20 }}>Carregando...</div>
 
   return (
     <html lang="pt-BR">
@@ -66,6 +70,13 @@ export default function RootLayout({
                 💎 Assinar Plano
               </button>
             </div>
+
+            {/* LOGOUT */}
+            <div style={{ marginTop: 'auto' }}>
+              <button style={btnLogout} onClick={logout}>
+                🚪 Sair
+              </button>
+            </div>
           </aside>
 
           {/* CONTEÚDO */}
@@ -76,10 +87,7 @@ export default function RootLayout({
   )
 }
 
-/* =========================
-   MENU
-========================= */
-
+/* MENU */
 function NavItem({ label, path, active }: any) {
   const router = useRouter()
 
@@ -97,9 +105,7 @@ function NavItem({ label, path, active }: any) {
   )
 }
 
-/* =========================
-   ESTILO
-========================= */
+/* ESTILO */
 
 const body = {
   margin: 0,
@@ -126,7 +132,6 @@ const logo = {
   fontSize: '20px',
   fontWeight: 'bold',
   marginBottom: '20px',
-  color: '#fff',
 }
 
 const navItem = {
@@ -135,8 +140,6 @@ const navItem = {
   border: 'none',
   textAlign: 'left' as const,
   cursor: 'pointer',
-  fontSize: '14px',
-  transition: '0.2s',
 }
 
 const btnUpgrade = {
@@ -147,6 +150,17 @@ const btnUpgrade = {
   borderRadius: '8px',
   cursor: 'pointer',
   fontWeight: 'bold',
+}
+
+const btnLogout = {
+  background: '#ef4444',
+  color: '#fff',
+  border: 'none',
+  padding: '12px',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontWeight: 'bold',
+  width: '100%',
 }
 
 const content = {
