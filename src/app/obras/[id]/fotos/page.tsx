@@ -11,6 +11,7 @@ export default function FotosObra() {
   const [fotos, setFotos] = useState<any[]>([])
   const [tipo, setTipo] = useState('fachada')
   const [loading, setLoading] = useState(false)
+  const [fotoSelecionada, setFotoSelecionada] = useState<string | null>(null)
 
   useEffect(() => {
     carregar()
@@ -41,9 +42,7 @@ export default function FotosObra() {
 
     const { error } = await supabase.storage
       .from('obras')
-      .upload(nomeArquivo, file, {
-        upsert: true,
-      })
+      .upload(nomeArquivo, file, { upsert: true })
 
     if (error) {
       alert('Erro ao enviar imagem: ' + error.message)
@@ -65,6 +64,20 @@ export default function FotosObra() {
     ])
 
     setLoading(false)
+    carregar()
+  }
+
+  async function excluirFoto(foto: any) {
+    if (!confirm('Deseja excluir esta foto?')) return
+
+    // remover do storage
+    const caminho = foto.url.split('/obras/')[1]
+
+    await supabase.storage.from('obras').remove([caminho])
+
+    // remover do banco
+    await supabase.from('obra_fotos').delete().eq('id', foto.id)
+
     carregar()
   }
 
@@ -98,7 +111,20 @@ export default function FotosObra() {
         {fachada.length === 0 && <p style={empty}>Nenhuma foto ainda</p>}
 
         {fachada.map((foto) => (
-          <img key={foto.id} src={foto.url} style={imagem} />
+          <div key={foto.id} style={cardImagem}>
+            <img
+              src={foto.url}
+              style={imagem}
+              onClick={() => setFotoSelecionada(foto.url)}
+            />
+
+            <button
+              style={btnExcluir}
+              onClick={() => excluirFoto(foto)}
+            >
+              🗑
+            </button>
+          </div>
         ))}
       </div>
 
@@ -109,14 +135,34 @@ export default function FotosObra() {
         {interior.length === 0 && <p style={empty}>Nenhuma foto ainda</p>}
 
         {interior.map((foto) => (
-          <img key={foto.id} src={foto.url} style={imagem} />
+          <div key={foto.id} style={cardImagem}>
+            <img
+              src={foto.url}
+              style={imagem}
+              onClick={() => setFotoSelecionada(foto.url)}
+            />
+
+            <button
+              style={btnExcluir}
+              onClick={() => excluirFoto(foto)}
+            >
+              🗑
+            </button>
+          </div>
         ))}
       </div>
+
+      {/* MODAL */}
+      {fotoSelecionada && (
+        <div style={modal} onClick={() => setFotoSelecionada(null)}>
+          <img src={fotoSelecionada} style={imagemModal} />
+        </div>
+      )}
     </div>
   )
 }
 
-/* 🎨 ESTILO PROFISSIONAL */
+/* 🎨 ESTILO */
 
 const container = {
   padding: '20px',
@@ -173,11 +219,45 @@ const grid = {
   gap: '12px',
 }
 
+const cardImagem = {
+  position: 'relative' as const,
+}
+
 const imagem = {
   width: '100%',
   height: '180px',
   objectFit: 'cover' as const,
   borderRadius: '10px',
   cursor: 'pointer',
-  transition: '0.3s',
+}
+
+const btnExcluir = {
+  position: 'absolute' as const,
+  top: '8px',
+  right: '8px',
+  background: '#ef4444',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '6px',
+  padding: '4px 6px',
+  cursor: 'pointer',
+}
+
+const modal = {
+  position: 'fixed' as const,
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  background: 'rgba(0,0,0,0.8)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 999,
+}
+
+const imagemModal = {
+  maxWidth: '90%',
+  maxHeight: '90%',
+  borderRadius: '12px',
 }
