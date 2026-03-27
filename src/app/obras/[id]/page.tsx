@@ -88,25 +88,25 @@ export default function DetalheObra() {
   if (!obra) return <p>Carregando...</p>
 
   const entradas = financeiro.filter((f) => f.tipo === 'entrada')
-const saidas = financeiro.filter((f) => f.tipo === 'saida')
+  const saidas = financeiro.filter((f) => f.tipo === 'saida')
 
-const categoriasEntrada: any = {}
+  const categoriasEntrada: any = {}
 
-entradas.forEach((e) => {
-  if (!categoriasEntrada[e.descricao]) {
-    categoriasEntrada[e.descricao] = 0
-  }
-  categoriasEntrada[e.descricao] += Number(e.valor)
-})
+  entradas.forEach((e) => {
+    if (!categoriasEntrada[e.descricao]) {
+      categoriasEntrada[e.descricao] = 0
+    }
+    categoriasEntrada[e.descricao] += Number(e.valor)
+  })
 
-const categorias: any = {}
+  const categorias: any = {}
 
-saidas.forEach((s) => {
-  if (!categorias[s.descricao]) {
-    categorias[s.descricao] = 0
-  }
-  categorias[s.descricao] += Number(s.valor)
-})
+  saidas.forEach((s) => {
+    if (!categorias[s.descricao]) {
+      categorias[s.descricao] = 0
+    }
+    categorias[s.descricao] += Number(s.valor)
+  })
 
   const totalEntradas = entradas.reduce((acc, e) => acc + Number(e.valor), 0)
   const totalSaidas = saidas.reduce((acc, s) => acc + Number(s.valor), 0)
@@ -117,7 +117,6 @@ saidas.forEach((s) => {
   const roi = totalSaidas > 0 ? lucro / totalSaidas : 0
   const custoPorMetro = obra?.area ? totalSaidas / obra.area : 0
 
-  // 🔥 AGRUPAMENTO MENSAL (FLUXO DE CAIXA)
   const fluxoMensal: any = {}
 
   financeiro.forEach((item) => {
@@ -144,6 +143,14 @@ saidas.forEach((s) => {
       <h1 style={titulo}>{obra.nome}</h1>
       <p style={subtitulo}>{obra.cliente}</p>
 
+      {/* 🔥 NOVO BOTÃO DE FOTOS */}
+      <button
+        style={btnFotos}
+        onClick={() => router.push(`/obras/${id}/fotos`)}
+      >
+        📸 Fotos da Obra
+      </button>
+
       <div style={grid}>
         <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
         <Card titulo="Custos" valor={totalSaidas} cor="#ef4444" />
@@ -153,7 +160,6 @@ saidas.forEach((s) => {
         <Card titulo="Custo/m²" valor={custoPorMetro} cor="#f59e0b" />
       </div>
 
-      {/* 🔥 GRÁFICO */}
       <h2 style={sectionTitle}>Fluxo de Caixa Mensal</h2>
 
       <div style={box}>
@@ -296,6 +302,16 @@ function Card({ titulo, valor, cor, tipo }: any) {
       </h2>
     </div>
   )
+}
+
+const btnFotos = {
+  background: '#0ea5e9',
+  color: '#fff',
+  padding: '10px 14px',
+  border: 'none',
+  borderRadius: '8px',
+  marginTop: '10px',
+  cursor: 'pointer',
 }
 
 const form = {
