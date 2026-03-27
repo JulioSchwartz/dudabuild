@@ -22,10 +22,10 @@ export default function RootLayout({
     const empresa_id = localStorage.getItem('empresa_id')
 
     // libera login sempre
-    if (pathname === '/login') {
-      setLiberado(true)
-      return
-    }
+    if (pathname === '/login' || pathname === '/pagar') {
+  setLiberado(true)
+  return
+}
 
     if (!empresa_id) {
       router.push('/login')
