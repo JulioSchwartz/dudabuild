@@ -13,15 +13,16 @@ export default function RootLayout({
   const pathname = usePathname()
   const router = useRouter()
   const [liberado, setLiberado] = useState(false)
+  const [pendentes, setPendentes] = useState(0)
 
   useEffect(() => {
     verificarAcesso()
+    carregarPendentes()
   }, [pathname])
 
   async function verificarAcesso() {
     const empresa_id = localStorage.getItem('empresa_id')
 
-    // 🔓 páginas públicas
     if (pathname === '/login') {
       setLiberado(true)
       return
@@ -46,6 +47,19 @@ export default function RootLayout({
     setLiberado(true)
   }
 
+  async function carregarPendentes() {
+    const empresa_id = localStorage.getItem('empresa_id')
+    if (!empresa_id) return
+
+    const { data } = await supabase
+      .from('orcamentos')
+      .select('*')
+      .eq('empresa_id', empresa_id)
+      .eq('status', 'pendente')
+
+    setPendentes(data?.length || 0)
+  }
+
   function logout() {
     localStorage.removeItem('empresa_id')
     router.push('/login')
@@ -57,14 +71,19 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body style={body}>
         <div style={container}>
-          {/* SIDEBAR */}
           <aside style={sidebar}>
             <div style={logo}>DudaBuild</div>
 
             <NavItem label="Dashboard" path="/dashboard" active={pathname === '/dashboard'} />
             <NavItem label="Obras" path="/obras" active={pathname.startsWith('/obras')} />
             <NavItem label="Financeiro" path="/financeiro" active={pathname.startsWith('/financeiro')} />
-            <NavItem label="Orçamentos" path="/orcamentos" active={pathname.startsWith('/orcamentos')} />
+
+            {/* 🔥 ORÇAMENTOS COM CONTADOR */}
+            <NavItem
+              label={`Orçamentos ${pendentes > 0 ? `(${pendentes})` : ''}`}
+              path="/orcamentos"
+              active={pathname.startsWith('/orcamentos')}
+            />
 
             <div style={{ marginTop: '20px' }}>
               <button style={btnUpgrade} onClick={() => router.push('/pagar')}>
@@ -72,7 +91,6 @@ export default function RootLayout({
               </button>
             </div>
 
-            {/* LOGOUT */}
             <div style={{ marginTop: 'auto' }}>
               <button style={btnLogout} onClick={logout}>
                 🚪 Sair
@@ -80,7 +98,6 @@ export default function RootLayout({
             </div>
           </aside>
 
-          {/* CONTEÚDO */}
           <main style={content}>{children}</main>
         </div>
       </body>
@@ -88,7 +105,6 @@ export default function RootLayout({
   )
 }
 
-/* MENU */
 function NavItem({ label, path, active }: any) {
   const router = useRouter()
 
