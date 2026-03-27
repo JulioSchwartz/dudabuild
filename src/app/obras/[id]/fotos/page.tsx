@@ -20,12 +20,22 @@ export default function FotosObra() {
   async function carregar() {
     const empresa_id = localStorage.getItem('empresa_id')
 
-    const { data } = await supabase
+    if (!empresa_id) {
+      console.log('empresa_id não encontrado')
+      return
+    }
+
+    const { data, error } = await supabase
       .from('obra_fotos')
       .select('*')
       .eq('obra_id', Number(id))
-      .eq('empresa_id', empresa_id)
+      .eq('empresa_id', Number(empresa_id)) // ✅ CORRIGIDO
       .order('created_at', { ascending: false })
+
+    if (error) {
+      console.log('Erro ao carregar fotos:', error)
+      return
+    }
 
     setFotos(data || [])
   }
@@ -36,9 +46,13 @@ export default function FotosObra() {
 
     const empresa_id = localStorage.getItem('empresa_id')
 
+    if (!empresa_id) {
+      alert('Erro: empresa não identificada')
+      return
+    }
+
     setLoading(true)
 
-    // 🔥 NOME SEGURO (CORRIGE ERRO 400)
     const nomeLimpo = file.name
       .replace(/\s+/g, '-')
       .replace(/[^\w.-]/g, '')
@@ -65,7 +79,7 @@ export default function FotosObra() {
     await supabase.from('obra_fotos').insert([
       {
         obra_id: Number(id),
-        empresa_id,
+        empresa_id: Number(empresa_id), // ✅ CORRIGIDO
         url: urlData.publicUrl,
         tipo,
       },
@@ -102,7 +116,6 @@ export default function FotosObra() {
         ← Voltar
       </button>
 
-      {/* UPLOAD */}
       <div style={uploadBox}>
         <select
           value={tipo}
@@ -118,7 +131,6 @@ export default function FotosObra() {
         {loading && <p style={{ color: '#334155' }}>Enviando...</p>}
       </div>
 
-      {/* FACHADA */}
       <h2 style={sectionTitle}>🏠 Fachada</h2>
 
       <div style={grid}>
@@ -144,7 +156,6 @@ export default function FotosObra() {
         ))}
       </div>
 
-      {/* INTERIOR */}
       <h2 style={sectionTitle}>🛋️ Interior</h2>
 
       <div style={grid}>
@@ -170,7 +181,6 @@ export default function FotosObra() {
         ))}
       </div>
 
-      {/* MODAL */}
       {fotoSelecionada && (
         <div
           style={modal}
