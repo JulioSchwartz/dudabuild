@@ -47,7 +47,7 @@ export default function RootLayout({
     setLiberado(true)
   }
 
-  if (!liberado) return null
+if (!liberado) return <div>Carregando...</div>
 
   return (
     <html lang="pt-BR">
