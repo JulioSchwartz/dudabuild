@@ -38,7 +38,11 @@ export default function FotosObra() {
 
     setLoading(true)
 
-    const nomeArquivo = `${id}/${Date.now()}-${file.name}`
+    const nomeLimpo = file.name
+  .replace(/\s+/g, '-')
+  .replace(/[^\w.-]/g, '')
+
+const nomeArquivo = `${id}/${Date.now()}-${nomeLimpo}`
 
     const { error } = await supabase.storage
       .from('obras')
@@ -261,3 +265,10 @@ const imagemModal = {
   maxHeight: '90%',
   borderRadius: '12px',
 }
+
+const { error } = await supabase.storage
+  .from('obras')
+  .upload(nomeArquivo, file, {
+    upsert: true,
+    contentType: file.type,
+  })
