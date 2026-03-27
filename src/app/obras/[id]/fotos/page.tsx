@@ -37,21 +37,23 @@ export default function FotosObra() {
 
     setLoading(true)
 
-    const nomeArquivo = `${Date.now()}-${file.name}`
+    const nomeArquivo = `${id}/${Date.now()}-${file.name}`
 
-    const { data: uploadData, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('obras')
-      .upload(nomeArquivo, file)
+      .upload(nomeArquivo, file, {
+        upsert: true,
+      })
 
     if (error) {
-      alert('Erro ao enviar imagem')
+      alert('Erro ao enviar imagem: ' + error.message)
       setLoading(false)
       return
     }
 
     const { data: urlData } = supabase.storage
       .from('obras')
-      .getPublicUrl(uploadData.path)
+      .getPublicUrl(nomeArquivo)
 
     await supabase.from('obra_fotos').insert([
       {
@@ -70,8 +72,8 @@ export default function FotosObra() {
   const interior = fotos.filter((f) => f.tipo === 'interior')
 
   return (
-    <div>
-      <h1 style={titulo}>Fotos da Obra</h1>
+    <div style={container}>
+      <h1 style={titulo}>📸 Fotos da Obra</h1>
 
       <button onClick={() => router.back()} style={btnVoltar}>
         ← Voltar
@@ -86,22 +88,26 @@ export default function FotosObra() {
 
         <input type="file" onChange={uploadImagem} />
 
-        {loading && <p>Enviando...</p>}
+        {loading && <p style={{ color: '#334155' }}>Enviando...</p>}
       </div>
 
       {/* FACHADA */}
-      <h2 style={sectionTitle}>Fachada</h2>
+      <h2 style={sectionTitle}>🏠 Fachada</h2>
 
       <div style={grid}>
+        {fachada.length === 0 && <p style={empty}>Nenhuma foto ainda</p>}
+
         {fachada.map((foto) => (
           <img key={foto.id} src={foto.url} style={imagem} />
         ))}
       </div>
 
       {/* INTERIOR */}
-      <h2 style={sectionTitle}>Interior</h2>
+      <h2 style={sectionTitle}>🛋️ Interior</h2>
 
       <div style={grid}>
+        {interior.length === 0 && <p style={empty}>Nenhuma foto ainda</p>}
+
         {interior.map((foto) => (
           <img key={foto.id} src={foto.url} style={imagem} />
         ))}
@@ -110,12 +116,19 @@ export default function FotosObra() {
   )
 }
 
-/* 🎨 ESTILO */
+/* 🎨 ESTILO PROFISSIONAL */
+
+const container = {
+  padding: '20px',
+  background: '#f1f5f9',
+  minHeight: '100vh',
+}
 
 const titulo = {
   fontSize: '26px',
   marginBottom: '10px',
   color: '#0f172a',
+  fontWeight: '600',
 }
 
 const btnVoltar = {
@@ -123,7 +136,7 @@ const btnVoltar = {
   padding: '8px 12px',
   borderRadius: '6px',
   border: 'none',
-  background: '#e2e8f0',
+  background: '#cbd5e1',
   cursor: 'pointer',
 }
 
@@ -131,26 +144,33 @@ const uploadBox = {
   display: 'flex',
   gap: '10px',
   marginBottom: '20px',
-  background: '#fff',
+  background: '#ffffff',
   padding: '15px',
-  borderRadius: '10px',
+  borderRadius: '12px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
 }
 
 const input = {
   padding: '8px',
   borderRadius: '6px',
-  border: '1px solid #cbd5e1',
+  border: '1px solid #94a3b8',
 }
 
 const sectionTitle = {
   marginTop: '20px',
   marginBottom: '10px',
+  color: '#0f172a',
+  fontWeight: '600',
+}
+
+const empty = {
+  color: '#475569',
 }
 
 const grid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-  gap: '10px',
+  gap: '12px',
 }
 
 const imagem = {
@@ -158,4 +178,6 @@ const imagem = {
   height: '180px',
   objectFit: 'cover' as const,
   borderRadius: '10px',
+  cursor: 'pointer',
+  transition: '0.3s',
 }
