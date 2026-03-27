@@ -34,98 +34,111 @@ export default function Orcamentos() {
     <div>
       <h1 style={titulo}>Orçamentos</h1>
 
-      <button
-        style={btnNovo}
-        onClick={() => router.push('/orcamentos/novo')}
-      >
+      <button style={btnNovo} onClick={() => router.push('/orcamentos/novo')}>
         + Novo Orçamento
       </button>
 
-      <div style={box}>
-        {orcamentos.map((orc) => (
-          <div key={orc.id} style={linha}>
-            <div>
-              <strong>{orc.cliente_nome}</strong><br />
-              <span style={sub}>{orc.descricao}</span>
-            </div>
-
-            <div>
-              <span style={{
-                ...status,
-                background: corStatus(orc.status)
-              }}>
-                {orc.status}
-              </span>
-            </div>
-
-            <div>
-              <strong>
-                {Number(orc.valor_total).toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                })}
-              </strong>
-            </div>
-
-            <div>
-              <button
-                style={btnLink}
-                onClick={() => {
-                  const link = `${window.location.origin}/cliente/orcamento/${orc.token}`
-                  navigator.clipboard.writeText(link)
-                  alert('Link copiado!')
-                }}
-              >
-                🔗 Link
-              </button>
-            </div>
+      {orcamentos.map((orc) => (
+        <div key={orc.id} style={card}>
+          <div>
+            <strong>{orc.cliente_nome}</strong>
+            <p style={sub}>{orc.descricao}</p>
           </div>
-        ))}
-      </div>
+
+          <div style={statusBox}>
+            <span style={{ ...badge, background: corStatus(orc.status) }}>
+              {orc.status}
+            </span>
+            <strong style={valor}>
+              {Number(orc.valor_total).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </strong>
+          </div>
+
+          <div style={acoes}>
+            <button
+              style={btnEditar}
+              onClick={() => router.push(`/orcamentos/editar/${orc.id}`)}
+            >
+              ✏️ Editar
+            </button>
+
+            <button
+              style={btnLink}
+              onClick={() => {
+                const link = `${window.location.origin}/cliente/orcamento/${orc.token}`
+                navigator.clipboard.writeText(link)
+                alert('Link copiado!')
+              }}
+            >
+              🔗 Link
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
 
 /* ESTILO */
 
-const titulo = { fontSize: '26px', marginBottom: '20px' }
+const titulo = { fontSize: 28, marginBottom: 20 }
 
 const btnNovo = {
   background: '#2563eb',
   color: '#fff',
-  padding: '10px 14px',
-  border: 'none',
-  borderRadius: '8px',
-  marginBottom: '20px',
+  padding: '12px 16px',
+  borderRadius: 10,
+  marginBottom: 20
 }
 
-const box = {
+const card = {
   background: '#fff',
-  padding: '20px',
-  borderRadius: '12px',
+  padding: 20,
+  borderRadius: 16,
+  marginBottom: 15,
+  boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
 }
 
-const linha = {
-  display: 'grid',
-  gridTemplateColumns: '2fr 1fr 1fr 1fr',
+const sub = { color: '#64748b' }
+
+const statusBox = {
+  display: 'flex',
+  justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '10px 0',
-  borderBottom: '1px solid #e2e8f0',
+  marginTop: 10
 }
 
-const sub = { color: '#64748b', fontSize: '12px' }
-
-const status = {
+const badge = {
   color: '#fff',
-  padding: '6px 10px',
-  borderRadius: '6px',
-  fontSize: '12px'
+  padding: '6px 12px',
+  borderRadius: 999
+}
+
+const valor = {
+  fontSize: 20,
+  fontWeight: 'bold',
+  color: '#16a34a'
+}
+
+const acoes = {
+  display: 'flex',
+  gap: 10,
+  marginTop: 15
+}
+
+const btnEditar = {
+  background: '#f59e0b',
+  color: '#fff',
+  padding: '8px 12px',
+  borderRadius: 8
 }
 
 const btnLink = {
   background: '#0ea5e9',
   color: '#fff',
-  border: 'none',
-  padding: '6px 10px',
-  borderRadius: '6px',
+  padding: '8px 12px',
+  borderRadius: 8
 }
