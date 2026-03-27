@@ -5,157 +5,87 @@ import { supabase } from '@/lib/supabase'
 
 export default function Financeiro() {
   const [obras, setObras] = useState<any[]>([])
-  const [obraId, setObraId] = useState('')
   const [financeiro, setFinanceiro] = useState<any[]>([])
-
-  const [area, setArea] = useState(0)
-  const [prazoPlanejado, setPrazoPlanejado] = useState(0)
-  const [prazoReal, setPrazoReal] = useState(0)
-  const [progressoPlanejado, setProgressoPlanejado] = useState(0)
-  const [progressoReal, setProgressoReal] = useState(0)
-  const [acidentes, setAcidentes] = useState(0)
-
-  const [configId, setConfigId] = useState<string | null>(null)
+  const [obraFiltro, setObraFiltro] = useState('')
 
   useEffect(() => {
-    carregarObras()
+    carregar()
   }, [])
 
-  useEffect(() => {
-    if (obraId) {
-      carregarFinanceiro()
-      carregarConfig()
-    }
-  }, [obraId])
-
-  async function carregarObras() {
+  async function carregar() {
     const empresa_id = localStorage.getItem('empresa_id')
 
-    const { data } = await supabase
+    const { data: obrasData } = await supabase
       .from('obras')
       .select('*')
       .eq('empresa_id', empresa_id)
 
-    setObras(data || [])
-  }
-
-  async function carregarFinanceiro() {
-    const empresa_id = localStorage.getItem('empresa_id')
-
-    const { data } = await supabase
+    const { data: financeiroData } = await supabase
       .from('financeiro')
       .select('*')
       .eq('empresa_id', empresa_id)
-      .eq('obra_id', obraId)
 
-    setFinanceiro(data || [])
-  }
-
-  async function carregarConfig() {
-    const empresa_id = localStorage.getItem('empresa_id')
-
-    const { data } = await supabase
-      .from('financeiro_config')
-      .select('*')
-      .eq('empresa_id', empresa_id)
-      .eq('obra_id', obraId)
-      .single()
-
-    if (data) {
-      setConfigId(data.id)
-      setArea(data.area || 0)
-      setPrazoPlanejado(data.prazo_planejado || 0)
-      setPrazoReal(data.prazo_real || 0)
-      setProgressoPlanejado(data.progresso_planejado || 0)
-      setProgressoReal(data.progresso_real || 0)
-      setAcidentes(data.acidentes || 0)
-    } else {
-      // limpa se trocar de obra
-      setConfigId(null)
-      setArea(0)
-      setPrazoPlanejado(0)
-      setPrazoReal(0)
-      setProgressoPlanejado(0)
-      setProgressoReal(0)
-      setAcidentes(0)
-    }
-  }
-
-  async function salvar() {
-    const empresa_id = localStorage.getItem('empresa_id')
-
-    const payload = {
-      empresa_id,
-      obra_id: obraId,
-      area,
-      prazo_planejado: prazoPlanejado,
-      prazo_real: prazoReal,
-      progresso_planejado: progressoPlanejado,
-      progresso_real: progressoReal,
-      acidentes,
-    }
-
-    if (configId) {
-      await supabase
-        .from('financeiro_config')
-        .update(payload)
-        .eq('id', configId)
-    } else {
-      const { data } = await supabase
-        .from('financeiro_config')
-        .insert([payload])
-        .select()
-
-      if (data) setConfigId(data[0].id)
-    }
-
-    alert('Dados salvos com sucesso!')
+    setObras(obrasData || [])
+    setFinanceiro(financeiroData || [])
   }
 
   // =========================
-  // 💰 BASE
+  // 🔍 FILTRO
   // =========================
 
-  const receita = financeiro
-    .filter(f => f.tipo === 'entrada')
+  const dadosFiltrados = obraFiltro
+    ? financeiro.filter((f) => String(f.obra_id) === obraFiltro)
+    : financeiro
+
+  // =========================
+  // 📊 BASE
+  // =========================
+
+  const receita = dadosFiltrados
+    .filter((f) => f.tipo === 'entrada')
     .reduce((acc, f) => acc + Number(f.valor), 0)
 
-  const custo = financeiro
-    .filter(f => f.tipo === 'saida')
+  const custo = dadosFiltrados
+    .filter((f) => f.tipo === 'saida')
     .reduce((acc, f) => acc + Number(f.valor), 0)
 
   const lucro = receita - custo
-
-  // =========================
-  // 📊 KPIs
-  // =========================
-
   const margem = receita > 0 ? (lucro / receita) * 100 : 0
-  const cpi = custo > 0 ? receita / custo : 0
-  const spi = progressoPlanejado > 0 ? progressoReal / progressoPlanejado : 0
-  const custoM2 = area > 0 ? custo / area : 0
 
-  function formatar(v: number) {
-    return v.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    })
-  }
+  // =========================
+  // 🏗️ POR OBRA
+  // =========================
 
-  function formatarPercent(v: number) {
-    return `${v.toFixed(2)}%`
-  }
+  const lucroPorObra = obras.map((obra) => {
+    const entradas = financeiro
+      .filter((f) => f.obra_id === obra.id && f.tipo === 'entrada')
+      .reduce((acc, f) => acc + Number(f.valor), 0)
+
+    const saidas = financeiro
+      .filter((f) => f.obra_id === obra.id && f.tipo === 'saida')
+      .reduce((acc, f) => acc + Number(f.valor), 0)
+
+    return {
+      nome: obra.nome,
+      lucro: entradas - saidas,
+    }
+  })
+
+  const ranking = [...lucroPorObra].sort((a, b) => b.lucro - a.lucro)
+  const prejuizo = ranking.filter((o) => o.lucro < 0)
 
   return (
     <div>
-      <h1 style={titulo}>Financeiro por Obra</h1>
+      <h1 style={titulo}>Financeiro Geral</h1>
+      <p style={subtitulo}>Visão consolidada da empresa</p>
 
+      {/* FILTRO */}
       <select
-        value={obraId}
-        onChange={(e) => setObraId(e.target.value)}
+        value={obraFiltro}
+        onChange={(e) => setObraFiltro(e.target.value)}
         style={select}
       >
-        <option value="">Selecione uma obra</option>
+        <option value="">Todas as obras</option>
         {obras.map((o) => (
           <option key={o.id} value={o.id}>
             {o.nome}
@@ -163,124 +93,143 @@ export default function Financeiro() {
         ))}
       </select>
 
-      {obraId && (
-        <>
-          <div style={grid}>
-            <Card titulo="Receita" valor={formatar(receita)} cor="#22c55e" />
-            <Card titulo="Custos" valor={formatar(custo)} cor="#ef4444" />
-            <Card titulo="Lucro" valor={formatar(lucro)} cor="#3b82f6" />
-            <Card titulo="Margem" valor={formatarPercent(margem)} cor="#a855f7" />
-          </div>
+      {/* CARDS */}
+      <div style={grid}>
+        <Card titulo="Receita" valor={receita} cor="#22c55e" />
+        <Card titulo="Custos" valor={custo} cor="#ef4444" />
+        <Card titulo="Lucro" valor={lucro} cor="#3b82f6" destaque />
+        <Card titulo="Margem" valor={margem} cor="#a855f7" tipo="percent" />
+      </div>
 
-          <h2 style={subtitulo}>Indicadores</h2>
-
-          <div style={grid}>
-            <Card titulo="CPI" valor={cpi.toFixed(2)} cor="#0ea5e9" />
-            <Card titulo="SPI" valor={spi.toFixed(2)} cor="#f59e0b" />
-            <Card titulo="Custo/m²" valor={formatar(custoM2)} cor="#14b8a6" />
-            <Card titulo="Acidentes" valor={acidentes} cor="#ef4444" />
-          </div>
-
-          <h2 style={subtitulo}>Dados da Obra</h2>
-
-          <div style={form}>
-            <Input label="Área (m²)" value={area} setValue={setArea} />
-            <Input label="Prazo Planejado" value={prazoPlanejado} setValue={setPrazoPlanejado} />
-            <Input label="Prazo Real" value={prazoReal} setValue={setPrazoReal} />
-            <Input label="% Planejado" value={progressoPlanejado} setValue={setProgressoPlanejado} />
-            <Input label="% Real" value={progressoReal} setValue={setProgressoReal} />
-            <Input label="Acidentes" value={acidentes} setValue={setAcidentes} />
-          </div>
-
-          <button style={botaoSalvar} onClick={salvar}>
-            Salvar Dados da Obra
-          </button>
-        </>
+      {/* ALERTA */}
+      {prejuizo.length > 0 && (
+        <div style={alerta}>
+          ⚠️ {prejuizo.length} obra(s) estão no prejuízo
+        </div>
       )}
+
+      {/* RANKING */}
+      <h2 style={sectionTitle}>Ranking Financeiro</h2>
+
+      <div style={box}>
+        {ranking.map((obra, index) => (
+          <div key={index} style={linha}>
+            <span>
+              {index + 1}º - {obra.nome}
+            </span>
+
+            <strong
+              style={{
+                color: obra.lucro < 0 ? '#ef4444' : '#22c55e',
+              }}
+            >
+              {Number(obra.lucro).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </strong>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
-// COMPONENTES
+/* COMPONENTE CARD */
 
-function Card({ titulo, valor, cor }: any) {
+function Card({ titulo, valor, cor, destaque, tipo }: any) {
   return (
-    <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
-      <p style={label}>{titulo}</p>
-      <h2 style={valorStyle}>{valor}</h2>
-    </div>
-  )
-}
+    <div
+      style={{
+        ...card,
+        borderLeft: `6px solid ${cor}`,
+        transform: destaque ? 'scale(1.05)' : 'scale(1)',
+      }}
+    >
+      <p style={cardTitulo}>{titulo}</p>
 
-function Input({ label, value, setValue }: any) {
-  return (
-    <div style={inputBox}>
-      <label style={labelStyle}>{label}</label>
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => setValue(Number(e.target.value))}
-        style={input}
-      />
+      <h2 style={cardValor}>
+        {tipo === 'percent'
+          ? `${valor.toFixed(2)}%`
+          : Number(valor).toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+            })}
+      </h2>
     </div>
   )
 }
 
 /* 🎨 ESTILO */
 
-const titulo = { color: '#0f172a' }
+const titulo = {
+  color: '#0f172a',
+  fontSize: '28px',
+  marginBottom: '5px',
+}
 
 const subtitulo = {
-  marginTop: '30px',
-  color: '#0f172a',
+  color: '#64748b',
+  marginBottom: '20px',
 }
 
 const select = {
   padding: '10px',
   borderRadius: '8px',
   border: '1px solid #e2e8f0',
-  marginTop: '10px',
+  marginBottom: '20px',
 }
 
 const grid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
   gap: '20px',
-  marginTop: '20px',
 }
 
 const card = {
-  background: '#fff',
+  background: '#ffffff',
   padding: '20px',
-  borderRadius: '12px',
-  boxShadow: '0 6px 20px rgba(0,0,0,0.05)',
+  borderRadius: '14px',
+  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
 }
 
-const label = { color: '#64748b' }
-const valorStyle = { color: '#0f172a' }
+const cardTitulo = {
+  color: '#64748b',
+  fontSize: '14px',
+}
 
-const form = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-  gap: '15px',
+const cardValor = {
+  color: '#0f172a',
+  fontSize: '22px',
+  fontWeight: 'bold',
+}
+
+const alerta = {
   marginTop: '20px',
+  padding: '15px',
+  background: '#fee2e2',
+  color: '#991b1b',
+  borderRadius: '10px',
+  fontWeight: 'bold',
 }
 
-const inputBox = { display: 'flex', flexDirection: 'column' }
-const labelStyle = { fontSize: '12px', color: '#64748b' }
-
-const input = {
-  padding: '10px',
-  borderRadius: '8px',
-  border: '1px solid #e2e8f0',
+const sectionTitle = {
+  marginTop: '30px',
+  marginBottom: '10px',
+  color: '#0f172a',
 }
 
-const botaoSalvar = {
-  marginTop: '20px',
-  background: '#2563eb',
-  color: '#fff',
-  padding: '10px',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
+const box = {
+  background: '#ffffff',
+  padding: '20px',
+  borderRadius: '14px',
+  boxShadow: '0 6px 18px rgba(0,0,0,0.05)',
+}
+
+const linha = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  marginBottom: '12px',
+  paddingBottom: '8px',
+  borderBottom: '1px solid #e2e8f0',
 }
