@@ -64,6 +64,7 @@ export default function RootLayout({
             <NavItem label="Dashboard" path="/dashboard" active={pathname === '/dashboard'} />
             <NavItem label="Obras" path="/obras" active={pathname.startsWith('/obras')} />
             <NavItem label="Financeiro" path="/financeiro" active={pathname.startsWith('/financeiro')} />
+            <NavItem label="Orçamentos" path="/orcamentos" active={pathname.startsWith('/orcamentos')} />
 
             <div style={{ marginTop: '20px' }}>
               <button style={btnUpgrade} onClick={() => router.push('/pagar')}>

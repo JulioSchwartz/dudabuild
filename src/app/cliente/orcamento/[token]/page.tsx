@@ -32,13 +32,47 @@ export default function OrcamentoCliente() {
     setItens(itensData || [])
   }
 
-  async function atualizarStatus(status: string) {
+  async function aprovar() {
+    // 🔥 1. Atualiza status
     await supabase
       .from('orcamentos')
-      .update({ status })
+      .update({ status: 'aprovado' })
       .eq('id', orcamento.id)
 
-    alert('Resposta enviada!')
+    // 🔥 2. Cria OBRA automaticamente
+    const { data: obra } = await supabase
+      .from('obras')
+      .insert([{
+        empresa_id: orcamento.empresa_id,
+        nome: `Obra - ${orcamento.cliente_nome}`,
+        cliente: orcamento.cliente_nome,
+        status: 'em andamento',
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+
+    // 🔥 3. Cria entrada no financeiro
+    await supabase.from('financeiro').insert([{
+      obra_id: obra.id,
+      empresa_id: orcamento.empresa_id,
+      tipo: 'entrada',
+      descricao: 'Orçamento aprovado',
+      valor: orcamento.valor_total,
+      created_at: new Date().toISOString()
+    }])
+
+    alert('Orçamento aprovado e obra criada!')
+    carregar()
+  }
+
+  async function recusar() {
+    await supabase
+      .from('orcamentos')
+      .update({ status: 'recusado' })
+      .eq('id', orcamento.id)
+
+    alert('Orçamento recusado')
     carregar()
   }
 
@@ -76,20 +110,26 @@ export default function OrcamentoCliente() {
 
       {orcamento.status === 'pendente' && (
         <div style={acoes}>
-          <button
-            style={btnAprovar}
-            onClick={() => atualizarStatus('aprovado')}
-          >
+          <button style={btnAprovar} onClick={aprovar}>
             ✅ Aprovar
           </button>
 
-          <button
-            style={btnRecusar}
-            onClick={() => atualizarStatus('recusado')}
-          >
+          <button style={btnRecusar} onClick={recusar}>
             ❌ Recusar
           </button>
         </div>
+      )}
+
+      {orcamento.status === 'aprovado' && (
+        <p style={{ color: '#16a34a', marginTop: '20px' }}>
+          ✔ Orçamento aprovado
+        </p>
+      )}
+
+      {orcamento.status === 'recusado' && (
+        <p style={{ color: '#ef4444', marginTop: '20px' }}>
+          ❌ Orçamento recusado
+        </p>
       )}
     </div>
   )
