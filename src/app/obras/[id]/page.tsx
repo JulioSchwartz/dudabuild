@@ -56,6 +56,26 @@ export default function DetalheObra() {
     setFinanceiro(financeiroData || [])
   }
 
+  // 🔥 NOVAS FUNÇÕES
+
+  function copiarLink() {
+    if (!obra?.token) return alert('Token não encontrado')
+
+    const link = `${window.location.origin}/cliente/obra/${obra.token}`
+    navigator.clipboard.writeText(link)
+    alert('Link copiado!')
+  }
+
+  function enviarWhatsApp() {
+    if (!obra?.token) return alert('Token não encontrado')
+
+    const link = `${window.location.origin}/cliente/obra/${obra.token}`
+
+    window.open(
+      `https://wa.me/?text=Acompanhe sua obra aqui: ${link}`
+    )
+  }
+
   async function adicionar(e: any) {
     e.preventDefault()
 
@@ -143,7 +163,18 @@ export default function DetalheObra() {
       <h1 style={titulo}>{obra.nome}</h1>
       <p style={subtitulo}>{obra.cliente}</p>
 
-      {/* 🔥 NOVO BOTÃO DE FOTOS */}
+      {/* 🔥 BOTÕES NOVOS */}
+      <div style={boxAcoes}>
+        <button onClick={copiarLink} style={btnCopiar}>
+          🔗 Copiar link do cliente
+        </button>
+
+        <button onClick={enviarWhatsApp} style={btnWhats}>
+          📤 Enviar no WhatsApp
+        </button>
+      </div>
+
+      {/* BOTÃO DE FOTOS */}
       <button
         style={btnFotos}
         onClick={() => router.push(`/obras/${id}/fotos`)}
@@ -288,6 +319,8 @@ export default function DetalheObra() {
   )
 }
 
+/* COMPONENTE CARD */
+
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
     <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
@@ -303,6 +336,34 @@ function Card({ titulo, valor, cor, tipo }: any) {
     </div>
   )
 }
+
+/* ESTILOS NOVOS */
+
+const boxAcoes = {
+  display: 'flex',
+  gap: '10px',
+  marginTop: '10px',
+}
+
+const btnCopiar = {
+  background: '#0ea5e9',
+  color: '#fff',
+  padding: '10px 14px',
+  border: 'none',
+  borderRadius: '8px',
+  cursor: 'pointer',
+}
+
+const btnWhats = {
+  background: '#22c55e',
+  color: '#fff',
+  padding: '10px 14px',
+  border: 'none',
+  borderRadius: '8px',
+  cursor: 'pointer',
+}
+
+/* RESTO ORIGINAL */
 
 const btnFotos = {
   background: '#0ea5e9',
