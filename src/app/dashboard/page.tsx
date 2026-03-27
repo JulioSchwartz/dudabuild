@@ -86,29 +86,35 @@ function DashboardInterno() {
     return {
       nome: obra.nome,
       lucro,
-      status: lucro < 0 ? 'prejuizo' : 'lucro',
     }
   })
 
   const ranking = [...resumoObras].sort((a, b) => b.lucro - a.lucro)
-
   const prejuizos = ranking.filter(o => o.lucro < 0)
+  const maxLucro = Math.max(...ranking.map(r => r.lucro), 1)
+
+  function medalha(index: number) {
+    if (index === 0) return '🥇'
+    if (index === 1) return '🥈'
+    if (index === 2) return '🥉'
+    return `${index + 1}º`
+  }
 
   return (
     <div>
       <h1 style={titulo}>Dashboard Executivo</h1>
       <p style={subtitulo}>Controle inteligente da sua empresa</p>
 
-      {/* KPIs PRINCIPAIS */}
+      {/* KPIs */}
       <div style={grid}>
         <Card titulo="Obras Ativas" valor={obras.length} cor="#3b82f6" />
-        <Card titulo="Receita Total" valor={totalEntradas} cor="#22c55e" />
-        <Card titulo="Custos Totais" valor={totalSaidas} cor="#ef4444" />
+        <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
+        <Card titulo="Custos" valor={totalSaidas} cor="#ef4444" />
         <Card titulo="Lucro" valor={lucro} cor="#a855f7" destaque />
         <Card titulo="Margem" valor={margem} cor="#0ea5e9" tipo="percent" />
       </div>
 
-      {/* MÉTRICAS AVANÇADAS */}
+      {/* Indicadores */}
       <h2 style={sectionTitle}>Indicadores Estratégicos</h2>
 
       <div style={grid}>
@@ -116,10 +122,10 @@ function DashboardInterno() {
         <Card titulo="Custo Médio" valor={custoMedio} cor="#f59e0b" />
       </div>
 
-      {/* ALERTAS */}
+      {/* ALERTA */}
       {prejuizos.length > 0 && (
         <div style={alerta}>
-          ⚠️ Atenção: {prejuizos.length} obra(s) estão com prejuízo!
+          ⚠️ {prejuizos.length} obra(s) com prejuízo
         </div>
       )}
 
@@ -127,28 +133,42 @@ function DashboardInterno() {
       <h2 style={sectionTitle}>Ranking de Obras</h2>
 
       <div style={box}>
-        {ranking.map((obra, index) => (
-          <div key={index} style={linha}>
-            <span>
-              {index + 1}º - {obra.nome}
-            </span>
+        {ranking.map((obra, index) => {
+          const percentual = (obra.lucro / maxLucro) * 100
 
-            <strong style={{
-              color: obra.lucro < 0 ? '#ef4444' : '#22c55e'
-            }}>
-              {Number(obra.lucro).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </strong>
-          </div>
-        ))}
+          return (
+            <div
+              key={index}
+              style={{
+                ...linha,
+                background: index === 0 ? '#f0fdf4' : '#fff',
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <span style={nomeObra}>
+                  {medalha(index)} {obra.nome}
+                </span>
+
+                <div style={barraBg}>
+                  <div style={{ ...barra, width: `${percentual}%` }} />
+                </div>
+              </div>
+
+              <strong style={{
+                color: obra.lucro < 0 ? '#ef4444' : '#16a34a',
+              }}>
+                {Number(obra.lucro).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </strong>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
-
-/* COMPONENTES */
 
 function Card({ titulo, valor, cor, destaque, tipo }: any) {
   return (
@@ -158,7 +178,6 @@ function Card({ titulo, valor, cor, destaque, tipo }: any) {
       transform: destaque ? 'scale(1.05)' : 'scale(1)'
     }}>
       <p style={cardTitulo}>{titulo}</p>
-
       <h2 style={cardValor}>
         {tipo === 'percent'
           ? `${valor.toFixed(2)}%`
@@ -175,15 +194,8 @@ function Card({ titulo, valor, cor, destaque, tipo }: any) {
 
 /* ESTILO */
 
-const titulo = {
-  fontSize: '28px',
-  color: '#0f172a'
-}
-
-const subtitulo = {
-  color: '#64748b',
-  marginBottom: '20px'
-}
+const titulo = { fontSize: '28px', color: '#0f172a' }
+const subtitulo = { color: '#64748b', marginBottom: '20px' }
 
 const grid = {
   display: 'grid',
@@ -199,15 +211,8 @@ const card = {
   boxShadow: '0 10px 30px rgba(0,0,0,0.08)'
 }
 
-const cardTitulo = {
-  color: '#64748b'
-}
-
-const cardValor = {
-  fontSize: '22px',
-  fontWeight: 'bold',
-  color: '#0f172a'
-}
+const cardTitulo = { color: '#64748b' }
+const cardValor = { fontSize: '22px', fontWeight: 'bold', color: '#0f172a' }
 
 const alerta = {
   marginTop: '20px',
@@ -228,11 +233,30 @@ const box = {
   background: '#fff',
   padding: '20px',
   borderRadius: '14px',
-  marginTop: '10px'
 }
 
 const linha = {
   display: 'flex',
   justifyContent: 'space-between',
-  marginBottom: '10px'
+  alignItems: 'center',
+  padding: '12px 0',
+  borderBottom: '1px solid #e2e8f0',
+}
+
+const nomeObra = {
+  color: '#0f172a',
+  fontWeight: '500',
+}
+
+const barraBg = {
+  height: '6px',
+  background: '#e2e8f0',
+  borderRadius: '6px',
+  marginTop: '6px',
+}
+
+const barra = {
+  height: '6px',
+  background: '#22c55e',
+  borderRadius: '6px',
 }

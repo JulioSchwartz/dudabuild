@@ -53,7 +53,7 @@ export default function Financeiro() {
   const margem = receita > 0 ? (lucro / receita) * 100 : 0
 
   // =========================
-  // 🏗️ POR OBRA
+  // 🏗️ POR OBRA (GLOBAL)
   // =========================
 
   const lucroPorObra = obras.map((obra) => {
@@ -73,6 +73,14 @@ export default function Financeiro() {
 
   const ranking = [...lucroPorObra].sort((a, b) => b.lucro - a.lucro)
   const prejuizo = ranking.filter((o) => o.lucro < 0)
+  const maxLucro = Math.max(...ranking.map(r => r.lucro), 1)
+
+  function medalha(index: number) {
+    if (index === 0) return '🥇'
+    if (index === 1) return '🥈'
+    if (index === 2) return '🥉'
+    return `${index + 1}º`
+  }
 
   return (
     <div>
@@ -112,24 +120,38 @@ export default function Financeiro() {
       <h2 style={sectionTitle}>Ranking Financeiro</h2>
 
       <div style={box}>
-        {ranking.map((obra, index) => (
-          <div key={index} style={linha}>
-            <span>
-              {index + 1}º - {obra.nome}
-            </span>
+        {ranking.map((obra, index) => {
+          const percentual = (obra.lucro / maxLucro) * 100
 
-            <strong
+          return (
+            <div
+              key={index}
               style={{
-                color: obra.lucro < 0 ? '#ef4444' : '#22c55e',
+                ...linha,
+                background: index === 0 ? '#f0fdf4' : '#fff',
               }}
             >
-              {Number(obra.lucro).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </strong>
-          </div>
-        ))}
+              <div style={{ flex: 1 }}>
+                <span style={nomeObra}>
+                  {medalha(index)} {obra.nome}
+                </span>
+
+                <div style={barraBg}>
+                  <div style={{ ...barra, width: `${percentual}%` }} />
+                </div>
+              </div>
+
+              <strong style={{
+                color: obra.lucro < 0 ? '#ef4444' : '#16a34a',
+              }}>
+                {Number(obra.lucro).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </strong>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -229,7 +251,25 @@ const box = {
 const linha = {
   display: 'flex',
   justifyContent: 'space-between',
-  marginBottom: '12px',
-  paddingBottom: '8px',
+  alignItems: 'center',
+  padding: '12px 0',
   borderBottom: '1px solid #e2e8f0',
+}
+
+const nomeObra = {
+  color: '#0f172a',
+  fontWeight: '500',
+}
+
+const barraBg = {
+  height: '6px',
+  background: '#e2e8f0',
+  borderRadius: '6px',
+  marginTop: '6px',
+}
+
+const barra = {
+  height: '6px',
+  background: '#22c55e',
+  borderRadius: '6px',
 }
