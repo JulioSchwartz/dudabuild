@@ -38,15 +38,19 @@ export default function FotosObra() {
 
     setLoading(true)
 
+    // 🔥 NOME SEGURO (CORRIGE ERRO 400)
     const nomeLimpo = file.name
-  .replace(/\s+/g, '-')
-  .replace(/[^\w.-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/[^\w.-]/g, '')
 
-const nomeArquivo = `${id}/${Date.now()}-${nomeLimpo}`
+    const nomeArquivo = `${id}/${Date.now()}-${nomeLimpo}`
 
     const { error } = await supabase.storage
       .from('obras')
-      .upload(nomeArquivo, file, { upsert: true })
+      .upload(nomeArquivo, file, {
+        upsert: true,
+        contentType: file.type,
+      })
 
     if (error) {
       alert('Erro ao enviar imagem: ' + error.message)
@@ -74,15 +78,17 @@ const nomeArquivo = `${id}/${Date.now()}-${nomeLimpo}`
   async function excluirFoto(foto: any) {
     if (!confirm('Deseja excluir esta foto?')) return
 
-    // remover do storage
-    const caminho = foto.url.split('/obras/')[1]
+    try {
+      const caminho = foto.url.split('/obras/')[1]
 
-    await supabase.storage.from('obras').remove([caminho])
+      await supabase.storage.from('obras').remove([caminho])
 
-    // remover do banco
-    await supabase.from('obra_fotos').delete().eq('id', foto.id)
+      await supabase.from('obra_fotos').delete().eq('id', foto.id)
 
-    carregar()
+      carregar()
+    } catch (err) {
+      alert('Erro ao excluir')
+    }
   }
 
   const fachada = fotos.filter((f) => f.tipo === 'fachada')
@@ -98,7 +104,11 @@ const nomeArquivo = `${id}/${Date.now()}-${nomeLimpo}`
 
       {/* UPLOAD */}
       <div style={uploadBox}>
-        <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={input}>
+        <select
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value)}
+          style={input}
+        >
           <option value="fachada">Fachada</option>
           <option value="interior">Interior</option>
         </select>
@@ -112,7 +122,9 @@ const nomeArquivo = `${id}/${Date.now()}-${nomeLimpo}`
       <h2 style={sectionTitle}>🏠 Fachada</h2>
 
       <div style={grid}>
-        {fachada.length === 0 && <p style={empty}>Nenhuma foto ainda</p>}
+        {fachada.length === 0 && (
+          <p style={empty}>Nenhuma foto ainda</p>
+        )}
 
         {fachada.map((foto) => (
           <div key={foto.id} style={cardImagem}>
@@ -136,7 +148,9 @@ const nomeArquivo = `${id}/${Date.now()}-${nomeLimpo}`
       <h2 style={sectionTitle}>🛋️ Interior</h2>
 
       <div style={grid}>
-        {interior.length === 0 && <p style={empty}>Nenhuma foto ainda</p>}
+        {interior.length === 0 && (
+          <p style={empty}>Nenhuma foto ainda</p>
+        )}
 
         {interior.map((foto) => (
           <div key={foto.id} style={cardImagem}>
@@ -158,7 +172,10 @@ const nomeArquivo = `${id}/${Date.now()}-${nomeLimpo}`
 
       {/* MODAL */}
       {fotoSelecionada && (
-        <div style={modal} onClick={() => setFotoSelecionada(null)}>
+        <div
+          style={modal}
+          onClick={() => setFotoSelecionada(null)}
+        >
           <img src={fotoSelecionada} style={imagemModal} />
         </div>
       )}
@@ -265,10 +282,3 @@ const imagemModal = {
   maxHeight: '90%',
   borderRadius: '12px',
 }
-
-const { error } = await supabase.storage
-  .from('obras')
-  .upload(nomeArquivo, file, {
-    upsert: true,
-    contentType: file.type,
-  })
