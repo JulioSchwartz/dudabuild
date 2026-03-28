@@ -49,6 +49,25 @@ export default function EditarOrcamento() {
     setCarregando(false)
   }
 
+  async function buscarSinapi(termo: string, index: number) {
+    if (!termo || termo.length < 3) return
+
+    const { data } = await supabase
+      .from('sinapi')
+      .select('*')
+      .ilike('descricao', `%${termo}%`)
+      .limit(1)
+
+    if (data && data.length > 0) {
+      const item = data[0]
+
+      atualizarItem(index, 'codigo', item.codigo)
+      atualizarItem(index, 'descricao', item.descricao)
+      atualizarItem(index, 'unidade', item.unidade)
+      atualizarItem(index, 'valor_unitario', item.valor)
+    }
+  }
+
   function adicionarItem() {
     setItens([
       ...itens,
@@ -131,22 +150,18 @@ export default function EditarOrcamento() {
     const conteudo = `
       <style>
         body { font-family: Arial; padding: 20px }
-        h1 { color: #111 }
         table { width: 100%; border-collapse: collapse; margin-top: 20px }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left }
+        th, td { border: 1px solid #ddd; padding: 8px }
         th { background: #f3f4f6 }
       </style>
 
       <h1>ORÇAMENTO</h1>
 
       <p><strong>Cliente:</strong> ${clienteNome}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>WhatsApp:</strong> ${whatsapp}</p>
 
       <h3>Descrição</h3>
       <p>${descricao}</p>
 
-      <h3>Planilha</h3>
       <table>
         <tr>
           <th>Código</th>
@@ -161,7 +176,7 @@ export default function EditarOrcamento() {
 
       <h2>Total: R$ ${calcularTotal().toFixed(2)}</h2>
 
-      <h3>Memorial Descritivo</h3>
+      <h3>Memorial</h3>
       <p>${memorial}</p>
     `
 
@@ -213,11 +228,24 @@ export default function EditarOrcamento() {
             .map((item, index) => (
               <div key={index} style={linha}>
                 <input value={item.codigo} onChange={e => atualizarItem(index, 'codigo', e.target.value)} style={inputPeq}/>
-                <input value={item.descricao} onChange={e => atualizarItem(index, 'descricao', e.target.value)} style={input}/>
+
+                <input
+                  value={item.descricao}
+                  onChange={e => {
+                    atualizarItem(index, 'descricao', e.target.value)
+                    buscarSinapi(e.target.value, index)
+                  }}
+                  style={input}
+                />
+
                 <input value={item.unidade} onChange={e => atualizarItem(index, 'unidade', e.target.value)} style={inputPeq}/>
                 <input type="number" value={item.quantidade} onChange={e => atualizarItem(index, 'quantidade', Number(e.target.value))} style={inputPeq}/>
                 <input type="number" value={item.valor_unitario} onChange={e => atualizarItem(index, 'valor_unitario', Number(e.target.value))} style={inputPeq}/>
-                <strong>R$ {(item.quantidade * item.valor_unitario).toFixed(2)}</strong>
+
+                <strong style={{ color: '#111827' }}>
+                  R$ {(item.quantidade * item.valor_unitario).toFixed(2)}
+                </strong>
+
                 <button onClick={() => removerItem(index)} style={btnRemover}>X</button>
               </div>
             ))}
@@ -231,13 +259,11 @@ export default function EditarOrcamento() {
       <button onClick={adicionarItem} style={btnAdd}>+ Item</button>
 
       <div style={card}>
-        <h3>Memorial Descritivo</h3>
+        <h3>Memorial</h3>
         <textarea value={memorial} onChange={e => setMemorial(e.target.value)} style={textarea}/>
       </div>
 
-      <div style={totalBox}>
-        💰 Total Geral: R$ {total.toFixed(2)}
-      </div>
+      <div style={totalBox}>💰 R$ {total.toFixed(2)}</div>
 
       <div style={{ display: 'flex', gap: 10 }}>
         <button onClick={salvar} style={btnSalvar}>Salvar</button>
@@ -251,28 +277,38 @@ export default function EditarOrcamento() {
 
 const container = { maxWidth: 1100, margin: '0 auto', padding: 20 }
 const titulo = { fontSize: 28, marginBottom: 20 }
+
 const card = { background: '#fff', padding: 20, borderRadius: 12, marginBottom: 20 }
+
 const grid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }
 
 const header = {
   display: 'grid',
   gridTemplateColumns: '80px 2fr 80px 80px 100px 120px 50px',
   fontWeight: 'bold',
-  marginBottom: 10
+  marginBottom: 10,
+  color: '#0f172a',
+  background: '#f1f5f9',
+  padding: 8,
+  borderRadius: 8
 }
 
 const linha = {
   display: 'grid',
   gridTemplateColumns: '80px 2fr 80px 80px 100px 120px 50px',
   gap: 8,
-  marginBottom: 8
+  marginBottom: 8,
+  alignItems: 'center',
+  color: '#111827'
 }
 
-const input = { padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111' }
-const inputPeq = { padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111' }
-const textarea = { width: '100%', height: 120, padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111' }
+const input = { padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111827' }
+const inputPeq = { padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111827' }
+
+const textarea = { width: '100%', height: 120, padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111827' }
 
 const subtotal = { textAlign: 'right', fontWeight: 'bold', marginTop: 10 }
+
 const totalBox = { fontSize: 22, fontWeight: 'bold', color: '#16a34a' }
 
 const btnAdd = { background: '#22c55e', color: '#fff', padding: 10, borderRadius: 6 }
