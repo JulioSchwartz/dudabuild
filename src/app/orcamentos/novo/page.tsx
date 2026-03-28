@@ -219,8 +219,9 @@ const input = {
   padding: 12,
   borderRadius: 8,
   border: '1px solid #e2e8f0',
-  background: '#fff',
-  color: '#111'
+  background: '#ffffff',
+  color: '#111827',
+  caretColor: '#111827'
 }
 
 const inputPequeno = {
@@ -228,7 +229,9 @@ const inputPequeno = {
   width: 80,
   borderRadius: 8,
   border: '1px solid #e2e8f0',
-  background: '#fff'
+  background: '#ffffff',
+  color: '#111827',
+  caretColor: '#111827',
 }
 
 const textarea = {
@@ -237,7 +240,9 @@ const textarea = {
   padding: 12,
   borderRadius: 8,
   border: '1px solid #e2e8f0',
-  background: '#fff'
+  background: '#ffffff',
+  color: '#111827',
+  caretColor: '#111827'
 }
 
 const headerTabela = {
