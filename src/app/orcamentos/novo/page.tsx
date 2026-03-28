@@ -13,6 +13,8 @@ export default function NovoOrcamento() {
   const [descricao, setDescricao] = useState('')
   const [memorial, setMemorial] = useState('')
 
+  const [sugestoes, setSugestoes] = useState<any>({})
+
   const [itens, setItens] = useState([
     {
       categoria: 'Serviços Iniciais',
@@ -50,23 +52,33 @@ export default function NovoOrcamento() {
     setItens(novos)
   }
 
-  async function buscarSinapi(termo: string, index: number) {
-    if (!termo || termo.length < 3) return
+  async function buscarSugestoes(termo: string, index: number) {
+    if (!termo || termo.length < 2) return
+
+    const empresa_id = localStorage.getItem('empresa_id')
 
     const { data } = await supabase
-      .from('sinapi')
+      .from('itens_base')
       .select('*')
+      .eq('empresa_id', empresa_id)
       .ilike('descricao', `%${termo}%`)
-      .limit(1)
+      .limit(5)
 
-    if (data && data.length > 0) {
-      const item = data[0]
+    setSugestoes(prev => ({
+      ...prev,
+      [index]: data
+    }))
+  }
 
-      atualizarItem(index, 'codigo', item.codigo)
-      atualizarItem(index, 'descricao', item.descricao)
-      atualizarItem(index, 'unidade', item.unidade)
-      atualizarItem(index, 'valor_unitario', item.valor)
-    }
+  function selecionarItem(item: any, index: number) {
+    atualizarItem(index, 'descricao', item.descricao)
+    atualizarItem(index, 'unidade', item.unidade)
+    atualizarItem(index, 'valor_unitario', item.valor)
+
+    setSugestoes(prev => ({
+      ...prev,
+      [index]: []
+    }))
   }
 
   function calcularTotal() {
@@ -115,6 +127,16 @@ export default function NovoOrcamento() {
     }))
 
     await supabase.from('orcamento_itens').insert(itensFormatados)
+
+    // 🔥 salva na base inteligente
+    await supabase.from('itens_base').insert(
+      itens.map(item => ({
+        empresa_id,
+        descricao: item.descricao,
+        unidade: item.unidade,
+        valor: item.valor_unitario
+      }))
+    )
 
     alert('Orçamento salvo!')
     router.push('/orcamentos')
@@ -212,14 +234,30 @@ export default function NovoOrcamento() {
               <div key={index} style={linha}>
                 <input value={item.codigo} onChange={e => atualizarItem(index, 'codigo', e.target.value)} style={inputPeq}/>
 
-                <input
-                  value={item.descricao}
-                  onChange={e => {
-                    atualizarItem(index, 'descricao', e.target.value)
-                    buscarSinapi(e.target.value, index)
-                  }}
-                  style={input}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    value={item.descricao}
+                    onChange={e => {
+                      atualizarItem(index, 'descricao', e.target.value)
+                      buscarSugestoes(e.target.value, index)
+                    }}
+                    style={input}
+                  />
+
+                  {sugestoes[index]?.length > 0 && (
+                    <div style={dropdown}>
+                      {sugestoes[index].map((s: any, i: number) => (
+                        <div
+                          key={i}
+                          style={itemDropdown}
+                          onClick={() => selecionarItem(s, index)}
+                        >
+                          <strong>{s.descricao}</strong> — R$ {s.valor}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <input value={item.unidade} onChange={e => atualizarItem(index, 'unidade', e.target.value)} style={inputPeq}/>
                 <input type="number" value={item.quantidade} onChange={e => atualizarItem(index, 'quantidade', Number(e.target.value))} style={inputPeq}/>
@@ -256,46 +294,59 @@ export default function NovoOrcamento() {
   )
 }
 
-/* ESTILO */
+/* estilos */
 
 const container = { maxWidth: 1100, margin: '0 auto', padding: 20 }
-const titulo = { fontSize: 28, marginBottom: 20 }
+const titulo = { fontSize: 28 }
 
 const card = { background: '#fff', padding: 20, borderRadius: 12, marginBottom: 20 }
-
 const grid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }
 
 const header = {
   display: 'grid',
   gridTemplateColumns: '80px 2fr 80px 80px 100px 120px 50px',
   fontWeight: 'bold',
-  marginBottom: 10,
-  color: '#0f172a',
   background: '#f1f5f9',
   padding: 8,
-  borderRadius: 8
+  borderRadius: 8,
+  color: '#0f172a'
 }
 
 const linha = {
   display: 'grid',
   gridTemplateColumns: '80px 2fr 80px 80px 100px 120px 50px',
   gap: 8,
-  marginBottom: 8,
-  alignItems: 'center',
+  marginTop: 8,
   color: '#111827'
 }
 
 const input = { padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111827' }
-const inputPeq = { padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111827' }
+const inputPeq = { ...input }
 
 const textarea = { width: '100%', height: 120, padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111827' }
 
-const subtotal = { textAlign: 'right', fontWeight: 'bold', marginTop: 10 }
+const subtotal = { textAlign: 'right', marginTop: 10 }
 
-const totalBox = { fontSize: 22, fontWeight: 'bold', color: '#16a34a' }
+const totalBox = { fontSize: 22, color: '#16a34a', fontWeight: 'bold' }
 
 const btnAdd = { background: '#22c55e', color: '#fff', padding: 10, borderRadius: 6 }
 const btnRemover = { background: '#ef4444', color: '#fff', padding: 6, borderRadius: 6 }
 
 const btnSalvar = { background: '#2563eb', color: '#fff', padding: 12, borderRadius: 8 }
 const btnPDF = { background: '#111827', color: '#fff', padding: 12, borderRadius: 8 }
+
+const dropdown = {
+  position: 'absolute',
+  top: '100%',
+  left: 0,
+  right: 0,
+  background: '#fff',
+  border: '1px solid #ddd',
+  borderRadius: 8,
+  zIndex: 10
+}
+
+const itemDropdown = {
+  padding: 10,
+  cursor: 'pointer'
+}
