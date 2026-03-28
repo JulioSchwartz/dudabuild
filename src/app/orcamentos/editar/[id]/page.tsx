@@ -143,7 +143,6 @@ export default function EditarOrcamento() {
 
     await supabase.from('orcamento_itens').insert(itensFormatados)
 
-    // 🔥 base inteligente
     await supabase.from('itens_base').insert(
       itens.map(item => ({
         empresa_id,
@@ -171,14 +170,13 @@ export default function EditarOrcamento() {
 
     const conteudo = `
       <style>
-        body { font-family: Arial; padding: 20px }
+        body { font-family: Inter, Arial; padding: 20px }
         table { width: 100%; border-collapse: collapse; margin-top: 20px }
         th, td { border: 1px solid #ddd; padding: 8px }
-        th { background: #f3f4f6 }
+        th { background: #e2e8f0 }
       </style>
 
       <h1>ORÇAMENTO</h1>
-
       <p><strong>Cliente:</strong> ${clienteNome}</p>
 
       <h3>Descrição</h3>
@@ -246,27 +244,23 @@ export default function EditarOrcamento() {
           </div>
 
           {itens.filter(i => i.categoria === cat).map((item, index) => (
-            <div key={index} style={linha}>
-              <input value={item.codigo} onChange={e => atualizarItem(index, 'codigo', e.target.value)} style={inputPeq}/>
+            <div key={index} style={linha(index)}>
+              <input value={item.codigo} onChange={e => atualizarItem(index,'codigo',e.target.value)} style={inputPeq}/>
 
               <div style={{ position: 'relative' }}>
                 <input
                   value={item.descricao}
                   onChange={e => {
-                    atualizarItem(index, 'descricao', e.target.value)
-                    buscarSugestoes(e.target.value, index)
+                    atualizarItem(index,'descricao',e.target.value)
+                    buscarSugestoes(e.target.value,index)
                   }}
                   style={input}
                 />
 
                 {sugestoes[index]?.length > 0 && (
                   <div style={dropdown}>
-                    {sugestoes[index].map((s: any, i: number) => (
-                      <div
-                        key={i}
-                        style={itemDropdown}
-                        onClick={() => selecionarItem(s, index)}
-                      >
+                    {sugestoes[index].map((s:any,i:number)=>(
+                      <div key={i} style={itemDropdown} onClick={()=>selecionarItem(s,index)}>
                         <strong>{s.descricao}</strong> — R$ {s.valor}
                       </div>
                     ))}
@@ -274,15 +268,12 @@ export default function EditarOrcamento() {
                 )}
               </div>
 
-              <input value={item.unidade} onChange={e => atualizarItem(index, 'unidade', e.target.value)} style={inputPeq}/>
-              <input type="number" value={item.quantidade} onChange={e => atualizarItem(index, 'quantidade', Number(e.target.value))} style={inputPeq}/>
-              <input type="number" value={item.valor_unitario} onChange={e => atualizarItem(index, 'valor_unitario', Number(e.target.value))} style={inputPeq}/>
+              <input value={item.unidade} onChange={e=>atualizarItem(index,'unidade',e.target.value)} style={inputPeq}/>
+              <input type="number" value={item.quantidade} onChange={e=>atualizarItem(index,'quantidade',Number(e.target.value))} style={inputPeq}/>
+              <input type="number" value={item.valor_unitario} onChange={e=>atualizarItem(index,'valor_unitario',Number(e.target.value))} style={inputPeq}/>
 
-              <strong style={{ color: '#111827' }}>
-                R$ {(item.quantidade * item.valor_unitario).toFixed(2)}
-              </strong>
-
-              <button onClick={() => removerItem(index)} style={btnRemover}>X</button>
+              <strong style={{color:'#020617'}}>R$ {(item.quantidade * item.valor_unitario).toFixed(2)}</strong>
+              <button onClick={()=>removerItem(index)} style={btnRemover}>X</button>
             </div>
           ))}
 
@@ -309,59 +300,38 @@ export default function EditarOrcamento() {
   )
 }
 
-/* estilos */
+/* ESTILO */
 
-const container = { maxWidth: 1100, margin: '0 auto', padding: 20 }
-const titulo = { fontSize: 28 }
+const container = { maxWidth:1100, margin:'0 auto', padding:24, fontFamily:'Inter, system-ui', background:'#f8fafc', minHeight:'100vh' }
+const titulo = { fontSize:28, fontWeight:700, color:'#0f172a' }
+const card = { background:'#fff', padding:20, borderRadius:12, marginBottom:20, boxShadow:'0 2px 8px rgba(0,0,0,0.05)' }
+const grid = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }
 
-const card = { background: '#fff', padding: 20, borderRadius: 12, marginBottom: 20 }
-const grid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }
+const header = { display:'grid', gridTemplateColumns:'80px 2fr 80px 80px 100px 120px 50px', background:'#e2e8f0', padding:10, borderRadius:8, color:'#020617', fontWeight:600 }
 
-const header = {
-  display: 'grid',
-  gridTemplateColumns: '80px 2fr 80px 80px 100px 120px 50px',
-  fontWeight: 'bold',
-  background: '#f1f5f9',
-  padding: 8,
-  borderRadius: 8,
-  color: '#0f172a'
-}
+const linha = (i:number)=>({
+  display:'grid',
+  gridTemplateColumns:'80px 2fr 80px 80px 100px 120px 50px',
+  gap:8,
+  marginTop:8,
+  padding:8,
+  borderRadius:8,
+  background: i%2===0 ? '#fff' : '#f1f5f9',
+  color:'#020617',
+  alignItems:'center'
+})
 
-const linha = {
-  display: 'grid',
-  gridTemplateColumns: '80px 2fr 80px 80px 100px 120px 50px',
-  gap: 8,
-  marginTop: 8,
-  color: '#111827'
-}
+const input = { padding:10, border:'1px solid #cbd5e1', borderRadius:6, color:'#020617' }
+const inputPeq = input
+const textarea = { width:'100%', height:120, padding:10, border:'1px solid #cbd5e1', borderRadius:6, color:'#020617' }
 
-const input = { padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111827' }
-const inputPeq = { ...input }
+const subtotal = { textAlign:'right', marginTop:10, fontWeight:600 }
+const totalBox = { fontSize:24, color:'#16a34a', fontWeight:700, marginTop:20 }
 
-const textarea = { width: '100%', height: 120, padding: 10, border: '1px solid #ccc', borderRadius: 6, color: '#111827' }
+const btnAdd = { background:'#22c55e', color:'#fff', padding:10, borderRadius:6 }
+const btnRemover = { background:'#ef4444', color:'#fff', padding:6, borderRadius:6 }
+const btnSalvar = { background:'#2563eb', color:'#fff', padding:12, borderRadius:8 }
+const btnPDF = { background:'#111827', color:'#fff', padding:12, borderRadius:8 }
 
-const subtotal = { textAlign: 'right', marginTop: 10 }
-
-const totalBox = { fontSize: 22, color: '#16a34a', fontWeight: 'bold' }
-
-const btnAdd = { background: '#22c55e', color: '#fff', padding: 10, borderRadius: 6 }
-const btnRemover = { background: '#ef4444', color: '#fff', padding: 6, borderRadius: 6 }
-
-const btnSalvar = { background: '#2563eb', color: '#fff', padding: 12, borderRadius: 8 }
-const btnPDF = { background: '#111827', color: '#fff', padding: 12, borderRadius: 8 }
-
-const dropdown = {
-  position: 'absolute',
-  top: '100%',
-  left: 0,
-  right: 0,
-  background: '#fff',
-  border: '1px solid #ddd',
-  borderRadius: 8,
-  zIndex: 10
-}
-
-const itemDropdown = {
-  padding: 10,
-  cursor: 'pointer'
-}
+const dropdown = { position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid #ddd', borderRadius:8, zIndex:10 }
+const itemDropdown = { padding:10, cursor:'pointer' }
