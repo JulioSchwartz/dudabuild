@@ -4,6 +4,18 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+const categoriasPadrao = [
+  'Serviços preliminares',
+  'Infraestrutura',
+  'Superestrutura',
+  'Alvenaria',
+  'Cobertura',
+  'Instalações',
+  'Revestimentos',
+  'Acabamentos',
+  'Limpeza'
+]
+
 export default function EditarOrcamento() {
   const { id } = useParams()
   const router = useRouter()
@@ -43,7 +55,10 @@ export default function EditarOrcamento() {
         descricao: i.descricao,
         unidade: i.unidade || 'm²',
         quantidade: i.quantidade,
-        valor_unitario: i.valor_unitario
+        valor_unitario: i.valor_unitario || 0,
+        material: i.material || 0,
+        mao_obra: i.mao_obra || 0,
+        equipamentos: i.equipamentos || 0
       })))
     }
 
@@ -88,7 +103,10 @@ export default function EditarOrcamento() {
         descricao: '',
         unidade: 'm²',
         quantidade: 1,
-        valor_unitario: 0
+        valor_unitario: 0,
+        material: 0,
+        mao_obra: 0,
+        equipamentos: 0
       }
     ])
   }
@@ -105,14 +123,20 @@ export default function EditarOrcamento() {
     setItens(novos)
   }
 
+  function totalItem(item: any) {
+    const custo = (item.material + item.mao_obra + item.equipamentos)
+    const base = custo > 0 ? custo : item.valor_unitario
+    return base * item.quantidade
+  }
+
   function calcularTotal() {
-    return itens.reduce((acc, item) => acc + item.quantidade * item.valor_unitario, 0)
+    return itens.reduce((acc, item) => acc + totalItem(item), 0)
   }
 
   function totalCategoria(cat: string) {
     return itens
       .filter(i => i.categoria === cat)
-      .reduce((acc, i) => acc + i.quantidade * i.valor_unitario, 0)
+      .reduce((acc, i) => acc + totalItem(i), 0)
   }
 
   async function salvar() {
@@ -135,10 +159,13 @@ export default function EditarOrcamento() {
       descricao: item.descricao,
       quantidade: item.quantidade,
       valor_unitario: item.valor_unitario,
-      valor_total: item.quantidade * item.valor_unitario,
+      valor_total: totalItem(item),
       categoria: item.categoria,
       codigo: item.codigo,
-      unidade: item.unidade
+      unidade: item.unidade,
+      material: item.material,
+      mao_obra: item.mao_obra,
+      equipamentos: item.equipamentos
     }))
 
     await supabase.from('orcamento_itens').insert(itensFormatados)
@@ -163,8 +190,7 @@ export default function EditarOrcamento() {
         <td>${i.descricao}</td>
         <td>${i.unidade}</td>
         <td>${i.quantidade}</td>
-        <td>R$ ${i.valor_unitario}</td>
-        <td>R$ ${(i.quantidade * i.valor_unitario).toFixed(2)}</td>
+        <td>R$ ${totalItem(i).toFixed(2)}</td>
       </tr>
     `).join('')
 
@@ -188,7 +214,6 @@ export default function EditarOrcamento() {
           <th>Descrição</th>
           <th>Un</th>
           <th>Qtd</th>
-          <th>Valor</th>
           <th>Total</th>
         </tr>
         ${tabela}
@@ -238,7 +263,6 @@ export default function EditarOrcamento() {
             <span>Descrição</span>
             <span>Un</span>
             <span>Qtd</span>
-            <span>Valor</span>
             <span>Total</span>
             <span></span>
           </div>
@@ -246,33 +270,11 @@ export default function EditarOrcamento() {
           {itens.filter(i => i.categoria === cat).map((item, index) => (
             <div key={index} style={linha(index)}>
               <input value={item.codigo} onChange={e => atualizarItem(index,'codigo',e.target.value)} style={inputPeq}/>
-
-              <div style={{ position: 'relative' }}>
-                <input
-                  value={item.descricao}
-                  onChange={e => {
-                    atualizarItem(index,'descricao',e.target.value)
-                    buscarSugestoes(e.target.value,index)
-                  }}
-                  style={input}
-                />
-
-                {sugestoes[index]?.length > 0 && (
-                  <div style={dropdown}>
-                    {sugestoes[index].map((s:any,i:number)=>(
-                      <div key={i} style={itemDropdown} onClick={()=>selecionarItem(s,index)}>
-                        <strong>{s.descricao}</strong> — R$ {s.valor}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
+              <input value={item.descricao} onChange={e => atualizarItem(index,'descricao',e.target.value)} style={input}/>
               <input value={item.unidade} onChange={e=>atualizarItem(index,'unidade',e.target.value)} style={inputPeq}/>
               <input type="number" value={item.quantidade} onChange={e=>atualizarItem(index,'quantidade',Number(e.target.value))} style={inputPeq}/>
-              <input type="number" value={item.valor_unitario} onChange={e=>atualizarItem(index,'valor_unitario',Number(e.target.value))} style={inputPeq}/>
 
-              <strong style={{color:'#020617'}}>R$ {(item.quantidade * item.valor_unitario).toFixed(2)}</strong>
+              <strong>R$ {totalItem(item).toFixed(2)}</strong>
               <button onClick={()=>removerItem(index)} style={btnRemover}>X</button>
             </div>
           ))}
@@ -300,18 +302,15 @@ export default function EditarOrcamento() {
   )
 }
 
-/* ESTILO */
-
+/* estilos mantidos */
 const container = { maxWidth:1100, margin:'0 auto', padding:24, fontFamily:'Inter, system-ui', background:'#f8fafc', minHeight:'100vh' }
 const titulo = { fontSize:28, fontWeight:700, color:'#0f172a' }
 const card = { background:'#fff', padding:20, borderRadius:12, marginBottom:20, boxShadow:'0 2px 8px rgba(0,0,0,0.05)' }
 const grid = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }
-
-const header = { display:'grid', gridTemplateColumns:'80px 2fr 80px 80px 100px 120px 50px', background:'#e2e8f0', padding:10, borderRadius:8, color:'#020617', fontWeight:600 }
-
+const header = { display:'grid', gridTemplateColumns:'80px 2fr 80px 80px 120px 50px', background:'#e2e8f0', padding:10, borderRadius:8, color:'#020617', fontWeight:600 }
 const linha = (i:number)=>({
   display:'grid',
-  gridTemplateColumns:'80px 2fr 80px 80px 100px 120px 50px',
+  gridTemplateColumns:'80px 2fr 80px 80px 120px 50px',
   gap:8,
   marginTop:8,
   padding:8,
@@ -320,18 +319,12 @@ const linha = (i:number)=>({
   color:'#020617',
   alignItems:'center'
 })
-
 const input = { padding:10, border:'1px solid #cbd5e1', borderRadius:6, color:'#020617' }
 const inputPeq = input
 const textarea = { width:'100%', height:120, padding:10, border:'1px solid #cbd5e1', borderRadius:6, color:'#020617' }
-
 const subtotal = { textAlign:'right', marginTop:10, fontWeight:600 }
 const totalBox = { fontSize:24, color:'#16a34a', fontWeight:700, marginTop:20 }
-
 const btnAdd = { background:'#22c55e', color:'#fff', padding:10, borderRadius:6 }
 const btnRemover = { background:'#ef4444', color:'#fff', padding:6, borderRadius:6 }
 const btnSalvar = { background:'#2563eb', color:'#fff', padding:12, borderRadius:8 }
 const btnPDF = { background:'#111827', color:'#fff', padding:12, borderRadius:8 }
-
-const dropdown = { position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid #ddd', borderRadius:8, zIndex:10 }
-const itemDropdown = { padding:10, cursor:'pointer' }

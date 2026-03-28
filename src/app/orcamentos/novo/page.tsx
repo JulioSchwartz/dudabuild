@@ -1,28 +1,55 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function NovoOrcamento() {
-  const router = useRouter()
+const categoriasPadrao = [
+  'Serviços preliminares',
+  'Infraestrutura',
+  'Superestrutura',
+  'Alvenaria',
+  'Cobertura',
+  'Instalações',
+  'Revestimentos',
+  'Acabamentos',
+  'Limpeza'
+]
 
-  const [clienteNome, setClienteNome] = useState('')
+export default function NovoOrcamento() {
+
+  const [cliente, setCliente] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
   const [descricao, setDescricao] = useState('')
-  const [memorial, setMemorial] = useState('')
 
-  const [sugestoes, setSugestoes] = useState<any>({})
+  const [memorial, setMemorial] = useState({
+    materiais: '',
+    metodos: '',
+    marcas: '',
+    observacoes: ''
+  })
+
+  const [condicoes, setCondicoes] = useState({
+    validade: '',
+    pagamento: '',
+    garantia: '',
+    observacoes: ''
+  })
+
+  const [cronograma, setCronograma] = useState([
+    { etapa: 'Fundação', dias: 10, percentual: 20 }
+  ])
 
   const [itens, setItens] = useState([
     {
-      categoria: 'Serviços Iniciais',
+      categoria: 'Infraestrutura',
       codigo: '',
       descricao: '',
       unidade: 'm²',
       quantidade: 1,
-      valor_unitario: 0
+      material: 0,
+      mao_obra: 0,
+      equipamentos: 0
     }
   ])
 
@@ -30,12 +57,14 @@ export default function NovoOrcamento() {
     setItens([
       ...itens,
       {
-        categoria: 'Serviços',
+        categoria: 'Serviços preliminares',
         codigo: '',
         descricao: '',
         unidade: 'm²',
         quantidade: 1,
-        valor_unitario: 0
+        material: 0,
+        mao_obra: 0,
+        equipamentos: 0
       }
     ])
   }
@@ -52,167 +81,106 @@ export default function NovoOrcamento() {
     setItens(novos)
   }
 
-  async function buscarSugestoes(termo: string, index: number) {
-    if (!termo || termo.length < 2) return
-
-    const empresa_id = localStorage.getItem('empresa_id')
-
-    const { data } = await supabase
-      .from('itens_base')
-      .select('*')
-      .eq('empresa_id', empresa_id)
-      .ilike('descricao', `%${termo}%`)
-      .limit(5)
-
-    setSugestoes(prev => ({
-      ...prev,
-      [index]: data
-    }))
+  function totalItem(item: any) {
+    return (item.material + item.mao_obra + item.equipamentos) * item.quantidade
   }
 
-  function selecionarItem(item: any, index: number) {
-    atualizarItem(index, 'descricao', item.descricao)
-    atualizarItem(index, 'unidade', item.unidade)
-    atualizarItem(index, 'valor_unitario', item.valor)
-
-    setSugestoes(prev => ({
-      ...prev,
-      [index]: []
-    }))
+  function totalGeral() {
+    return itens.reduce((acc, item) => acc + totalItem(item), 0)
   }
 
-  function calcularTotal() {
-    return itens.reduce((acc, item) => acc + item.quantidade * item.valor_unitario, 0)
-  }
-
-  function totalCategoria(cat: string) {
+  function totalPorCategoria(cat: string) {
     return itens
       .filter(i => i.categoria === cat)
-      .reduce((acc, i) => acc + i.quantidade * i.valor_unitario, 0)
-  }
-
-  async function salvar() {
-    const empresa_id = localStorage.getItem('empresa_id')
-    const total = calcularTotal()
-
-    const { data: orcamento, error } = await supabase
-      .from('orcamentos')
-      .insert([{
-        empresa_id,
-        cliente_nome: clienteNome,
-        cliente_whatsapp: whatsapp,
-        cliente_email: email,
-        descricao,
-        memorial,
-        valor_total: total,
-        token: Math.random().toString(36).substring(2)
-      }])
-      .select()
-      .single()
-
-    if (error) {
-      alert('Erro ao salvar')
-      return
-    }
-
-    const itensFormatados = itens.map(item => ({
-      orcamento_id: orcamento.id,
-      descricao: item.descricao,
-      quantidade: item.quantidade,
-      valor_unitario: item.valor_unitario,
-      valor_total: item.quantidade * item.valor_unitario,
-      categoria: item.categoria,
-      codigo: item.codigo,
-      unidade: item.unidade
-    }))
-
-    await supabase.from('orcamento_itens').insert(itensFormatados)
-
-    await supabase.from('itens_base').insert(
-      itens.map(item => ({
-        empresa_id,
-        descricao: item.descricao,
-        unidade: item.unidade,
-        valor: item.valor_unitario
-      }))
-    )
-
-    alert('Orçamento salvo!')
-    router.push('/orcamentos')
+      .reduce((acc, i) => acc + totalItem(i), 0)
   }
 
   function gerarPDF() {
-    const tabela = itens.map(i => `
+    const linhas = itens.map(i => `
       <tr>
+        <td>${i.categoria}</td>
         <td>${i.codigo}</td>
         <td>${i.descricao}</td>
         <td>${i.unidade}</td>
         <td>${i.quantidade}</td>
-        <td>R$ ${i.valor_unitario}</td>
-        <td>R$ ${(i.quantidade * i.valor_unitario).toFixed(2)}</td>
+        <td>R$ ${totalItem(i).toFixed(2)}</td>
       </tr>
     `).join('')
 
-    const conteudo = `
+    const html = `
       <style>
-        body { font-family: Inter, Arial; padding: 20px }
+        body { font-family: Arial; padding: 30px }
+        h1 { font-size: 26px }
         table { width: 100%; border-collapse: collapse; margin-top: 20px }
-        th, td { border: 1px solid #ddd; padding: 8px }
-        th { background: #e2e8f0 }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left }
+        th { background: #f1f5f9 }
       </style>
 
       <h1>ORÇAMENTO</h1>
 
-      <p><strong>Cliente:</strong> ${clienteNome}</p>
+      <p><b>Cliente:</b> ${cliente}</p>
+      <p><b>WhatsApp:</b> ${whatsapp}</p>
+      <p><b>Email:</b> ${email}</p>
 
       <h3>Descrição</h3>
       <p>${descricao}</p>
 
+      <h3>Planilha</h3>
       <table>
         <tr>
+          <th>Categoria</th>
           <th>Código</th>
           <th>Descrição</th>
           <th>Un</th>
           <th>Qtd</th>
-          <th>Valor</th>
           <th>Total</th>
         </tr>
-        ${tabela}
+        ${linhas}
       </table>
 
-      <h2>Total: R$ ${calcularTotal().toFixed(2)}</h2>
+      <h2>Total: R$ ${totalGeral().toFixed(2)}</h2>
 
       <h3>Memorial</h3>
-      <p>${memorial}</p>
+      <p>${memorial.materiais}</p>
+      <p>${memorial.metodos}</p>
+      <p>${memorial.marcas}</p>
+      <p>${memorial.observacoes}</p>
+
+      <h3>Condições</h3>
+      <p>${condicoes.pagamento}</p>
+      <p>${condicoes.validade}</p>
     `
 
-    const win = window.open('', '', 'width=900,height=700')
-    win?.document.write(conteudo)
-    win?.document.close()
-    win?.print()
+    const w = window.open('', '', 'width=900,height=700')
+    w?.document.write(html)
+    w?.document.close()
+    w?.print()
   }
 
   const categorias = [...new Set(itens.map(i => i.categoria))]
-  const total = calcularTotal()
 
   return (
-    <div style={container}>
-      <h1 style={titulo}>📊 Novo Orçamento Profissional</h1>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24, background: '#f8fafc', color: '#0f172a' }}>
 
+      <h1 style={{ fontSize: 28, fontWeight: 700 }}>📊 Orçamento Profissional</h1>
+
+      {/* CLIENTE */}
       <div style={card}>
         <h3>Dados do Cliente</h3>
         <div style={grid}>
-          <input placeholder="Nome" value={clienteNome} onChange={e => setClienteNome(e.target.value)} style={input}/>
-          <input placeholder="WhatsApp" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} style={input}/>
-          <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={input}/>
+          <input placeholder="Nome" onChange={e => setCliente(e.target.value)} style={input}/>
+          <input placeholder="WhatsApp" onChange={e => setWhatsapp(e.target.value)} style={input}/>
+          <input placeholder="Email" onChange={e => setEmail(e.target.value)} style={input}/>
         </div>
       </div>
 
+      {/* DESCRIÇÃO */}
       <div style={card}>
         <h3>Descrição</h3>
-        <textarea value={descricao} onChange={e => setDescricao(e.target.value)} style={textarea}/>
+        <textarea onChange={e => setDescricao(e.target.value)} style={textarea}/>
       </div>
 
+      {/* PLANILHA */}
       {categorias.map(cat => (
         <div key={cat} style={card}>
           <h3>{cat}</h3>
@@ -222,100 +190,91 @@ export default function NovoOrcamento() {
             <span>Descrição</span>
             <span>Un</span>
             <span>Qtd</span>
-            <span>Valor</span>
+            <span>Material</span>
+            <span>M.O</span>
+            <span>Equip</span>
             <span>Total</span>
             <span></span>
           </div>
 
           {itens.filter(i => i.categoria === cat).map((item, index) => (
             <div key={index} style={linha(index)}>
-              <input value={item.codigo} onChange={e => atualizarItem(index,'codigo',e.target.value)} style={inputPeq}/>
 
-              <div style={{ position: 'relative' }}>
-                <input
-                  value={item.descricao}
-                  onChange={e => {
-                    atualizarItem(index,'descricao',e.target.value)
-                    buscarSugestoes(e.target.value,index)
-                  }}
-                  style={input}
-                />
+              <input value={item.codigo} onChange={e => atualizarItem(index,'codigo',e.target.value)} style={input}/>
+              <input value={item.descricao} onChange={e => atualizarItem(index,'descricao',e.target.value)} style={input}/>
+              <input value={item.unidade} onChange={e => atualizarItem(index,'unidade',e.target.value)} style={input}/>
+              <input type="number" value={item.quantidade} onChange={e => atualizarItem(index,'quantidade',Number(e.target.value))} style={input}/>
 
-                {sugestoes[index]?.length > 0 && (
-                  <div style={dropdown}>
-                    {sugestoes[index].map((s:any,i:number)=>(
-                      <div key={i} style={itemDropdown} onClick={()=>selecionarItem(s,index)}>
-                        <strong>{s.descricao}</strong> — R$ {s.valor}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <input type="number" value={item.material} onChange={e => atualizarItem(index,'material',Number(e.target.value))} style={input}/>
+              <input type="number" value={item.mao_obra} onChange={e => atualizarItem(index,'mao_obra',Number(e.target.value))} style={input}/>
+              <input type="number" value={item.equipamentos} onChange={e => atualizarItem(index,'equipamentos',Number(e.target.value))} style={input}/>
 
-              <input value={item.unidade} onChange={e=>atualizarItem(index,'unidade',e.target.value)} style={inputPeq}/>
-              <input type="number" value={item.quantidade} onChange={e=>atualizarItem(index,'quantidade',Number(e.target.value))} style={inputPeq}/>
-              <input type="number" value={item.valor_unitario} onChange={e=>atualizarItem(index,'valor_unitario',Number(e.target.value))} style={inputPeq}/>
+              <strong>R$ {totalItem(item).toFixed(2)}</strong>
 
-              <strong style={{color:'#020617'}}>R$ {(item.quantidade * item.valor_unitario).toFixed(2)}</strong>
-              <button onClick={()=>removerItem(index)} style={btnRemover}>X</button>
+              <button onClick={() => removerItem(index)} style={btnRemover}>X</button>
             </div>
           ))}
 
           <div style={subtotal}>
-            Subtotal: R$ {totalCategoria(cat).toFixed(2)}
+            Subtotal: R$ {totalPorCategoria(cat).toFixed(2)}
           </div>
         </div>
       ))}
 
       <button onClick={adicionarItem} style={btnAdd}>+ Item</button>
 
+      {/* MEMORIAL */}
       <div style={card}>
-        <h3>Memorial</h3>
-        <textarea value={memorial} onChange={e => setMemorial(e.target.value)} style={textarea}/>
+        <h3>Memorial Descritivo</h3>
+        <textarea placeholder="Materiais" onChange={e => setMemorial({...memorial, materiais:e.target.value})} style={textarea}/>
+        <textarea placeholder="Métodos" onChange={e => setMemorial({...memorial, metodos:e.target.value})} style={textarea}/>
+        <textarea placeholder="Marcas" onChange={e => setMemorial({...memorial, marcas:e.target.value})} style={textarea}/>
+        <textarea placeholder="Observações" onChange={e => setMemorial({...memorial, observacoes:e.target.value})} style={textarea}/>
       </div>
 
-      <div style={totalBox}>💰 R$ {total.toFixed(2)}</div>
+      {/* CONDIÇÕES */}
+      <div style={card}>
+        <h3>Condições Comerciais</h3>
+        <textarea placeholder="Forma de pagamento" onChange={e => setCondicoes({...condicoes, pagamento:e.target.value})} style={textarea}/>
+        <textarea placeholder="Validade" onChange={e => setCondicoes({...condicoes, validade:e.target.value})} style={textarea}/>
+      </div>
 
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button onClick={salvar} style={btnSalvar}>Salvar</button>
+      {/* TOTAL */}
+      <div style={{ fontSize: 26, fontWeight: 700, color: '#16a34a' }}>
+        Total: R$ {totalGeral().toFixed(2)}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+        <button style={btnSalvar}>Salvar</button>
         <button onClick={gerarPDF} style={btnPDF}>Gerar PDF</button>
       </div>
+
     </div>
   )
 }
 
 /* ESTILO */
 
-const container = { maxWidth:1100, margin:'0 auto', padding:24, fontFamily:'Inter, system-ui', background:'#f8fafc', minHeight:'100vh' }
-const titulo = { fontSize:28, fontWeight:700, color:'#0f172a' }
-const card = { background:'#fff', padding:20, borderRadius:12, marginBottom:20, boxShadow:'0 2px 8px rgba(0,0,0,0.05)' }
+const card = { background:'#fff', padding:20, borderRadius:10, marginBottom:20 }
 const grid = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }
 
-const header = { display:'grid', gridTemplateColumns:'80px 2fr 80px 80px 100px 120px 50px', background:'#e2e8f0', padding:10, borderRadius:8, color:'#020617', fontWeight:600 }
+const header = { display:'grid', gridTemplateColumns:'1fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr 60px', background:'#e2e8f0', padding:10 }
 
 const linha = (i:number)=>({
   display:'grid',
-  gridTemplateColumns:'80px 2fr 80px 80px 100px 120px 50px',
-  gap:8,
-  marginTop:8,
-  padding:8,
-  borderRadius:8,
-  background: i%2===0 ? '#fff' : '#f1f5f9',
-  color:'#020617',
-  alignItems:'center'
+  gridTemplateColumns:'1fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr 60px',
+  gap:10,
+  marginTop:10,
+  background: i%2 ? '#f1f5f9' : '#fff',
+  padding:10
 })
 
-const input = { padding:10, border:'1px solid #cbd5e1', borderRadius:6, color:'#020617' }
-const inputPeq = input
-const textarea = { width:'100%', height:120, padding:10, border:'1px solid #cbd5e1', borderRadius:6, color:'#020617' }
+const input = { padding:10, border:'1px solid #cbd5e1', borderRadius:6, color:'#000', background:'#fff' }
+const textarea = { width:'100%', height:100, padding:10, marginTop:10 }
 
 const subtotal = { textAlign:'right', marginTop:10, fontWeight:600 }
-const totalBox = { fontSize:24, color:'#16a34a', fontWeight:700, marginTop:20 }
 
 const btnAdd = { background:'#22c55e', color:'#fff', padding:10, borderRadius:6 }
-const btnRemover = { background:'#ef4444', color:'#fff', padding:6, borderRadius:6 }
+const btnRemover = { background:'#ef4444', color:'#fff', borderRadius:6 }
 const btnSalvar = { background:'#2563eb', color:'#fff', padding:12, borderRadius:8 }
 const btnPDF = { background:'#111827', color:'#fff', padding:12, borderRadius:8 }
-
-const dropdown = { position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1px solid #ddd', borderRadius:8, zIndex:10 }
-const itemDropdown = { padding:10, cursor:'pointer' }
