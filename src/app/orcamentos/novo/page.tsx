@@ -15,6 +15,7 @@ const categoriasPadrao = [
   'Limpeza'
 ]
 
+
 export default function NovoOrcamento() {
 
   const [cliente, setCliente] = useState('')
