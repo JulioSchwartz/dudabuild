@@ -16,7 +16,6 @@ const categoriasPadrao = [
   'Limpeza'
 ]
 
-
 export default function EditarOrcamento() {
   const { id } = useParams()
   const router = useRouter()
