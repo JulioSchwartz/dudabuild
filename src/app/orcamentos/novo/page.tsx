@@ -261,14 +261,38 @@ export default function NovoOrcamento() {
 
           {itens.filter(i => i.categoria === cat).map((item, index) => (
             <div key={index} style={linha(index)}>
+
               <input value={item.codigo} onChange={e => atualizarItem(index,'codigo',e.target.value)} style={input}/>
               <input value={item.descricao} onChange={e => atualizarItem(index,'descricao',e.target.value)} style={input}/>
               <input value={item.unidade} onChange={e => atualizarItem(index,'unidade',e.target.value)} style={input}/>
-              <input type=\"number\" value={item.quantidade} onChange={e => atualizarItem(index,'quantidade',Number(e.target.value))} style={input}/>
 
-              <input type=\"number\" value={item.material} onChange={e => atualizarItem(index,'material',Number(e.target.value))} style={input}/>
-              <input type=\"number\" value={item.mao_obra} onChange={e => atualizarItem(index,'mao_obra',Number(e.target.value))} style={input}/>
-              <input type=\"number\" value={item.equipamentos} onChange={e => atualizarItem(index,'equipamentos',Number(e.target.value))} style={input}/>
+              <input
+                type="number"
+                value={item.quantidade}
+                onChange={e => atualizarItem(index,'quantidade', Number(e.target.value))}
+                style={input}
+              />
+
+              <input
+                type="number"
+                value={item.material}
+                onChange={e => atualizarItem(index,'material', Number(e.target.value))}
+                style={input}
+              />
+
+              <input
+                type="number"
+                value={item.mao_obra}
+                onChange={e => atualizarItem(index,'mao_obra', Number(e.target.value))}
+                style={input}
+              />
+
+              <input
+                type="number"
+                value={item.equipamentos}
+                onChange={e => atualizarItem(index,'equipamentos', Number(e.target.value))}
+                style={input}
+              />
 
               <strong>R$ {totalItem(item).toFixed(2)}</strong>
 
