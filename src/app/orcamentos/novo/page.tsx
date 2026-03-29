@@ -232,9 +232,9 @@ export default function NovoOrcamento() {
       <div style={card}>
         <h3>Dados do Cliente</h3>
         <div style={grid}>
-          <input placeholder=\"Nome\" onChange={e => setCliente(e.target.value)} style={input}/>
-          <input placeholder=\"WhatsApp\" onChange={e => setWhatsapp(e.target.value)} style={input}/>
-          <input placeholder=\"Email\" onChange={e => setEmail(e.target.value)} style={input}/>
+          <input placeholder="Nome" onChange={e => setCliente(e.target.value)} style={input}/>
+          <input placeholder="WhatsApp" onChange={e => setWhatsapp(e.target.value)} style={input}/>
+          <input placeholder="Email" onChange={e => setEmail(e.target.value)} style={input}/>
         </div>
       </div>
 
@@ -286,18 +286,18 @@ export default function NovoOrcamento() {
 
       <div style={card}>
         <h3>Memorial Descritivo</h3>
-        <textarea placeholder=\"Materiais\" onChange={e => setMemorial({...memorial, materiais:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Métodos\" onChange={e => setMemorial({...memorial, metodos:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Marcas\" onChange={e => setMemorial({...memorial, marcas:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Observações\" onChange={e => setMemorial({...memorial, observacoes:e.target.value})} style={textarea}/>
+        <textarea placeholder="Materiais" onChange={e => setMemorial({...memorial, materiais:e.target.value})} style={textarea}/>
+        <textarea placeholder="Métodos" onChange={e => setMemorial({...memorial, metodos:e.target.value})} style={textarea}/>
+        <textarea placeholder="Marcas" onChange={e => setMemorial({...memorial, marcas:e.target.value})} style={textarea}/>
+        <textarea placeholder="Observações" onChange={e => setMemorial({...memorial, observacoes:e.target.value})} style={textarea}/>
       </div>
 
       <div style={card}>
         <h3>Condições Comerciais</h3>
-        <textarea placeholder=\"Forma de pagamento\" onChange={e => setCondicoes({...condicoes, pagamento:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Validade\" onChange={e => setCondicoes({...condicoes, validade:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Garantia\" onChange={e => setCondicoes({...condicoes, garantia:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Observações\" onChange={e => setCondicoes({...condicoes, observacoes:e.target.value})} style={textarea}/>
+        <textarea placeholder="Forma de pagamento" onChange={e => setCondicoes({...condicoes, pagamento:e.target.value})} style={textarea}/>
+        <textarea placeholder="Validade" onChange={e => setCondicoes({...condicoes, validade:e.target.value})} style={textarea}/>
+        <textarea placeholder="Garantia" onChange={e => setCondicoes({...condicoes, garantia:e.target.value})} style={textarea}/>
+        <textarea placeholder="Observações" onChange={e => setCondicoes({...condicoes, observacoes:e.target.value})} style={textarea}/>
       </div>
 
       <div style={{ fontSize: 26, fontWeight: 700, color: '#16a34a' }}>
