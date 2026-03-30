@@ -7,8 +7,6 @@ import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function NovoOrcamento(){
 
-useEmpresa()
-
   const [cliente,setCliente]=useState('')
   const [descricao,setDescricao]=useState('')
   const [orcamentoId,setOrcamentoId]=useState<any>(null)

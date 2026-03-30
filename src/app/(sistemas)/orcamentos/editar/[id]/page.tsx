@@ -8,8 +8,6 @@ import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function EditarOrcamento(){
 
-useEmpresa()
-
   const {id}=useParams()
   const [itens,setItens]=useState<any[]>([])
 

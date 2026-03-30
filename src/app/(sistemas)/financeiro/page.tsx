@@ -6,8 +6,6 @@ import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function Financeiro() {
 
-useEmpresa()
-
   const [obras, setObras] = useState<any[]>([])
   const [financeiro, setFinanceiro] = useState<any[]>([])
   const [obraFiltro, setObraFiltro] = useState('')

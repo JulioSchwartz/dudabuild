@@ -8,8 +8,6 @@ import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function Obras() {
 
-useEmpresa()
-
   const router = useRouter()
   const [obras, setObras] = useState<any[]>([])
 
