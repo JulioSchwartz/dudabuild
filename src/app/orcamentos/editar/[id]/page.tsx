@@ -283,15 +283,43 @@ export default function EditarOrcamento() {
           </div>
 
           {itens.filter(i => i.categoria === cat).map((item, index) => (
-            <div key={index} style={linha(index)}>
-              <input value={item.codigo} onChange={e => atualizarItem(index,'codigo',e.target.value)} style={inputPeq}/>
-              <input value={item.descricao} onChange={e => atualizarItem(index,'descricao',e.target.value)} style={input}/>
-              <input value={item.unidade} onChange={e=>atualizarItem(index,'unidade',e.target.value)} style={inputPeq}/>
-              <input type=\"number\" value={item.quantidade} onChange={e=>atualizarItem(index,'quantidade',Number(e.target.value))} style={inputPeq}/>
+           <div key={index} style={linha(index)}>
+  <input value={item.codigo} onChange={e => atualizarItem(index,'codigo',e.target.value)} style={inputPeq}/>
+  <input value={item.descricao} onChange={e => atualizarItem(index,'descricao',e.target.value)} style={input}/>
+  <input value={item.unidade} onChange={e=>atualizarItem(index,'unidade',e.target.value)} style={inputPeq}/>
 
-              <input type=\"number\" value={item.material} onChange={e=>atualizarItem(index,'material',Number(e.target.value))} style={inputPeq}/>
-              <input type=\"number\" value={item.mao_obra} onChange={e=>atualizarItem(index,'mao_obra',Number(e.target.value))} style={inputPeq}/>
-              <input type=\"number\" value={item.equipamentos} onChange={e=>atualizarItem(index,'equipamentos',Number(e.target.value))} style={inputPeq}/>
+  <input
+    type="number"
+    value={item.quantidade}
+    onChange={e => atualizarItem(index,'quantidade', Number(e.target.value))}
+    style={inputPeq}
+  />
+
+  <input
+    type="number"
+    value={item.material}
+    onChange={e => atualizarItem(index,'material', Number(e.target.value))}
+    style={inputPeq}
+  />
+
+  <input
+    type="number"
+    value={item.mao_obra}
+    onChange={e => atualizarItem(index,'mao_obra', Number(e.target.value))}
+    style={inputPeq}
+  />
+
+  <input
+    type="number"
+    value={item.equipamentos}
+    onChange={e => atualizarItem(index,'equipamentos', Number(e.target.value))}
+    style={inputPeq}
+  />
+
+  <strong>R$ {totalItem(item).toFixed(2)}</strong>
+
+  <button onClick={()=>removerItem(index)} style={btnRemover}>X</button>
+</div>
 
               <strong>R$ {totalItem(item).toFixed(2)}</strong>
               <button onClick={()=>removerItem(index)} style={btnRemover}>X</button>
@@ -308,18 +336,18 @@ export default function EditarOrcamento() {
 
       <div style={card}>
         <h3>Memorial Descritivo</h3>
-        <textarea placeholder=\"Materiais\" value={memorial.materiais} onChange={e => setMemorial({...memorial, materiais:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Métodos\" value={memorial.metodos} onChange={e => setMemorial({...memorial, metodos:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Marcas\" value={memorial.marcas} onChange={e => setMemorial({...memorial, marcas:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Observações\" value={memorial.observacoes} onChange={e => setMemorial({...memorial, observacoes:e.target.value})} style={textarea}/>
+        <textarea placeholder="Materiais" value={memorial.materiais} onChange={e => setMemorial({...memorial, materiais:e.target.value})} style={textarea}/>
+        <textarea placeholder="Métodos" value={memorial.metodos} onChange={e => setMemorial({...memorial, metodos:e.target.value})} style={textarea}/>
+        <textarea placeholder="Marcas" value={memorial.marcas} onChange={e => setMemorial({...memorial, marcas:e.target.value})} style={textarea}/>
+        <textarea placeholder="Observações" value={memorial.observacoes} onChange={e => setMemorial({...memorial, observacoes:e.target.value})} style={textarea}/>
       </div>
 
       <div style={card}>
         <h3>Condições Comerciais</h3>
-        <textarea placeholder=\"Forma de pagamento\" value={condicoes.pagamento} onChange={e => setCondicoes({...condicoes, pagamento:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Validade\" value={condicoes.validade} onChange={e => setCondicoes({...condicoes, validade:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Garantia\" value={condicoes.garantia} onChange={e => setCondicoes({...condicoes, garantia:e.target.value})} style={textarea}/>
-        <textarea placeholder=\"Observações\" value={condicoes.observacoes} onChange={e => setCondicoes({...condicoes, observacoes:e.target.value})} style={textarea}/>
+        <textarea placeholder="Forma de pagamento" value={condicoes.pagamento} onChange={e => setCondicoes({...condicoes, pagamento:e.target.value})} style={textarea}/>
+        <textarea placeholder="Validade" value={condicoes.validade} onChange={e => setCondicoes({...condicoes, validade:e.target.value})} style={textarea}/>
+        <textarea placeholder="Garantia" value={condicoes.garantia} onChange={e => setCondicoes({...condicoes, garantia:e.target.value})} style={textarea}/>
+        <textarea placeholder="Observações" value={condicoes.observacoes} onChange={e => setCondicoes({...condicoes, observacoes:e.target.value})} style={textarea}/>
       </div>
 
       <div style={totalBox}>💰 R$ {total.toFixed(2)}</div>
