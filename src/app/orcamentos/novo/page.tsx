@@ -311,9 +311,12 @@ export default function NovoOrcamento() {
 
   const categorias = [...new Set(itens.map(i => i.categoria))]
 
-  return (
-    <div style={container}>
-      <h1 style={titulo}>📊 Orçamento Profissional</h1>
+return (
+  <div style={container}>
+
+    <h1>FUNCIONANDO AGORA</h1>  // 👈 TESTE
+
+    <h1 style={titulo}>📊 Orçamento Profissional</h1>
 
       {categorias.map(cat => (
         <div key={cat} style={card}>
