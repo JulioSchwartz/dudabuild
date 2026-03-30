@@ -338,11 +338,7 @@ export default function EditarOrcamento() {
   </div>
 ))}
 
-              <strong>R$ {totalItem(item).toFixed(2)}</strong>
-              <button onClick={()=>removerItem(index)} style={btnRemover}>X</button>
-            </div>
-          ))}
-
+         
           <div style={subtotal}>
             Subtotal: R$ {totalCategoria(cat).toFixed(2)}
           </div>
