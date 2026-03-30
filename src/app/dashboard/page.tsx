@@ -9,14 +9,43 @@ export default function Dashboard() {
   const [carregado, setCarregado] = useState(false)
 
   useEffect(() => {
-    const empresa = localStorage.getItem('empresa_id')
-
-    if (!empresa) {
-      router.push('/login')
-    } else {
-      setCarregado(true)
-    }
+    iniciar()
   }, [])
+
+  async function iniciar() {
+    const empresa_id = localStorage.getItem('empresa_id')
+
+    console.log('Empresa ID:', empresa_id)
+
+    // 🔒 valida login
+    if (!empresa_id) {
+      router.push('/login')
+      return
+    }
+
+    // 🔒 valida status da empresa
+    const { data, error } = await supabase
+      .from('empresas')
+      .select('status')
+      .eq('id', empresa_id)
+      .single()
+
+    console.log('Empresa:', data)
+
+    if (error) {
+      console.log('Erro ao buscar empresa:', error)
+      return
+    }
+
+    if (data?.status !== 'ativo') {
+      console.log('🚫 BLOQUEANDO USUÁRIO')
+      router.push('/bloqueado')
+      return
+    }
+
+    // ✅ libera sistema
+    setCarregado(true)
+  }
 
   if (!carregado) return null
 
@@ -169,8 +198,6 @@ function Card({ titulo, valor, cor, destaque, tipo }: any) {
     </div>
   )
 }
-
-/* ESTILO ORIGINAL MANTIDO */
 
 const titulo = { fontSize: '28px', color: '#0f172a' }
 const subtitulo = { color: '#64748b', marginBottom: '20px' }
