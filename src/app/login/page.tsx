@@ -19,24 +19,37 @@ export default function Login() {
     setErro('')
     setLoading(true)
 
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('email', email)
-      .eq('senha', senha)
-      .single()
+    // 🔥 LOGIN REAL
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: senha,
+    })
 
-    if (error || !data) {
+    if (error) {
       setErro('Email ou senha inválidos')
       setLoading(false)
       return
     }
 
-    // salva empresa
-    localStorage.setItem('empresa_id', data.empresa_id)
+    const user = data.user
 
-    // 🔥 REDIRECIONA PRA CAPA (NOVO FLUXO)
-    router.push('/')
+    // 🔥 BUSCA EMPRESA DO USUÁRIO
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('empresa_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!usuario?.empresa_id) {
+      setErro('Usuário sem empresa vinculada')
+      setLoading(false)
+      return
+    }
+
+    // 🔥 SALVA (temporário - depois removemos)
+    localStorage.setItem('empresa_id', usuario.empresa_id)
+
+    router.push('/dashboard')
   }
 
   return (
@@ -79,7 +92,7 @@ export default function Login() {
   )
 }
 
-/* 🎨 ESTILO PREMIUM */
+/* 🎨 ESTILO */
 
 const container = {
   height: '100vh',
@@ -118,8 +131,6 @@ const input = {
   padding: '12px',
   borderRadius: '8px',
   border: '1px solid #e2e8f0',
-  outline: 'none',
-  transition: '0.2s',
 }
 
 const senhaBox = {
@@ -150,5 +161,4 @@ const botao = {
   borderRadius: '8px',
   fontWeight: 'bold',
   cursor: 'pointer',
-  transition: '0.2s',
 }

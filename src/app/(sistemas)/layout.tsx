@@ -14,24 +14,41 @@ export default function SistemaLayout({ children }: any) {
   }, [])
 
   async function verificar() {
-    const empresa_id = localStorage.getItem('empresa_id')
 
-    console.log('Empresa layout:', empresa_id)
+    // 🔥 PEGA USUÁRIO LOGADO
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!empresa_id) {
+    console.log('USER:', user)
+
+    if (!user) {
       router.push('/login')
       return
     }
 
-    const { data } = await supabase
-      .from('empresas')
-      .select('status')
-      .eq('id', empresa_id)
+    // 🔥 PEGA EMPRESA DO USUÁRIO
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('empresa_id')
+      .eq('user_id', user.id)
       .single()
 
-    console.log('Status empresa:', data)
+    console.log('USUARIO:', usuario)
 
-    if (data?.status !== 'ativo') {
+    if (!usuario?.empresa_id) {
+      router.push('/login')
+      return
+    }
+
+    // 🔥 VALIDA STATUS
+    const { data: empresa } = await supabase
+      .from('empresas')
+      .select('status')
+      .eq('id', usuario.empresa_id)
+      .single()
+
+    console.log('EMPRESA:', empresa)
+
+    if (empresa?.status !== 'ativo') {
       router.push('/bloqueado')
       return
     }
