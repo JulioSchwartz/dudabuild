@@ -4,51 +4,29 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
 
-export default function NovoOrcamento() {
+export default function NovoOrcamento(){
 
-  const [cliente, setCliente] = useState('')
-  const [whatsapp, setWhatsapp] = useState('')
-  const [email, setEmail] = useState('')
-  const [descricao, setDescricao] = useState('')
+  const [cliente,setCliente]=useState('')
+  const [descricao,setDescricao]=useState('')
 
-  const [memorial, setMemorial] = useState({
-    materiais: '',
-    metodos: '',
-    marcas: '',
-    observacoes: ''
-  })
+  const [memorial,setMemorial]=useState({materiais:'',metodos:'',marcas:''})
+  const [condicoes,setCondicoes]=useState({pagamento:'',validade:''})
 
-  const [condicoes, setCondicoes] = useState({
-    validade: '',
-    pagamento: '',
-    garantia: '',
-    observacoes: ''
-  })
+  const [itens,setItens]=useState([{
+    categoria:'Lista de Materiais',
+    codigo:'',
+    descricao:'',
+    unidade:'m²',
+    quantidade:1,
+    material:0,
+    mao_obra:0,
+    equipamentos:0
+  }])
 
-  const [itens, setItens] = useState([
-    {
-      categoria: 'Lista de Materiais',
-      codigo: '',
-      descricao: '',
-      unidade: 'm²',
-      quantidade: 1,
-      material: 0,
-      mao_obra: 0,
-      equipamentos: 0
-    }
-  ])
-
-  function adicionarItem() {
-    setItens([...itens, {
-      categoria: 'Lista de Materiais',
-      codigo: '',
-      descricao: '',
-      unidade: 'm²',
-      quantidade: 1,
-      material: 0,
-      mao_obra: 0,
-      equipamentos: 0
-    }])
+  function atualizarItem(index:number,campo:string,valor:any){
+    const novos=[...itens]
+    novos[index][campo]=valor
+    setItens(novos)
   }
 
   function removerItem(index:number){
@@ -57,47 +35,42 @@ export default function NovoOrcamento() {
     setItens(novos)
   }
 
-  function atualizarItem(index:number,campo:string,valor:any){
-    const novos=[...itens]
-    novos[index][campo]=valor
-    setItens(novos)
+  function adicionarItem(){
+    setItens([...itens,{
+      categoria:'Lista de Materiais',
+      codigo:'',
+      descricao:'',
+      unidade:'m²',
+      quantidade:1,
+      material:0,
+      mao_obra:0,
+      equipamentos:0
+    }])
   }
 
-  function totalItem(item:any){
-    return (item.material + item.mao_obra + item.equipamentos) * item.quantidade
+  function totalItem(i:any){
+    return (i.material+i.mao_obra+i.equipamentos)*i.quantidade
   }
 
   function totalGeral(){
     return itens.reduce((acc,i)=>acc+totalItem(i),0)
   }
 
-  const categorias=[...new Set(itens.map(i=>i.categoria))]
-
   async function salvar(){
     const empresa_id = localStorage.getItem('empresa_id')
 
-    const { data: orcamento } = await supabase
-      .from('orcamentos')
-      .insert({
-        empresa_id,
-        cliente_nome: cliente,
-        cliente_whatsapp: whatsapp,
-        cliente_email: email,
-        descricao,
-        memorial,
-        condicoes,
-        valor_total: totalGeral()
-      })
-      .select()
-      .single()
+    const {data:orc}=await supabase.from('orcamentos').insert({
+      empresa_id,
+      cliente_nome:cliente,
+      descricao,
+      memorial,
+      condicoes,
+      valor_total:totalGeral()
+    }).select().single()
 
-    const itensFormatados = itens.map(i => ({
-      orcamento_id: orcamento?.id,
-      ...i,
-      valor_total: totalItem(i)
-    }))
-
-    await supabase.from('orcamento_itens').insert(itensFormatados)
+    await supabase.from('orcamento_itens').insert(
+      itens.map(i=>({...i,orcamento_id:orc?.id,valor_total:totalItem(i)}))
+    )
 
     alert('Salvo!')
   }
@@ -115,71 +88,68 @@ export default function NovoOrcamento() {
     `).join('')
 
     const html = `
-      <style>
-        body{font-family:Arial;padding:40px}
-        table{width:100%;border-collapse:collapse;margin-top:20px}
-        th,td{border:1px solid #ddd;padding:8px}
-        th{background:#1e3a8a;color:#fff}
-      </style>
+    <style>
+      body{font-family:Arial;margin:0}
+      .capa{background:#1e3a8a;color:#fff;padding:60px;height:100vh}
+      .conteudo{padding:40px}
+      table{width:100%;border-collapse:collapse;margin-top:20px}
+      th,td{border:1px solid #ddd;padding:8px}
+      th{background:#1e3a8a;color:#fff}
+      .total{font-size:28px;color:#16a34a;font-weight:bold;margin-top:20px}
+    </style>
 
+    <div class="capa">
       <h1>DudaBuild Engenharia</h1>
       <h2>Proposta Comercial</h2>
-      <p><b>Cliente:</b> ${cliente}</p>
+      <p>Cliente: ${cliente}</p>
+    </div>
 
+    <div class="conteudo">
       <table>
-        <tr><th>Código</th><th>Descrição</th><th>Un</th><th>Qtd</th><th>Total</th></tr>
+        <tr><th>Cód</th><th>Descrição</th><th>Un</th><th>Qtd</th><th>Total</th></tr>
         ${tabela}
       </table>
 
-      <h2>Total: R$ ${totalGeral().toFixed(2)}</h2>
+      <div class="total">Total: R$ ${totalGeral().toFixed(2)}</div>
+    </div>
     `
 
-    const w = window.open('')
+    const w=window.open('')
     w?.document.write(html)
     w?.print()
   }
 
-  return (
+  return(
     <div style={container}>
 
-      <h1 style={titulo}>📊 Orçamento Profissional</h1>
-
-      <div style={card}>
-        <h3>Cliente</h3>
-        <input placeholder="Nome" onChange={e=>setCliente(e.target.value)} style={input}/>
-        <input placeholder="WhatsApp" onChange={e=>setWhatsapp(e.target.value)} style={input}/>
-        <input placeholder="Email" onChange={e=>setEmail(e.target.value)} style={input}/>
+      <div style={topo}>
+        <div>
+          <h1 style={titulo}>Orçamento Profissional</h1>
+          <p style={sub}>Proposta Comercial</p>
+        </div>
+        <div style={total}>R$ {totalGeral().toFixed(2)}</div>
       </div>
 
-      {categorias.map(cat=>(
-        <div key={cat} style={card}>
-          <h3>{cat}</h3>
+      <input placeholder="Cliente" onChange={e=>setCliente(e.target.value)} style={input}/>
+      <textarea placeholder="Descrição" onChange={e=>setDescricao(e.target.value)} style={input}/>
 
-          <TabelaOrcamento
-            itens={itens.filter(i=>i.categoria===cat)}
-            atualizarItem={atualizarItem}
-            removerItem={removerItem}
-            totalItem={totalItem}
-          />
-        </div>
-      ))}
+      <TabelaOrcamento itens={itens} atualizarItem={atualizarItem} removerItem={removerItem} totalItem={totalItem}/>
 
-      <button onClick={adicionarItem} style={btnAdd}>+ Item</button>
+      <button onClick={adicionarItem} style={btn}>+ Item</button>
 
-      <div style={totalBox}>Total: R$ {totalGeral().toFixed(2)}</div>
-
-      <button onClick={salvar} style={btnSalvar}>Salvar</button>
-      <button onClick={gerarPDF} style={btnPDF}>PDF</button>
+      <button onClick={salvar} style={btnBlue}>Salvar</button>
+      <button onClick={gerarPDF} style={btnBlack}>PDF</button>
 
     </div>
   )
 }
 
-const container={maxWidth:1100,margin:'0 auto',padding:24,background:'#f8fafc'}
-const titulo={fontSize:28,fontWeight:700}
-const card={background:'#fff',padding:20,borderRadius:12,marginBottom:20}
-const input={width:'100%',padding:8,marginTop:8}
-const totalBox={fontSize:24,fontWeight:700}
-const btnAdd={background:'green',color:'#fff',padding:10}
-const btnSalvar={background:'blue',color:'#fff',padding:10}
-const btnPDF={background:'black',color:'#fff',padding:10}
+const container={maxWidth:1100,margin:'0 auto',padding:24}
+const topo={display:'flex',justifyContent:'space-between',marginBottom:20}
+const titulo={fontSize:26,fontWeight:700}
+const sub={color:'#64748b'}
+const total={fontSize:24,color:'#16a34a',fontWeight:700}
+const input={width:'100%',marginTop:10,padding:10}
+const btn={marginTop:10}
+const btnBlue={background:'blue',color:'#fff',marginTop:10}
+const btnBlack={background:'black',color:'#fff',marginTop:10}

@@ -28,9 +28,7 @@ export default function TabelaOrcamento({ itens, atualizarItem, removerItem, tot
           <input type="number" value={item.mao_obra} onChange={e => atualizarItem(index,'mao_obra', Number(e.target.value))} style={inputPeq}/>
           <input type="number" value={item.equipamentos} onChange={e => atualizarItem(index,'equipamentos', Number(e.target.value))} style={inputPeq}/>
 
-          <strong style={{textAlign:'right'}}>
-            R$ {totalItem(item).toFixed(2)}
-          </strong>
+          <strong>R$ {totalItem(item).toFixed(2)}</strong>
 
           <button onClick={()=>removerItem(index)} style={btnRemover}>X</button>
         </div>
@@ -39,7 +37,6 @@ export default function TabelaOrcamento({ itens, atualizarItem, removerItem, tot
   )
 }
 
-// estilos
 const header = {
   display:'grid',
   gridTemplateColumns:'80px 2fr 80px 80px 120px 120px 120px 120px 50px',
