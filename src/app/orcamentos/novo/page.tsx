@@ -3,8 +3,11 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
+import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function NovoOrcamento(){
+
+useEmpresa()
 
   const [cliente,setCliente]=useState('')
   const [descricao,setDescricao]=useState('')

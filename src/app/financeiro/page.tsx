@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function Financeiro() {
+
+useEmpresa()
+
   const [obras, setObras] = useState<any[]>([])
   const [financeiro, setFinanceiro] = useState<any[]>([])
   const [obraFiltro, setObraFiltro] = useState('')

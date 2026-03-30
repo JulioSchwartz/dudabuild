@@ -4,8 +4,12 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function Obras() {
+
+useEmpresa()
+
   const router = useRouter()
   const [obras, setObras] = useState<any[]>([])
 

@@ -4,8 +4,11 @@ import { useEffect,useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
+import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function EditarOrcamento(){
+
+useEmpresa()
 
   const {id}=useParams()
   const [itens,setItens]=useState<any[]>([])
