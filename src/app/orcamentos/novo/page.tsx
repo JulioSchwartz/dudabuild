@@ -127,28 +127,101 @@ export default function NovoOrcamento() {
 
   function gerarPDF() {
 
-    const cron = cronogramaComValor().map(c => `
-      <tr>
-        <td>${c.etapa}</td>
-        <td>${c.dias}</td>
-        <td>${c.percentual}%</td>
-        <td>R$ ${c.valor.toFixed(2)}</td>
-      </tr>
-    `).join('')
+  const html = `
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      color: #0f172a;
+    }
 
-    const html = `
-      <style>
-        body { font-family: Arial; padding: 30px; color:#0f172a }
-        h1 { font-size: 28px; color:#1e3a8a }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px }
-        th, td { border: 1px solid #ccc; padding: 8px }
-        th { background: #f1f5f9 }
-      </style>
+    .page {
+      padding: 40px;
+    }
 
-      <h1>ORÇAMENTO</h1>
-      <p><b>Cliente:</b> ${cliente}</p>
-      <p><b>Total:</b> R$ ${totalGeral().toFixed(2)}</p>
+    .capa {
+      height: 100vh;
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px;
+    }
 
+    .capa h1 {
+      font-size: 42px;
+      margin-bottom: 10px;
+    }
+
+    .capa p {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+
+    .secao {
+      margin-top: 30px;
+    }
+
+    h2 {
+      color: #1e3a8a;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th {
+      background: #1e3a8a;
+      color: white;
+      padding: 10px;
+      font-size: 13px;
+    }
+
+    td {
+      border: 1px solid #e2e8f0;
+      padding: 8px;
+      font-size: 13px;
+    }
+
+    .total {
+      margin-top: 30px;
+      font-size: 26px;
+      font-weight: bold;
+      text-align: right;
+      color: #16a34a;
+    }
+
+    .box {
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+  </style>
+
+  <!-- CAPA -->
+  <div class="capa">
+    <h1>PROPOSTA COMERCIAL</h1>
+    <p>${cliente}</p>
+    <p>${new Date().toLocaleDateString()}</p>
+  </div>
+
+  <!-- CONTEÚDO -->
+  <div class="page">
+
+    <div class="secao">
+      <h2>Resumo Executivo</h2>
+      <div class="box">
+        <p>${descricao || 'Execução de serviços conforme orçamento detalhado abaixo.'}</p>
+      </div>
+    </div>
+
+    <div class="secao">
+      <h2>Planilha de Custos</h2>
       <table>
         <tr>
           <th>Categoria</th>
@@ -159,25 +232,54 @@ export default function NovoOrcamento() {
           <th>Equip</th>
           <th>Total</th>
         </tr>
+
         ${itens.map(i => `
           <tr>
             <td>${i.categoria}</td>
             <td>${i.descricao}</td>
             <td>${i.quantidade}</td>
-            <td>${i.material}</td>
-            <td>${i.mao_obra}</td>
-            <td>${i.equipamentos}</td>
-            <td>R$ ${totalItem(i).toFixed(2)}</td>
+            <td>R$ ${i.material}</td>
+            <td>R$ ${i.mao_obra}</td>
+            <td>R$ ${i.equipamentos}</td>
+            <td><b>R$ ${totalItem(i).toFixed(2)}</b></td>
           </tr>
         `).join('')}
-      </table>
 
-  
-    const w = window.open('', '', 'width=900,height=700')
-    w?.document.write(html)
-    w?.document.close()
-    w?.print()
-  }
+      </table>
+    </div>
+
+    <div class="secao">
+      <h2>Memorial Descritivo</h2>
+      <div class="box">
+        <p><b>Materiais:</b> ${memorial.materiais}</p>
+        <p><b>Métodos:</b> ${memorial.metodos}</p>
+        <p><b>Marcas:</b> ${memorial.marcas}</p>
+        <p><b>Observações:</b> ${memorial.observacoes}</p>
+      </div>
+    </div>
+
+    <div class="secao">
+      <h2>Condições Comerciais</h2>
+      <div class="box">
+        <p><b>Pagamento:</b> ${condicoes.pagamento}</p>
+        <p><b>Validade:</b> ${condicoes.validade}</p>
+        <p><b>Garantia:</b> ${condicoes.garantia}</p>
+        <p><b>Observações:</b> ${condicoes.observacoes}</p>
+      </div>
+    </div>
+
+    <div class="total">
+      VALOR TOTAL: R$ ${totalGeral().toFixed(2)}
+    </div>
+
+  </div>
+  `
+
+  const w = window.open('', '', 'width=900,height=700')
+  w?.document.write(html)
+  w?.document.close()
+  w?.print()
+}
 
   const categorias = [...new Set(itens.map(i => i.categoria))]
 
