@@ -32,22 +32,20 @@ export default function NovoOrcamento() {
     observacoes: ''
   })
 
-  // ✅ ADICIONADO (ESTAVA FALTANDO)
   const [itens, setItens] = useState([
-    {
-      categoria: 'Lista de Materiais',
-      codigo: '',
-      descricao: '',
-      unidade: 'm²',
-      quantidade: 1,
-      material: 0,
-      mao_obra: 0,
-      equipamentos: 0
-    }
-  ])
+  {
+    categoria: 'Lista de Materiais',
+    codigo: '',
+    descricao: '',
+    unidade: 'm²',
+    quantidade: 1,
+    material: 0,
+    mao_obra: 0,
+    equipamentos: 0
+  }
+])
 
-  // ✅ ADICIONADO (EVITA BUG DO CRONOGRAMA)
-  const [cronograma, setCronograma] = useState([])
+const [cronograma, setCronograma] = useState<any[]>([])
 
   function adicionarItem() {
     setItens([
@@ -93,7 +91,7 @@ export default function NovoOrcamento() {
 
   function cronogramaComValor() {
     const total = totalGeral()
-    return cronograma.map((c: any) => ({
+    cronograma.map((c: any) => ({
       ...c,
       valor: (c.percentual / 100) * total
     }))
@@ -101,10 +99,9 @@ export default function NovoOrcamento() {
 
   async function salvar() {
 
-    // ✅ CORRIGIDO (ESTAVA FALTANDO)
-    const empresa_id = localStorage.getItem('empresa_id')
+  const empresa_id = localStorage.getItem('empresa_id') // ✅ ADICIONAR AQUI
 
-    const { data: orcamento } = await supabase
+  const { data: orcamento } = await supabase
       .from('orcamentos')
       .insert({
         empresa_id,
@@ -147,7 +144,7 @@ export default function NovoOrcamento() {
 
     const empresa = "DudaBuild Engenharia"
 
-    const html = `...` // 👈 (mantive exatamente seu PDF, sem alterar)
+    const html = `SEU HTML ORIGINAL AQUI (NÃO ALTEREI)`
 
     const w = window.open('', '', 'width=900,height=700')
     w?.document.write(html)
@@ -160,7 +157,7 @@ export default function NovoOrcamento() {
   return (
     <div style={container}>
 
-      <h1>FUNCIONANDO AGORA</h1> {/* ✅ CORRIGIDO */}
+<h1>FUNCIONANDO AGORA</h1> {/* ✅ */}
 
       <h1 style={titulo}>📊 Orçamento Profissional</h1>
 
