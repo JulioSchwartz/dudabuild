@@ -32,22 +32,7 @@ export default function NovoOrcamento() {
     observacoes: ''
   })
 
-  // ✅ REMOVE CRONOGRAMA PADRÃO (BUG RESOLVIDO)
-  const [cronograma, setCronograma] = useState<any[]>([])
-
-  const [itens, setItens] = useState([
-    {
-      categoria: 'Lista de Materiais',
-      codigo: '',
-      descricao: '',
-      unidade: 'm²',
-      quantidade: 1,
-      material: 0,
-      mao_obra: 0,
-      equipamentos: 0
-    }
-  ])
-
+  
   function adicionarItem() {
     setItens([
       ...itens,
@@ -187,15 +172,7 @@ export default function NovoOrcamento() {
         `).join('')}
       </table>
 
-      ${cronograma.length > 0 ? `
-        <h3>Cronograma</h3>
-        <table>
-          <tr><th>Etapa</th><th>Dias</th><th>%</th><th>Valor</th></tr>
-          ${cron}
-        </table>
-      ` : ''}
-    `
-
+  
     const w = window.open('', '', 'width=900,height=700')
     w?.document.write(html)
     w?.document.close()
@@ -257,14 +234,41 @@ export default function NovoOrcamento() {
 
 // 🎨 ESTILO PROFISSIONAL
 const container={maxWidth:1100,margin:'0 auto',padding:24,background:'#f8fafc'}
+
 const titulo={fontSize:28,fontWeight:700}
+
 const card={background:'#fff',padding:20,borderRadius:12,marginBottom:20,boxShadow:'0 2px 6px rgba(0,0,0,0.05)'}
-const header={display:'grid',gridTemplateColumns:'80px 2fr 70px 80px 110px 110px 110px 120px 60px',gap:8,background:'#e2e8f0',padding:10,borderRadius:8}
-const linha=(i:number)=>({display:'grid',gridTemplateColumns:'80px 2fr 70px 80px 110px 110px 110px 120px 60px',gap:8,marginTop:8,padding:10,background:i%2?'#f8fafc':'#fff'})
+
+const header = {
+  display:'grid',
+  gridTemplateColumns:'80px 2fr 70px 80px 110px 110px 110px 120px 60px',
+  gap:8,
+  background:'#e2e8f0',
+  padding:10,
+  borderRadius:8,
+  alignItems:'center' // 🔥 ESSENCIAL
+}
+
+const linha=(i:number)=>({
+  display:'grid',
+  gridTemplateColumns:'80px 2fr 70px 80px 110px 110px 110px 120px 60px',
+  gap:8,
+  marginTop:8,
+  padding:10,
+  background:i%2?'#f8fafc':'#fff',
+  alignItems:'center' // 🔥 ESSENCIAL
+})
+
 const input={width:'100%',padding:8,border:'1px solid #cbd5e1',borderRadius:6}
+
 const subtotal={textAlign:'right',marginTop:10,fontWeight:600}
+
 const totalBox={fontSize:28,fontWeight:700,color:'#16a34a',textAlign:'right'}
+
 const btnAdd={background:'#22c55e',color:'#fff',padding:10,borderRadius:6}
+
 const btnRemover={background:'#ef4444',color:'#fff',borderRadius:6,width:40}
+
 const btnSalvar={background:'#2563eb',color:'#fff',padding:12,borderRadius:8}
+
 const btnPDF={background:'#111827',color:'#fff',padding:12,borderRadius:8}
