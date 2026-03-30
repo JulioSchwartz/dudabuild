@@ -5,16 +5,28 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 const categoriasPadrao = [
-  'Serviços preliminares',
-  'Infraestrutura',
-  'Superestrutura',
-  'Alvenaria',
-  'Cobertura',
-  'Instalações',
-  'Revestimentos',
-  'Acabamentos',
-  'Limpeza'
+  'Serviços de Mão de Obra',
+  'Lista de Materiais',
+  'Equipamentos',
+  'Acabamentos'
 ]
+
+function adicionarItem() {
+  setItens([
+    ...itens,
+    {
+      categoria: 'Lista de Materiais',
+      codigo: '',
+      descricao: '',
+      unidade: 'm²',
+      quantidade: 1,
+      valor_unitario: 0,
+      material: 0,
+      mao_obra: 0,
+      equipamentos: 0
+    }
+  ])
+}
 
 export default function EditarOrcamento() {
   const { id } = useParams()

@@ -3,16 +3,12 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+// ✅ CATEGORIAS PROFISSIONAIS
 const categoriasPadrao = [
-  'Serviços preliminares',
-  'Infraestrutura',
-  'Superestrutura',
-  'Alvenaria',
-  'Cobertura',
-  'Instalações',
-  'Revestimentos',
-  'Acabamentos',
-  'Limpeza'
+  'Serviços de Mão de Obra',
+  'Lista de Materiais',
+  'Equipamentos',
+  'Acabamentos'
 ]
 
 export default function NovoOrcamento() {
@@ -36,13 +32,12 @@ export default function NovoOrcamento() {
     observacoes: ''
   })
 
-  const [cronograma, setCronograma] = useState([
-    { etapa: 'Fundação', dias: 10, percentual: 20 }
-  ])
+  // ✅ REMOVE CRONOGRAMA PADRÃO (BUG RESOLVIDO)
+  const [cronograma, setCronograma] = useState<any[]>([])
 
   const [itens, setItens] = useState([
     {
-      categoria: 'Infraestrutura',
+      categoria: 'Lista de Materiais',
       codigo: '',
       descricao: '',
       unidade: 'm²',
@@ -57,7 +52,7 @@ export default function NovoOrcamento() {
     setItens([
       ...itens,
       {
-        categoria: 'Serviços preliminares',
+        categoria: 'Lista de Materiais',
         codigo: '',
         descricao: '',
         unidade: 'm²',
@@ -166,14 +161,9 @@ export default function NovoOrcamento() {
       </style>
 
       <h1>ORÇAMENTO</h1>
-
-      <h3>Cliente</h3>
-      <p>${cliente}</p>
-
-      <h3>Resumo</h3>
+      <p><b>Cliente:</b> ${cliente}</p>
       <p><b>Total:</b> R$ ${totalGeral().toFixed(2)}</p>
 
-      <h3>Planilha</h3>
       <table>
         <tr>
           <th>Categoria</th>
@@ -197,23 +187,13 @@ export default function NovoOrcamento() {
         `).join('')}
       </table>
 
-      <h3>Cronograma</h3>
-      <table>
-        <tr><th>Etapa</th><th>Dias</th><th>%</th><th>Valor</th></tr>
-        ${cron}
-      </table>
-
-      <h3>Memorial</h3>
-      <p><b>Materiais:</b> ${memorial.materiais}</p>
-      <p><b>Métodos:</b> ${memorial.metodos}</p>
-      <p><b>Marcas:</b> ${memorial.marcas}</p>
-      <p><b>Observações:</b> ${memorial.observacoes}</p>
-
-      <h3>Condições Comerciais</h3>
-      <p><b>Pagamento:</b> ${condicoes.pagamento}</p>
-      <p><b>Validade:</b> ${condicoes.validade}</p>
-      <p><b>Garantia:</b> ${condicoes.garantia}</p>
-      <p><b>Obs:</b> ${condicoes.observacoes}</p>
+      ${cronograma.length > 0 ? `
+        <h3>Cronograma</h3>
+        <table>
+          <tr><th>Etapa</th><th>Dias</th><th>%</th><th>Valor</th></tr>
+          ${cron}
+        </table>
+      ` : ''}
     `
 
     const w = window.open('', '', 'width=900,height=700')
@@ -225,38 +205,16 @@ export default function NovoOrcamento() {
   const categorias = [...new Set(itens.map(i => i.categoria))]
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24, background: '#f8fafc', color: '#0f172a' }}>
-
-      <h1 style={{ fontSize: 28, fontWeight: 700 }}>📊 Orçamento Profissional</h1>
-
-      <div style={card}>
-        <h3>Dados do Cliente</h3>
-        <div style={grid}>
-          <input placeholder="Nome" onChange={e => setCliente(e.target.value)} style={input}/>
-          <input placeholder="WhatsApp" onChange={e => setWhatsapp(e.target.value)} style={input}/>
-          <input placeholder="Email" onChange={e => setEmail(e.target.value)} style={input}/>
-        </div>
-      </div>
-
-      <div style={card}>
-        <h3>Descrição</h3>
-        <textarea onChange={e => setDescricao(e.target.value)} style={textarea}/>
-      </div>
+    <div style={container}>
+      <h1 style={titulo}>📊 Orçamento Profissional</h1>
 
       {categorias.map(cat => (
         <div key={cat} style={card}>
           <h3>{cat}</h3>
 
           <div style={header}>
-            <span>Cód</span>
-            <span>Descrição</span>
-            <span>Un</span>
-            <span>Qtd</span>
-            <span>Material</span>
-            <span>M.O</span>
-            <span>Equip</span>
-            <span>Total</span>
-            <span></span>
+            <span>Cód</span><span>Descrição</span><span>Un</span><span>Qtd</span>
+            <span>Material</span><span>M.O</span><span>Equip</span><span>Total</span><span></span>
           </div>
 
           {itens.filter(i => i.categoria === cat).map((item, index) => (
@@ -266,33 +224,10 @@ export default function NovoOrcamento() {
               <input value={item.descricao} onChange={e => atualizarItem(index,'descricao',e.target.value)} style={input}/>
               <input value={item.unidade} onChange={e => atualizarItem(index,'unidade',e.target.value)} style={input}/>
 
-              <input
-                type="number"
-                value={item.quantidade}
-                onChange={e => atualizarItem(index,'quantidade', Number(e.target.value))}
-                style={input}
-              />
-
-              <input
-                type="number"
-                value={item.material}
-                onChange={e => atualizarItem(index,'material', Number(e.target.value))}
-                style={input}
-              />
-
-              <input
-                type="number"
-                value={item.mao_obra}
-                onChange={e => atualizarItem(index,'mao_obra', Number(e.target.value))}
-                style={input}
-              />
-
-              <input
-                type="number"
-                value={item.equipamentos}
-                onChange={e => atualizarItem(index,'equipamentos', Number(e.target.value))}
-                style={input}
-              />
+              <input type="number" value={item.quantidade} onChange={e => atualizarItem(index,'quantidade', Number(e.target.value))} style={input}/>
+              <input type="number" value={item.material} onChange={e => atualizarItem(index,'material', Number(e.target.value))} style={input}/>
+              <input type="number" value={item.mao_obra} onChange={e => atualizarItem(index,'mao_obra', Number(e.target.value))} style={input}/>
+              <input type="number" value={item.equipamentos} onChange={e => atualizarItem(index,'equipamentos', Number(e.target.value))} style={input}/>
 
               <strong>R$ {totalItem(item).toFixed(2)}</strong>
 
@@ -308,50 +243,28 @@ export default function NovoOrcamento() {
 
       <button onClick={adicionarItem} style={btnAdd}>+ Item</button>
 
-      <div style={card}>
-        <h3>Memorial Descritivo</h3>
-        <textarea placeholder="Materiais" onChange={e => setMemorial({...memorial, materiais:e.target.value})} style={textarea}/>
-        <textarea placeholder="Métodos" onChange={e => setMemorial({...memorial, metodos:e.target.value})} style={textarea}/>
-        <textarea placeholder="Marcas" onChange={e => setMemorial({...memorial, marcas:e.target.value})} style={textarea}/>
-        <textarea placeholder="Observações" onChange={e => setMemorial({...memorial, observacoes:e.target.value})} style={textarea}/>
-      </div>
-
-      <div style={card}>
-        <h3>Condições Comerciais</h3>
-        <textarea placeholder="Forma de pagamento" onChange={e => setCondicoes({...condicoes, pagamento:e.target.value})} style={textarea}/>
-        <textarea placeholder="Validade" onChange={e => setCondicoes({...condicoes, validade:e.target.value})} style={textarea}/>
-        <textarea placeholder="Garantia" onChange={e => setCondicoes({...condicoes, garantia:e.target.value})} style={textarea}/>
-        <textarea placeholder="Observações" onChange={e => setCondicoes({...condicoes, observacoes:e.target.value})} style={textarea}/>
-      </div>
-
-      <div style={{ fontSize: 26, fontWeight: 700, color: '#16a34a' }}>
+      <div style={totalBox}>
         Total: R$ {totalGeral().toFixed(2)}
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+      <div style={{ display: 'flex', gap: 10 }}>
         <button onClick={salvar} style={btnSalvar}>Salvar</button>
-        <button onClick={gerarPDF} style={btnPDF}>Gerar PDF</button>
+        <button onClick={gerarPDF} style={btnPDF}>PDF</button>
       </div>
-
     </div>
   )
 }
 
-const card = { background:'#fff', padding:20, borderRadius:10, marginBottom:20 }
-const grid = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }
-const header = { display:'grid', gridTemplateColumns:'1fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr 60px', background:'#e2e8f0', padding:10 }
-const linha = (i:number)=>({
-  display:'grid',
-  gridTemplateColumns:'1fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr 60px',
-  gap:10,
-  marginTop:10,
-  background: i%2 ? '#f1f5f9' : '#fff',
-  padding:10
-})
-const input = { padding:10, border:'1px solid #cbd5e1', borderRadius:6, color:'#000', background:'#fff' }
-const textarea = { width:'100%', height:100, padding:10, marginTop:10 }
-const subtotal = { textAlign:'right', marginTop:10, fontWeight:600 }
-const btnAdd = { background:'#22c55e', color:'#fff', padding:10, borderRadius:6 }
-const btnRemover = { background:'#ef4444', color:'#fff', borderRadius:6 }
-const btnSalvar = { background:'#2563eb', color:'#fff', padding:12, borderRadius:8 }
-const btnPDF = { background:'#111827', color:'#fff', padding:12, borderRadius:8 }
+// 🎨 ESTILO PROFISSIONAL
+const container={maxWidth:1100,margin:'0 auto',padding:24,background:'#f8fafc'}
+const titulo={fontSize:28,fontWeight:700}
+const card={background:'#fff',padding:20,borderRadius:12,marginBottom:20,boxShadow:'0 2px 6px rgba(0,0,0,0.05)'}
+const header={display:'grid',gridTemplateColumns:'80px 2fr 70px 80px 110px 110px 110px 120px 60px',gap:8,background:'#e2e8f0',padding:10,borderRadius:8}
+const linha=(i:number)=>({display:'grid',gridTemplateColumns:'80px 2fr 70px 80px 110px 110px 110px 120px 60px',gap:8,marginTop:8,padding:10,background:i%2?'#f8fafc':'#fff'})
+const input={width:'100%',padding:8,border:'1px solid #cbd5e1',borderRadius:6}
+const subtotal={textAlign:'right',marginTop:10,fontWeight:600}
+const totalBox={fontSize:28,fontWeight:700,color:'#16a34a',textAlign:'right'}
+const btnAdd={background:'#22c55e',color:'#fff',padding:10,borderRadius:6}
+const btnRemover={background:'#ef4444',color:'#fff',borderRadius:6,width:40}
+const btnSalvar={background:'#2563eb',color:'#fff',padding:12,borderRadius:8}
+const btnPDF={background:'#111827',color:'#fff',padding:12,borderRadius:8}
