@@ -51,13 +51,22 @@ export default function OrcamentoCliente() {
   }
 
   async function atualizarStatus(status: string) {
-    await supabase
-      .from('orcamentos')
-      .update({ status })
-      .eq('id', id)
+  await supabase
+    .from('orcamentos')
+    .update({ status })
+    .eq('id', id)
 
-    setOrcamento({ ...orcamento, status })
-  }
+  // 🔔 ENVIA NOTIFICAÇÃO
+  await fetch('/api/notificar', {
+    method: 'POST',
+    body: JSON.stringify({
+      id,
+      status
+    })
+  })
+
+  setOrcamento({ ...orcamento, status })
+}
 
   if (loading) return <p>Carregando...</p>
 

@@ -133,41 +133,44 @@ export default function NovoOrcamento() {
   }
 
   function gerarPDF() {
-  const doc = new jsPDF()
+  const html = `
+    <html>
+    <body style="font-family: Arial; padding: 40px">
 
-  doc.setFontSize(18)
-  doc.text('PROPOSTA COMERCIAL', 20, 20)
+      <h1>DudaBuild Engenharia</h1>
+      <h2>Proposta Comercial</h2>
 
-  doc.setFontSize(12)
-  doc.text(`Cliente: ${cliente}`, 20, 30)
-  doc.text(`Descrição: ${descricao}`, 20, 38)
+      <p><b>Cliente:</b> ${cliente}</p>
+      <p><b>Descrição:</b> ${descricao}</p>
 
-  let y = 50
+      <hr/>
 
-  doc.text('Itens:', 20, y)
-  y += 10
+      ${itens.map(i => `
+        <p>${i.descricao} - ${i.quantidade}x - R$ ${totalItem(i).toFixed(2)}</p>
+      `).join('')}
 
-  itens.forEach(i => {
-    doc.text(
-      `${i.descricao} - ${i.quantidade}x - R$ ${totalItem(i).toFixed(2)}`,
-      20,
-      y
-    )
-    y += 8
-  })
+      <hr/>
 
-  y += 10
+      <h2>Total: R$ ${totalGeral().toFixed(2)}</h2>
 
-  doc.setFontSize(14)
-  doc.text(`TOTAL: R$ ${totalGeral().toFixed(2)}`, 20, y)
+      <br/>
 
-  y += 15
+      <p><b>CNPJ:</b> 00.000.000/0001-00</p>
+      <p><b>Responsável:</b> Eng. Civil</p>
 
-  doc.setFontSize(10)
-  doc.text('Validade: 7 dias', 20, y)
-  doc.text('Pagamento: A combinar', 20, y + 5)
+      <br/><br/>
 
-  doc.save('orcamento.pdf')
+      <p>__________________________</p>
+      <p>Assinatura</p>
+
+    </body>
+    </html>
+  `
+
+  const w = window.open('', '', 'width=900,height=700')
+  w?.document.write(html)
+  w?.document.close()
+  w?.print()
 }
 
   const input = { width: '100%', marginTop: 10, padding: 12, borderRadius: 8 }
