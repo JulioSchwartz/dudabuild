@@ -39,12 +39,12 @@ export default function EditarOrcamento(){
   }
 
   function enviarWhatsApp() {
-    const texto = `Olá ${cliente}, segue seu orçamento no valor de R$ ${total.toFixed(2)}.`
+  const total = totalGeral()
 
-    const url = `https://wa.me/5511999999999?text=${encodeURIComponent(texto)}`
+  const texto = `Olá! Segue seu orçamento no valor de R$ ${total.toFixed(2)}.`
 
-    window.open(url, '_blank')
-  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`)
+}
 
   return(
     <div style={container}>

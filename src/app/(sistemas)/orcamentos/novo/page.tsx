@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
 import jsPDF from 'jspdf'
 
-// ✅ Tipagem forte
+// 🚀 TIPAGEM PROFISSIONAL
 type Item = {
   categoria: string
   codigo: string
@@ -17,10 +17,18 @@ type Item = {
   equipamentos: number
 }
 
+function formatarMoeda(valor: number) {
+  return valor.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  })
+}
+
 export default function NovoOrcamento() {
   const [cliente, setCliente] = useState('')
   const [descricao, setDescricao] = useState('')
   const [orcamentoId, setOrcamentoId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const [itens, setItens] = useState<Item[]>([
     {
@@ -72,12 +80,14 @@ export default function NovoOrcamento() {
   }
 
   async function salvar() {
-    const empresa_id = localStorage.getItem('empresa_id')
-
-    if (!empresa_id) {
-      alert('Empresa não encontrada')
+    if (!cliente) {
+      alert('Informe o cliente')
       return
     }
+
+    setLoading(true)
+
+    const empresa_id = localStorage.getItem('empresa_id')
 
     const { data: orc, error } = await supabase
       .from('orcamentos')
@@ -92,6 +102,7 @@ export default function NovoOrcamento() {
 
     if (error || !orc) {
       alert('Erro ao salvar')
+      setLoading(false)
       return
     }
 
@@ -105,101 +116,76 @@ export default function NovoOrcamento() {
       }))
     )
 
-    alert('Orçamento salvo!')
+    alert('Orçamento salvo com sucesso!')
+    setLoading(false)
   }
 
   function enviarWhatsApp() {
     if (!orcamentoId) {
-      alert('Salve o orçamento primeiro')
+      alert('Salve primeiro')
       return
     }
 
     const link = `https://dudabuild.vercel.app/orcamento/${orcamentoId}`
     const msg = `Olá! Segue seu orçamento:\n${link}`
 
-    window.open(`https://wa.me/5549991587646?text=${encodeURIComponent(msg)}`)
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`)
   }
 
   function gerarPDF() {
-    const doc = new jsPDF()
+  const doc = new jsPDF()
 
-    doc.setFillColor(15, 23, 42)
-    doc.rect(0, 0, 210, 40, 'F')
+  doc.setFontSize(18)
+  doc.text('PROPOSTA COMERCIAL', 20, 20)
 
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(18)
-    doc.text('DudaBuild Engenharia', 20, 25)
+  doc.setFontSize(12)
+  doc.text(`Cliente: ${cliente}`, 20, 30)
+  doc.text(`Descrição: ${descricao}`, 20, 38)
 
-    doc.setFontSize(12)
-    doc.text('PROPOSTA COMERCIAL', 140, 25)
+  let y = 50
 
-    doc.setTextColor(0, 0, 0)
+  doc.text('Itens:', 20, y)
+  y += 10
 
-    doc.setFontSize(12)
-    doc.text(`Cliente: ${cliente}`, 20, 60)
-    doc.text(`Descrição: ${descricao}`, 20, 68)
+  itens.forEach(i => {
+    doc.text(
+      `${i.descricao} - ${i.quantidade}x - R$ ${totalItem(i).toFixed(2)}`,
+      20,
+      y
+    )
+    y += 8
+  })
 
-    let y = 80
+  y += 10
 
-    doc.setFillColor(230, 230, 230)
-    doc.rect(20, y, 170, 10, 'F')
+  doc.setFontSize(14)
+  doc.text(`TOTAL: R$ ${totalGeral().toFixed(2)}`, 20, y)
 
-    doc.text('Descrição', 22, y + 7)
-    doc.text('Qtd', 120, y + 7)
-    doc.text('Total', 160, y + 7)
+  y += 15
 
-    y += 15
+  doc.setFontSize(10)
+  doc.text('Validade: 7 dias', 20, y)
+  doc.text('Pagamento: A combinar', 20, y + 5)
 
-    itens.forEach(item => {
-      doc.text(item.descricao || '-', 22, y)
-      doc.text(String(item.quantidade), 120, y)
-      doc.text(`R$ ${totalItem(item).toFixed(2)}`, 160, y)
-      y += 10
-    })
+  doc.save('orcamento.pdf')
+}
 
-    y += 10
-    doc.setFontSize(14)
-    doc.text(`TOTAL: R$ ${totalGeral().toFixed(2)}`, 20, y)
-
-    y += 20
-    doc.setFontSize(10)
-    doc.text('Validade: 7 dias', 20, y)
-    doc.text('Forma de pagamento: A combinar', 20, y + 5)
-
-    y += 25
-    doc.text('_________________________________', 20, y)
-    doc.text('Responsável técnico', 20, y + 5)
-
-    doc.save('orcamento.pdf')
-  }
-
-  const container = { maxWidth: 1100, margin: '0 auto', padding: 24 }
-  const titulo = { fontSize: 26, fontWeight: 700 }
-  const input = { width: '100%', marginTop: 10, padding: 10 }
-  const total = { fontSize: 24, fontWeight: 700, marginTop: 20 }
-  const btn = { marginTop: 10 }
-  const btnBlack = { background: 'black', color: '#fff', marginTop: 10 }
-  const btnWhats = {
-    background: '#25D366',
-    color: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 10
-  }
+  const input = { width: '100%', marginTop: 10, padding: 12, borderRadius: 8 }
+  const btn = { marginTop: 10, padding: 12, borderRadius: 8 }
 
   return (
-    <div style={container}>
-      <h1 style={titulo}>Novo Orçamento</h1>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
+      <h1 style={{ fontSize: 28, fontWeight: 700 }}>Novo Orçamento</h1>
 
       <input
-        placeholder="Cliente"
+        placeholder="Nome do cliente"
         value={cliente}
         onChange={e => setCliente(e.target.value)}
         style={input}
       />
 
       <input
-        placeholder="Descrição"
+        placeholder="Descrição do serviço"
         value={descricao}
         onChange={e => setDescricao(e.target.value)}
         style={input}
@@ -215,17 +201,19 @@ export default function NovoOrcamento() {
         + Adicionar Item
       </button>
 
-      <h2 style={total}>Total: R$ {totalGeral().toFixed(2)}</h2>
+      <h2 style={{ fontSize: 26, marginTop: 20 }}>
+        Total: {formatarMoeda(totalGeral())}
+      </h2>
 
-      <button onClick={salvar} style={btn}>
-        Salvar Orçamento
+      <button onClick={salvar} style={btn} disabled={loading}>
+        {loading ? 'Salvando...' : 'Salvar Orçamento'}
       </button>
 
-      <button onClick={gerarPDF} style={btnBlack}>
+      <button onClick={gerarPDF} style={{ ...btn, background: '#000', color: '#fff' }}>
         Gerar PDF
       </button>
 
-      <button onClick={enviarWhatsApp} style={btnWhats}>
+      <button onClick={enviarWhatsApp} style={{ ...btn, background: '#25D366', color: '#fff' }}>
         Enviar WhatsApp
       </button>
     </div>

@@ -1,6 +1,32 @@
 'use client'
 
-export default function TabelaOrcamento({ itens, atualizarItem, removerItem, totalItem }) {
+type Item = {
+  codigo: string
+  descricao: string
+  unidade: string
+  quantidade: number
+  material: number
+  mao_obra: number
+  equipamentos: number
+}
+
+type Props = {
+  itens: Item[]
+  atualizarItem: (index: number, campo: keyof Item, valor: any) => void
+  removerItem: (index: number) => void
+  readOnly?: boolean
+}
+
+export default function TabelaOrcamento({
+  itens,
+  atualizarItem,
+  removerItem,
+  readOnly
+}: Props) {
+
+  function totalItem(item: Item) {
+    return (item.material + item.mao_obra + item.equipamentos) * item.quantidade
+  }
 
   return (
     <>
@@ -19,23 +45,76 @@ export default function TabelaOrcamento({ itens, atualizarItem, removerItem, tot
       {itens.map((item, index) => (
         <div key={index} style={linha(index)}>
 
-          <input value={item.codigo} onChange={e => atualizarItem(index,'codigo',e.target.value)} style={input}/>
-          <input value={item.descricao} onChange={e => atualizarItem(index,'descricao',e.target.value)} style={input}/>
-          <input value={item.unidade} onChange={e => atualizarItem(index,'unidade',e.target.value)} style={input}/>
+          <input
+            disabled={readOnly}
+            value={item.codigo}
+            onChange={e => atualizarItem(index,'codigo',e.target.value)}
+            style={input}
+          />
 
-          <input type="number" value={item.quantidade} onChange={e => atualizarItem(index,'quantidade', Number(e.target.value))} style={input}/>
-          <input type="number" value={item.material} onChange={e => atualizarItem(index,'material', Number(e.target.value))} style={input}/>
-          <input type="number" value={item.mao_obra} onChange={e => atualizarItem(index,'mao_obra', Number(e.target.value))} style={input}/>
-          <input type="number" value={item.equipamentos} onChange={e => atualizarItem(index,'equipamentos', Number(e.target.value))} style={input}/>
+          <input
+            disabled={readOnly}
+            value={item.descricao}
+            onChange={e => atualizarItem(index,'descricao',e.target.value)}
+            style={input}
+          />
 
-          <strong>R$ {totalItem(item).toFixed(2)}</strong>
+          <input
+            disabled={readOnly}
+            value={item.unidade}
+            onChange={e => atualizarItem(index,'unidade',e.target.value)}
+            style={input}
+          />
 
-          <button onClick={()=>removerItem(index)} style={btnRemover}>X</button>
+          <input
+            disabled={readOnly}
+            type="number"
+            value={item.quantidade}
+            onChange={e => atualizarItem(index,'quantidade', Number(e.target.value))}
+            style={input}
+          />
+
+          <input
+            disabled={readOnly}
+            type="number"
+            value={item.material}
+            onChange={e => atualizarItem(index,'material', Number(e.target.value))}
+            style={input}
+          />
+
+          <input
+            disabled={readOnly}
+            type="number"
+            value={item.mao_obra}
+            onChange={e => atualizarItem(index,'mao_obra', Number(e.target.value))}
+            style={input}
+          />
+
+          <input
+            disabled={readOnly}
+            type="number"
+            value={item.equipamentos}
+            onChange={e => atualizarItem(index,'equipamentos', Number(e.target.value))}
+            style={input}
+          />
+
+          <strong>
+            R$ {totalItem(item).toFixed(2)}
+          </strong>
+
+          {!readOnly && (
+            <button onClick={() => removerItem(index)} style={btnRemover}>
+              X
+            </button>
+          )}
+
         </div>
       ))}
     </>
   )
 }
+
+/* 🎨 ESTILO */
 
 const header = {
   display:'grid',
@@ -45,12 +124,23 @@ const header = {
   borderRadius:8
 }
 
-const linha = (i:number)=>({
+const linha = (i:number)=>( {
   display:'grid',
   gridTemplateColumns:'80px 2fr 80px 80px 120px 120px 120px 120px 50px',
   gap:8,
   marginTop:8
 })
 
-const input = { padding:8 }
-const btnRemover = { background:'red', color:'#fff' }
+const input = {
+  padding:8,
+  border:'1px solid #cbd5e1',
+  borderRadius:6
+}
+
+const btnRemover = {
+  background:'red',
+  color:'#fff',
+  border:'none',
+  borderRadius:6,
+  cursor:'pointer'
+}
