@@ -60,19 +60,20 @@ export default function SistemaLayout({ children }: any) {
       {/* SIDEBAR */}
       <aside style={sidebar}>
 
-      <img src="/logo.png" style={{ width: 140, marginBottom: 20 }} />
+  <div>
+    <img src="/logo.png" style={{ width: 140, marginBottom: 20 }} />
 
+    <MenuItem texto="Dashboard" rota="/dashboard" ativo={pathname === '/dashboard'} />
+    <MenuItem texto="Obras" rota="/obras" ativo={pathname.includes('/obras')} />
+    <MenuItem texto="Financeiro" rota="/financeiro" ativo={pathname.includes('/financeiro')} />
+    <MenuItem texto="Orçamentos" rota="/orcamentos" ativo={pathname.includes('/orcamentos')} />
+  </div>
 
-          <MenuItem texto="Dashboard" rota="/dashboard" ativo={pathname === '/dashboard'} />
-          <MenuItem texto="Obras" rota="/obras" ativo={pathname.includes('/obras')} />
-          <MenuItem texto="Financeiro" rota="/financeiro" ativo={pathname.includes('/financeiro')} />
-          <MenuItem texto="Orçamentos" rota="/orcamentos" ativo={pathname.includes('/orcamentos')} />
-        </div>
+  <button onClick={sair} style={logout}>
+    Sair
+  </button>
 
-        <button onClick={sair} style={logout}>
-          Sair
-        </button>
-      </aside>
+</aside>
 
       {/* CONTEÚDO */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

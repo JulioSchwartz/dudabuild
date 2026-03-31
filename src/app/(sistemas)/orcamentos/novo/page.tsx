@@ -197,7 +197,7 @@ return (
     </button>
 
   </div>
-)
+}
 
 const container={maxWidth:1100,margin:'0 auto',padding:24}
 const titulo={fontSize:26,fontWeight:700}
