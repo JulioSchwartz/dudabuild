@@ -2,90 +2,101 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell
+} from 'recharts'
 
 export default function Dashboard() {
 
-  const [dados, setDados] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [orcamentos, setOrcamentos] = useState<any[]>([])
+  const [obras, setObras] = useState<any[]>([])
 
   useEffect(() => {
     carregar()
   }, [])
 
   async function carregar() {
-    const { data } = await supabase.from('orcamentos').select('*')
-    setDados(data || [])
-    setLoading(false)
+    const { data: o } = await supabase.from('orcamentos').select('*')
+    const { data: ob } = await supabase.from('obras').select('*')
+
+    setOrcamentos(o || [])
+    setObras(ob || [])
   }
 
-  // 📊 MÉTRICAS
-  const total = dados.reduce((acc, o) => acc + (o.valor_total || 0), 0)
-  const aprovados = dados.filter(o => o.status === 'aprovado')
-  const recusados = dados.filter(o => o.status === 'recusado')
-  const pendentes = dados.filter(o => !o.status || o.status === 'pendente')
+  // 📊 ORÇAMENTOS
+  const aprovados = orcamentos.filter(o => o.status === 'aprovado')
+  const recusados = orcamentos.filter(o => o.status === 'recusado')
 
-  const taxaConversao = dados.length
-    ? ((aprovados.length / dados.length) * 100).toFixed(1)
-    : '0'
+  const totalOrcado = orcamentos.reduce((acc, o) => acc + (o.valor_total || 0), 0)
 
-  const ticketMedio = aprovados.length
-    ? (aprovados.reduce((acc, o) => acc + o.valor_total, 0) / aprovados.length).toFixed(2)
-    : '0'
+  // 🏗️ OBRAS
+  const obrasAndamento = obras.filter(o => o.status === 'andamento')
+  const obrasFinalizadas = obras.filter(o => o.status === 'finalizada')
 
-  if (loading) return <p style={{ padding: 24 }}>Carregando...</p>
+  const totalObras = obras.reduce((acc, o) => acc + (o.valor_total || 0), 0)
+
+  // 📊 FUNIL
+  const funil = [
+    { name: 'Orçados', value: orcamentos.length },
+    { name: 'Aprovados', value: aprovados.length },
+    { name: 'Em Obra', value: obrasAndamento.length },
+    { name: 'Finalizados', value: obrasFinalizadas.length }
+  ]
 
   return (
     <div style={container}>
 
-      <h1 style={titulo}>📊 Dashboard</h1>
+      <h1>📊 Dashboard Geral</h1>
 
-      {/* 📈 CARDS */}
+      {/* KPIs */}
       <div style={grid}>
 
-        <Card titulo="💰 Total Orçado" valor={format(total)} cor="#2563eb" />
-        <Card titulo="✅ Aprovados" valor={aprovados.length} cor="#16a34a" />
-        <Card titulo="❌ Recusados" valor={recusados.length} cor="#dc2626" />
-        <Card titulo="⏳ Pendentes" valor={pendentes.length} cor="#f59e0b" />
-
-        <Card titulo="📈 Conversão" valor={`${taxaConversao}%`} cor="#7c3aed" />
-        <Card titulo="💎 Ticket Médio" valor={`R$ ${ticketMedio}`} cor="#0ea5e9" />
+        <Card titulo="💰 Total Orçado" valor={format(totalOrcado)} />
+        <Card titulo="🏗️ Em Obras" valor={obrasAndamento.length} />
+        <Card titulo="💵 Faturado" valor={format(totalObras)} />
+        <Card titulo="✅ Aprovados" valor={aprovados.length} />
 
       </div>
 
-      {/* 📊 LISTA RECENTE */}
-      <div style={cardGrande}>
-        <h2>Últimos Orçamentos</h2>
+      {/* GRÁFICOS */}
+      <div style={grid2}>
 
-        <table style={tabela}>
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th>Valor</th>
-              <th>Status</th>
-              <th>Data</th>
-            </tr>
-          </thead>
+        {/* FUNIL */}
+        <div style={card}>
+          <h3>Funil</h3>
 
-          <tbody>
-            {dados.slice(0, 5).map(o => (
-              <tr key={o.id}>
-                <td>{o.cliente_nome}</td>
-                <td>{format(o.valor_total)}</td>
-                <td style={status(o.status)}>{o.status || 'pendente'}</td>
-                <td>{new Date(o.created_at).toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={funil}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
-      {/* 📊 RESUMO VISUAL (BARRAS SIMPLES) */}
-      <div style={cardGrande}>
-        <h2>Distribuição</h2>
+        {/* STATUS OBRAS */}
+        <div style={card}>
+          <h3>Status das Obras</h3>
 
-        <Bar label="Aprovados" valor={aprovados.length} cor="#16a34a" total={dados.length} />
-        <Bar label="Recusados" valor={recusados.length} cor="#dc2626" total={dados.length} />
-        <Bar label="Pendentes" valor={pendentes.length} cor="#f59e0b" total={dados.length} />
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={[
+                  { name: 'Andamento', value: obrasAndamento.length },
+                  { name: 'Finalizadas', value: obrasFinalizadas.length }
+                ]}
+                dataKey="value"
+                outerRadius={80}
+              >
+                <Cell fill="#f59e0b" />
+                <Cell fill="#16a34a" />
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
 
       </div>
 
@@ -93,40 +104,18 @@ export default function Dashboard() {
   )
 }
 
-/* 🔥 COMPONENTES */
+/* COMPONENTES */
 
-function Card({ titulo, valor, cor }: any) {
+function Card({ titulo, valor }: any) {
   return (
-    <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
+    <div style={card}>
       <h4>{titulo}</h4>
       <h2>{valor}</h2>
     </div>
   )
 }
 
-function Bar({ label, valor, total, cor }: any) {
-  const porcentagem = total ? (valor / total) * 100 : 0
-
-  return (
-    <div style={{ marginTop: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span>{label}</span>
-        <span>{valor}</span>
-      </div>
-
-      <div style={barContainer}>
-        <div style={{
-          width: `${porcentagem}%`,
-          background: cor,
-          height: 10,
-          borderRadius: 6
-        }} />
-      </div>
-    </div>
-  )
-}
-
-/* 🎨 ESTILO */
+/* ESTILO */
 
 const container = {
   padding: 24,
@@ -134,43 +123,23 @@ const container = {
   minHeight: '100vh'
 }
 
-const titulo = {
-  fontSize: 28,
-  fontWeight: 700,
+const grid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, 1fr)',
+  gap: 20,
   marginBottom: 20
 }
 
-const grid = {
+const grid2 = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
+  gridTemplateColumns: '1fr 1fr',
   gap: 20
 }
 
 const card = {
   background: '#fff',
   padding: 20,
-  borderRadius: 10,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-}
-
-const cardGrande = {
-  background: '#fff',
-  padding: 20,
-  borderRadius: 10,
-  marginTop: 20
-}
-
-const tabela = {
-  width: '100%',
-  marginTop: 10,
-  borderCollapse: 'collapse'
-}
-
-const barContainer = {
-  width: '100%',
-  background: '#e5e7eb',
-  borderRadius: 6,
-  marginTop: 4
+  borderRadius: 10
 }
 
 function format(valor: number) {
@@ -178,10 +147,4 @@ function format(valor: number) {
     style: 'currency',
     currency: 'BRL'
   })
-}
-
-function status(s?: string) {
-  if (s === 'aprovado') return { color: '#16a34a', fontWeight: 600 }
-  if (s === 'recusado') return { color: '#dc2626', fontWeight: 600 }
-  return { color: '#f59e0b', fontWeight: 600 }
 }

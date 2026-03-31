@@ -51,19 +51,33 @@ export default function OrcamentoCliente() {
   }
 
   async function atualizarStatus(status: string) {
+
   await supabase
     .from('orcamentos')
     .update({ status })
     .eq('id', id)
 
-  // 🔔 ENVIA NOTIFICAÇÃO
-  await fetch('/api/notificar', {
-    method: 'POST',
-    body: JSON.stringify({
-      id,
-      status
-    })
-  })
+  // 🚀 SE APROVADO → CRIA OBRA
+  if (status === 'aprovado') {
+
+    const { data: obra } = await supabase
+      .from('obras')
+      .insert({
+        nome: `Obra - ${orcamento.cliente_nome}`,
+        cliente_nome: orcamento.cliente_nome,
+        valor_total: orcamento.valor_total
+      })
+      .select()
+      .single()
+
+    // vincula obra ao orçamento
+    if (obra) {
+      await supabase
+        .from('orcamentos')
+        .update({ obra_id: obra.id })
+        .eq('id', id)
+    }
+  }
 
   setOrcamento({ ...orcamento, status })
 }
