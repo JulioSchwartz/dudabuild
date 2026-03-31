@@ -59,8 +59,9 @@ export default function SistemaLayout({ children }: any) {
 
       {/* SIDEBAR */}
       <aside style={sidebar}>
-        <div>
-          <h2 style={logo}>🏗️ DudaBuild</h2>
+
+      <img src="/logo.png" style={{ width: 140, marginBottom: 20 }} />
+
 
           <MenuItem texto="Dashboard" rota="/dashboard" ativo={pathname === '/dashboard'} />
           <MenuItem texto="Obras" rota="/obras" ativo={pathname.includes('/obras')} />

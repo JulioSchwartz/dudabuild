@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
 import { useEmpresa } from '@/hooks/useEmpresa'
+import jsPDF from 'jspdf'
 
 export default function NovoOrcamento(){
 
@@ -101,79 +102,52 @@ export default function NovoOrcamento(){
     window.open(`https://wa.me/5549991587646?text=${encodeURIComponent(msg)}`)
   }
 
-  function gerarPDF(){
 
-    const tabela = itens.map(i=>`
-      <tr>
-        <td>${i.codigo}</td>
-        <td>${i.descricao}</td>
-        <td>${i.unidade}</td>
-        <td>${i.quantidade}</td>
-        <td>R$ ${totalItem(i).toFixed(2)}</td>
-      </tr>
-    `).join('')
+function gerarPDF() {
+  const doc = new jsPDF()
 
-    const html = `
-    <style>
-      body{font-family:Arial;margin:0}
-      .capa{background:#1e3a8a;color:#fff;padding:60px;height:100vh}
-      .conteudo{padding:40px}
-      table{width:100%;border-collapse:collapse;margin-top:20px}
-      th,td{border:1px solid #ddd;padding:8px}
-      th{background:#1e3a8a;color:#fff}
-      .total{font-size:28px;color:#16a34a;font-weight:bold;margin-top:20px}
-    </style>
+  // CAPA
+  doc.setFontSize(20)
+  doc.text('PROPOSTA COMERCIAL', 20, 30)
 
-    <div class="capa">
-      <h1>DudaBuild Engenharia</h1>
-      <h2>Proposta Comercial</h2>
-      <p>Cliente: ${cliente}</p>
-    </div>
+  doc.setFontSize(12)
+  doc.text('DudaBuild Engenharia', 20, 40)
+  doc.text('Cliente: ' + cliente, 20, 50)
 
-    <div class="conteudo">
-      <table>
-        <tr><th>Cód</th><th>Descrição</th><th>Un</th><th>Qtd</th><th>Total</th></tr>
-        ${tabela}
-      </table>
+  // LINHA
+  doc.line(20, 60, 190, 60)
 
-      <div class="total">Total: R$ ${totalGeral().toFixed(2)}</div>
-    </div>
-    `
+  // ITENS
+  let y = 70
 
-    const w=window.open('')
-    w?.document.write(html)
-    w?.print()
-  }
+  itens.forEach((item: any) => {
+    doc.text(`${item.descricao}`, 20, y)
+    doc.text(`R$ ${totalItem(item).toFixed(2)}`, 150, y)
+    y += 10
+  })
 
-  return(
-    <div style={container}>
+  // TOTAL
+  doc.line(20, y, 190, y)
+  y += 10
 
-      <h1 style={titulo}>Orçamento Profissional</h1>
+  doc.setFontSize(14)
+  doc.text(`TOTAL: R$ ${totalGeral().toFixed(2)}`, 20, y)
 
-      <input placeholder="Cliente" onChange={e=>setCliente(e.target.value)} style={input}/>
-      <textarea placeholder="Descrição" onChange={e=>setDescricao(e.target.value)} style={input}/>
+  // RODAPÉ
+  y += 20
+  doc.setFontSize(10)
+  doc.text('Validade: 7 dias', 20, y)
+  doc.text('Forma de pagamento: A combinar', 20, y + 5)
 
-      <TabelaOrcamento
-        itens={itens}
-        atualizarItem={atualizarItem}
-        removerItem={removerItem}
-        totalItem={totalItem}
-      />
 
-      <button onClick={adicionarItem} style={btn}>+ Item</button>
+  y += 30
 
-      <div style={total}>Total: R$ {totalGeral().toFixed(2)}</div>
+  doc.text('_________________________________', 20, y)
+  doc.text('Responsável técnico', 20, y + 5)
+  doc.text('DudaBuild Engenharia', 20, y + 10)
 
-      <button onClick={salvar} style={btnBlue}>Salvar</button>
+  doc.save('orcamento.pdf')
 
-      <button onClick={gerarPDF} style={btnBlack}>PDF</button>
-
-      <button onClick={enviarWhatsApp} style={btnWhats}>
-        Enviar no WhatsApp
-      </button>
-
-    </div>
-  )
 }
 
 const container={maxWidth:1100,margin:'0 auto',padding:24}
@@ -183,4 +157,59 @@ const total={fontSize:24,fontWeight:700,marginTop:20}
 const btn={marginTop:10}
 const btnBlue={background:'blue',color:'#fff',marginTop:10}
 const btnBlack={background:'black',color:'#fff',marginTop:10}
-const btnWhats={background:'#25D366',color:'#fff',marginTop:10}
+const btnWhats = {
+  background: '#25D366',
+  color: '#fff',
+  padding: 12,
+  borderRadius: 8,
+  marginTop: 10
+}
+
+return (
+  <div style={container}>
+
+    <h1 style={titulo}>Novo Orçamento</h1>
+
+    <input
+      placeholder="Cliente"
+      value={cliente}
+      onChange={e=>setCliente(e.target.value)}
+      style={input}
+    />
+
+    <input
+      placeholder="Descrição"
+      value={descricao}
+      onChange={e=>setDescricao(e.target.value)}
+      style={input}
+    />
+
+    <TabelaOrcamento
+      itens={itens}
+      atualizarItem={atualizarItem}
+      removerItem={removerItem}
+    />
+
+    <button onClick={adicionarItem} style={btn}>
+      + Adicionar Item
+    </button>
+
+    <h2 style={total}>
+      Total: R$ {totalGeral().toFixed(2)}
+    </h2>
+
+    {/* 🔥 BOTÕES IMPORTANTES */}
+    <button onClick={salvar} style={btn}>
+      Salvar Orçamento
+    </button>
+
+    <button onClick={gerarPDF} style={btnBlack}>
+      Gerar PDF
+    </button>
+
+    <button onClick={enviarWhatsApp} style={btnWhats}>
+      Enviar WhatsApp
+    </button>
+
+  </div>
+)
