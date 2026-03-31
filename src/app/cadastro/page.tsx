@@ -34,8 +34,8 @@ export default function Cadastro(){
 
     const user = data.user
 
-    if(!user){
-      setErro('Erro ao criar usuário')
+    if (!user) {
+      setErro('Verifique seu email para confirmar a conta')
       setLoading(false)
       return
     }
