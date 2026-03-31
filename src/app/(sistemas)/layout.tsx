@@ -5,7 +5,6 @@ import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 export default function SistemaLayout({ children }: any) {
-
   const router = useRouter()
   const pathname = usePathname()
   const [liberado, setLiberado] = useState(false)
@@ -15,14 +14,6 @@ export default function SistemaLayout({ children }: any) {
   }, [pathname])
 
   async function verificar() {
-
-    const rotasPublicas = ['/login', '/cadastro']
-
-    if (rotasPublicas.includes(pathname)) {
-      setLiberado(true)
-      return
-    }
-
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -55,56 +46,114 @@ export default function SistemaLayout({ children }: any) {
     setLiberado(true)
   }
 
+  async function sair() {
+    await supabase.auth.signOut()
+    localStorage.removeItem('empresa_id')
+    router.push('/login')
+  }
+
   if (!liberado) return null
 
-  // 🎯 AQUI ESTÁ O QUE FALTAVA → MENU + LAYOUT
   return (
-    <div style={{ display: 'flex' }}>
+    <div style={{ display: 'flex', height: '100vh', background: '#f1f5f9' }}>
 
-      {/* MENU LATERAL */}
-      <aside style={{
-        width: 240,
-        background: '#0f172a',
-        color: '#fff',
-        height: '100vh',
-        padding: 20
-      }}>
-        <h2 style={{ marginBottom: 20 }}>🏗️ DudaBuild</h2>
+      {/* SIDEBAR */}
+      <aside style={sidebar}>
+        <div>
+          <h2 style={logo}>🏗️ DudaBuild</h2>
 
-        <MenuItem texto="Dashboard" rota="/dashboard" />
-        <MenuItem texto="Obras" rota="/obras" />
-        <MenuItem texto="Financeiro" rota="/financeiro" />
-        <MenuItem texto="Orçamentos" rota="/orcamentos" />
+          <MenuItem texto="Dashboard" rota="/dashboard" ativo={pathname === '/dashboard'} />
+          <MenuItem texto="Obras" rota="/obras" ativo={pathname.includes('/obras')} />
+          <MenuItem texto="Financeiro" rota="/financeiro" ativo={pathname.includes('/financeiro')} />
+          <MenuItem texto="Orçamentos" rota="/orcamentos" ativo={pathname.includes('/orcamentos')} />
+        </div>
+
+        <button onClick={sair} style={logout}>
+          Sair
+        </button>
       </aside>
 
       {/* CONTEÚDO */}
-      <main style={{
-        flex: 1,
-        padding: 30,
-        background: '#f8fafc',
-        minHeight: '100vh'
-      }}>
-        {children}
-      </main>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
 
+        {/* HEADER */}
+        <header style={header}>
+          <span style={{ fontWeight: 600 }}>Sistema de Gestão</span>
+          <span style={{ color: '#64748b' }}>Construtora</span>
+        </header>
+
+        {/* PAGE */}
+        <main style={content}>
+          {children}
+        </main>
+
+      </div>
     </div>
   )
 }
 
-// 🔥 COMPONENTE MENU
-function MenuItem({ texto, rota }: any) {
+function MenuItem({ texto, rota, ativo }: any) {
   const router = useRouter()
 
   return (
     <div
       onClick={() => router.push(rota)}
       style={{
-        padding: '10px 0',
-        cursor: 'pointer',
-        color: '#cbd5e1'
+        ...menuItem,
+        background: ativo ? '#1e293b' : 'transparent',
+        color: ativo ? '#fff' : '#cbd5e1'
       }}
     >
       {texto}
     </div>
   )
+}
+
+/* 🎨 ESTILO PREMIUM */
+
+const sidebar = {
+  width: 240,
+  background: '#0f172a',
+  color: '#fff',
+  padding: 20,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'space-between'
+}
+
+const logo = {
+  marginBottom: 30,
+  fontSize: 20
+}
+
+const menuItem = {
+  padding: '12px 14px',
+  borderRadius: 8,
+  cursor: 'pointer',
+  marginBottom: 8,
+  transition: '0.2s'
+}
+
+const header = {
+  height: 60,
+  background: '#fff',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '0 20px',
+  borderBottom: '1px solid #e2e8f0'
+}
+
+const content = {
+  padding: 30,
+  overflow: 'auto'
+}
+
+const logout = {
+  background: '#ef4444',
+  border: 'none',
+  color: '#fff',
+  padding: 10,
+  borderRadius: 8,
+  cursor: 'pointer'
 }
