@@ -46,10 +46,6 @@ export default function Login() {
       return
     }
 
-    <p style={{marginTop:10}}>
-  Não tem conta? <a href="/cadastro">Criar agora</a>
-</p>
-
     // 🔥 SALVA (temporário - depois removemos)
     localStorage.setItem('empresa_id', usuario.empresa_id)
 
@@ -90,6 +86,13 @@ export default function Login() {
           <button style={botao} disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
+
+	  <p style={linkCadastro}>
+	    Não tem conta?{' '}
+	    <span onClick={() => router.push('/cadastro')} style={link}>
+	      Criar agora
+	    </span>
+	  </p>
         </form>
       </div>
     </div>
