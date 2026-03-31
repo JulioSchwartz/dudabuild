@@ -164,6 +164,21 @@ function gerarPDF() {
   doc.save('orcamento.pdf')
 }
 
+const container={maxWidth:1100,margin:'0 auto',padding:24}
+const titulo={fontSize:26,fontWeight:700}
+const input={width:'100%',marginTop:10,padding:10}
+const total={fontSize:24,fontWeight:700,marginTop:20}
+const btn={marginTop:10}
+const btnBlue={background:'blue',color:'#fff',marginTop:10}
+const btnBlack={background:'black',color:'#fff',marginTop:10}
+const btnWhats = {
+  background: '#25D366',
+  color: '#fff',
+  padding: 12,
+  borderRadius: 8,
+  marginTop: 10
+}
+
 return (
   <div style={container}>
 
@@ -211,20 +226,6 @@ return (
     </button>
 
   </div>
-}
-
-const container={maxWidth:1100,margin:'0 auto',padding:24}
-const titulo={fontSize:26,fontWeight:700}
-const input={width:'100%',marginTop:10,padding:10}
-const total={fontSize:24,fontWeight:700,marginTop:20}
-const btn={marginTop:10}
-const btnBlue={background:'blue',color:'#fff',marginTop:10}
-const btnBlack={background:'black',color:'#fff',marginTop:10}
-const btnWhats = {
-  background: '#25D366',
-  color: '#fff',
-  padding: 12,
-  borderRadius: 8,
-  marginTop: 10
+)
 }
 
