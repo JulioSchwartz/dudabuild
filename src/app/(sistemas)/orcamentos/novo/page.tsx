@@ -106,48 +106,62 @@ export default function NovoOrcamento(){
 function gerarPDF() {
   const doc = new jsPDF()
 
-  // CAPA
-  doc.setFontSize(20)
-  doc.text('PROPOSTA COMERCIAL', 20, 30)
+  // LOGO
+  doc.setFillColor(15, 23, 42)
+  doc.rect(0, 0, 210, 40, 'F')
+
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(18)
+  doc.text('DudaBuild Engenharia', 20, 25)
 
   doc.setFontSize(12)
-  doc.text('DudaBuild Engenharia', 20, 40)
-  doc.text('Cliente: ' + cliente, 20, 50)
+  doc.text('PROPOSTA COMERCIAL', 140, 25)
 
-  // LINHA
-  doc.line(20, 60, 190, 60)
+  // RESET COR
+  doc.setTextColor(0, 0, 0)
+
+  // CLIENTE
+  doc.setFontSize(12)
+  doc.text(`Cliente: ${cliente}`, 20, 60)
+  doc.text(`Descrição: ${descricao}`, 20, 68)
+
+  // TABELA HEADER
+  let y = 80
+
+  doc.setFillColor(230, 230, 230)
+  doc.rect(20, y, 170, 10, 'F')
+
+  doc.text('Descrição', 22, y + 7)
+  doc.text('Qtd', 120, y + 7)
+  doc.text('Total', 160, y + 7)
+
+  y += 15
 
   // ITENS
-  let y = 70
-
-  itens.forEach((item: any) => {
-    doc.text(`${item.descricao}`, 20, y)
-    doc.text(`R$ ${totalItem(item).toFixed(2)}`, 150, y)
+  itens.forEach((item:any)=>{
+    doc.text(item.descricao, 22, y)
+    doc.text(String(item.quantidade), 120, y)
+    doc.text(`R$ ${totalItem(item).toFixed(2)}`, 160, y)
     y += 10
   })
 
   // TOTAL
-  doc.line(20, y, 190, y)
   y += 10
-
   doc.setFontSize(14)
   doc.text(`TOTAL: R$ ${totalGeral().toFixed(2)}`, 20, y)
 
-  // RODAPÉ
+  // CONDIÇÕES
   y += 20
   doc.setFontSize(10)
   doc.text('Validade: 7 dias', 20, y)
   doc.text('Forma de pagamento: A combinar', 20, y + 5)
 
-
-  y += 30
-
+  // ASSINATURA
+  y += 25
   doc.text('_________________________________', 20, y)
   doc.text('Responsável técnico', 20, y + 5)
-  doc.text('DudaBuild Engenharia', 20, y + 10)
 
   doc.save('orcamento.pdf')
-
 }
 
 return (
