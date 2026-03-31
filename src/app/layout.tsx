@@ -1,15 +1,8 @@
-import './globals.css'
-import ClientLayout from './ClientLayout'
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: any) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-br">
       <body>
-        <ClientLayout>{children}</ClientLayout>
+        {children}
       </body>
     </html>
   )
