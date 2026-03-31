@@ -16,7 +16,6 @@ export default function SistemaLayout({ children }: any) {
 
   async function verificar() {
 
-    // 🔥 ROTAS LIBERADAS (SEM LOGIN)
     const rotasPublicas = ['/login', '/cadastro']
 
     if (rotasPublicas.includes(pathname)) {
@@ -24,7 +23,6 @@ export default function SistemaLayout({ children }: any) {
       return
     }
 
-    // 🔥 VERIFICA LOGIN
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -32,7 +30,6 @@ export default function SistemaLayout({ children }: any) {
       return
     }
 
-    // 🔥 BUSCA EMPRESA
     const { data: usuario } = await supabase
       .from('usuarios')
       .select('empresa_id')
@@ -44,7 +41,6 @@ export default function SistemaLayout({ children }: any) {
       return
     }
 
-    // 🔥 VALIDA STATUS
     const { data: empresa } = await supabase
       .from('empresas')
       .select('status')
@@ -61,5 +57,54 @@ export default function SistemaLayout({ children }: any) {
 
   if (!liberado) return null
 
-  return children
+  // 🎯 AQUI ESTÁ O QUE FALTAVA → MENU + LAYOUT
+  return (
+    <div style={{ display: 'flex' }}>
+
+      {/* MENU LATERAL */}
+      <aside style={{
+        width: 240,
+        background: '#0f172a',
+        color: '#fff',
+        height: '100vh',
+        padding: 20
+      }}>
+        <h2 style={{ marginBottom: 20 }}>🏗️ DudaBuild</h2>
+
+        <MenuItem texto="Dashboard" rota="/dashboard" />
+        <MenuItem texto="Obras" rota="/obras" />
+        <MenuItem texto="Financeiro" rota="/financeiro" />
+        <MenuItem texto="Orçamentos" rota="/orcamentos" />
+      </aside>
+
+      {/* CONTEÚDO */}
+      <main style={{
+        flex: 1,
+        padding: 30,
+        background: '#f8fafc',
+        minHeight: '100vh'
+      }}>
+        {children}
+      </main>
+
+    </div>
+  )
+}
+
+// 🔥 COMPONENTE MENU
+function MenuItem({ texto, rota }: any) {
+  const router = useRouter()
+
+  return (
+    <div
+      onClick={() => router.push(rota)}
+      style={{
+        padding: '10px 0',
+        cursor: 'pointer',
+        color: '#cbd5e1'
+      }}
+    >
+      {texto}
+    </div>
+  )
 }
