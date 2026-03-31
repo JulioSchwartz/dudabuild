@@ -169,3 +169,15 @@ const botao = {
   fontWeight: 'bold',
   cursor: 'pointer',
 }
+
+const linkCadastro = {
+  marginTop: '15px',
+  fontSize: '13px',
+  color: '#64748b',
+}
+
+const link = {
+  color: '#2563eb',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+}
