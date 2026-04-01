@@ -55,12 +55,7 @@ export default function DetalheObra() {
       .eq('empresa_id', empresaId)
       .maybeSingle()
 
-    const { data: financeiroData } = await supabase
-  .from('financeiro')
-  .select('*')
-  .eq('obra_id', Number(id)) // 🔥 importante
-  .order('created_at', { ascending: true })
-
+ 
 const { data: financeiroData } = await supabase
   .from('financeiro')
   .select('*')
