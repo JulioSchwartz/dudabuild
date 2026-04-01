@@ -96,7 +96,6 @@ export default function DetalheObra() {
         tipo,
         descricao,
         valor: Number(valor),
-        empresa_id: empresaId,
         created_at: new Date().toISOString(),
       },
     ])

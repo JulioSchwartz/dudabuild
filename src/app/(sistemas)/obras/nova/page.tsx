@@ -68,7 +68,7 @@ export default function NovaObra() {
         nome,
         cliente: cliente, // ✅ correto
         valor: Number(valor), // ✅ correto
-        empresa_id: empresaId
+        
      }
      ])
 
