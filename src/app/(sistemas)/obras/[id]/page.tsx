@@ -28,35 +28,40 @@ export default function DetalheObra() {
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
 
-  useEffect(() => {
-    const empresa = localStorage.getItem('empresa_id')
+ useEffect(() => {
+  const empresa = localStorage.getItem('empresa_id')
 
-    if (!empresa) {
-      router.push('/login')
-    } else if (id && empresaId) {
-      carregar()
-    }
-  }, [id, empresaId])
+  if (!empresa) {
+    router.push('/login')
+    return
+  }
+
+  if (id && empresaId) {
+    carregar()
+  }
+}, [id, empresaId])
 
   async function carregar() {
 
-    const { data: obraData } = await supabase
-      .from('obras')
-      .select('*')
-      .eq('id', id)
-      .eq('empresa_id', empresaId)
-      .maybeSingle()
+  if (!empresaId) return <p style={{ padding: 24 }}>Carregando empresa...</p> // ✅ PROTEÇÃO
 
-    const { data: financeiroData } = await supabase
-      .from('financeiro')
-      .select('*')
-      .eq('obra_id', id)
-      .eq('empresa_id', empresaId)
-      .order('created_at', { ascending: true })
+  const { data: obraData } = await supabase
+    .from('obras')
+    .select('*')
+    .eq('id', id)
+    .eq('empresa_id', empresaId)
+    .maybeSingle()
 
-    setObra(obraData)
-    setFinanceiro(financeiroData || [])
-  }
+  const { data: financeiroData } = await supabase
+    .from('financeiro')
+    .select('*')
+    .eq('obra_id', id)
+    .eq('empresa_id', empresaId)
+    .order('created_at', { ascending: true })
+
+  setObra(obraData)
+  setFinanceiro(financeiroData || [])
+}
 
   function copiarLink() {
     if (!obra?.token) return alert('Token não encontrado')
