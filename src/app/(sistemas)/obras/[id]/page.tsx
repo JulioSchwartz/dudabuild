@@ -43,14 +43,14 @@ export default function DetalheObra() {
     const { data: obraData } = await supabase
       .from('obras')
       .select('*')
-      .eq('id', id) // ✅ CORRIGIDO
+      .eq('id', id)
       .eq('empresa_id', empresaId)
       .maybeSingle()
 
     const { data: financeiroData } = await supabase
       .from('financeiro')
       .select('*')
-      .eq('obra_id', id) // ✅ CORRIGIDO
+      .eq('obra_id', id)
       .eq('empresa_id', empresaId)
       .order('created_at', { ascending: true })
 
@@ -84,7 +84,7 @@ export default function DetalheObra() {
 
     await supabase.from('financeiro').insert([
       {
-        obra_id: id, // ✅ CORRIGIDO
+        obra_id: id,
         tipo,
         descricao,
         valor: Number(valor),
@@ -105,11 +105,12 @@ export default function DetalheObra() {
 
   if (!obra) return <p>Carregando...</p>
 
-  const entradas = financeiro.filter((f) => f.tipo === 'entrada')
-  const saidas = financeiro.filter((f) => f.tipo === 'saida')
+  const lista = financeiro || []
+
+  const entradas = lista.filter((f) => f.tipo === 'entrada')
+  const saidas = lista.filter((f) => f.tipo === 'saida')
 
   const categoriasEntrada: any = {}
-
   entradas.forEach((e) => {
     if (!categoriasEntrada[e.descricao]) {
       categoriasEntrada[e.descricao] = 0
@@ -118,7 +119,6 @@ export default function DetalheObra() {
   })
 
   const categorias: any = {}
-
   saidas.forEach((s) => {
     if (!categorias[s.descricao]) {
       categorias[s.descricao] = 0
@@ -137,7 +137,7 @@ export default function DetalheObra() {
 
   const fluxoMensal: any = {}
 
-  financeiro.forEach((item) => {
+  lista.forEach((item) => {
     if (!item.created_at) return
 
     const data = new Date(item.created_at)
@@ -154,12 +154,20 @@ export default function DetalheObra() {
     }
   })
 
-  const dadosGrafico = Object.values(fluxoMensal)
+  const dadosGrafico = Object.values(fluxoMensal || {})
 
   return (
     <div>
       <h1 style={titulo}>{obra.nome}</h1>
       <p style={subtitulo}>{obra.cliente}</p>
+
+      {/* 💰 VALOR DA OBRA */}
+      <p style={valorObra}>
+        💰 {Number(obra.valor || 0).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        })}
+      </p>
 
       <div style={boxAcoes}>
         <button onClick={copiarLink} style={btnCopiar}>
@@ -213,8 +221,8 @@ export default function DetalheObra() {
         <select value={descricao} onChange={(e) => setDescricao(e.target.value)} style={input}>
           <option value="">Selecione...</option>
           {(tipo === 'entrada'
-            ? opcoesFinanceiro.entrada
-            : opcoesFinanceiro.saida
+            ? (opcoesFinanceiro?.entrada || [])
+            : (opcoesFinanceiro?.saida || [])
           ).map((item, i) => (
             <option key={i}>{item}</option>
           ))}
@@ -333,7 +341,16 @@ function Card({ titulo, valor, cor, tipo }: any) {
   )
 }
 
-/* ESTILOS NOVOS */
+/* NOVO ESTILO */
+
+const valorObra = {
+  fontSize: '18px',
+  fontWeight: '600',
+  color: '#16a34a',
+  marginTop: '5px',
+}
+
+/* RESTO ORIGINAL */
 
 const boxAcoes = {
   display: 'flex',
@@ -358,8 +375,6 @@ const btnWhats = {
   borderRadius: '8px',
   cursor: 'pointer',
 }
-
-/* RESTO ORIGINAL */
 
 const btnFotos = {
   background: '#0ea5e9',
