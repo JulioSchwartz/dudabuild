@@ -5,20 +5,12 @@ import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { lancarMovimento } from '@/lib/financeiro'
 
-type Item = {
-  descricao: string
-  quantidade: number
-  material: number
-  mao_obra: number
-  equipamentos: number
-}
-
 export default function OrcamentoCliente() {
 
   const { id } = useParams()
 
   const [orcamento, setOrcamento] = useState<any>(null)
-  const [itens, setItens] = useState<Item[]>([])
+  const [itens, setItens] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -43,7 +35,7 @@ export default function OrcamentoCliente() {
     setLoading(false)
   }
 
-  function totalItem(i: Item) {
+  function totalItem(i: any) {
     return (i.material + i.mao_obra + i.equipamentos) * i.quantidade
   }
 
@@ -51,7 +43,6 @@ export default function OrcamentoCliente() {
     return itens.reduce((acc, i) => acc + totalItem(i), 0)
   }
 
-  // ✅ FUNÇÃO CORRETA (ANTES ESTAVA ERRADO)
   async function atualizarStatus(status: string) {
 
     await supabase
@@ -59,7 +50,6 @@ export default function OrcamentoCliente() {
       .update({ status })
       .eq('id', id)
 
-    // 🚀 SE APROVADO → CRIA OBRA + FINANCEIRO
     if (status === 'aprovado' && orcamento) {
 
       const { data: obra } = await supabase
@@ -67,25 +57,23 @@ export default function OrcamentoCliente() {
         .insert({
           nome: `Obra - ${orcamento.cliente_nome}`,
           cliente_nome: orcamento.cliente_nome,
-          valor_total: orcamento.valor_total
+          valor_total: totalGeral()
         })
         .select()
         .single()
 
       if (obra) {
 
-        // 🔗 vincula obra
         await supabase
           .from('orcamentos')
           .update({ obra_id: obra.id })
           .eq('id', id)
 
-        // 💰 lança receita
         await lancarMovimento({
           obra_id: obra.id,
           tipo: 'entrada',
           descricao: 'Contrato aprovado',
-          valor: orcamento.valor_total
+          valor: totalGeral()
         })
       }
     }
@@ -93,66 +81,81 @@ export default function OrcamentoCliente() {
     setOrcamento({ ...orcamento, status })
   }
 
-  if (loading) return <p>Carregando...</p>
+  if (loading) return <p style={{ padding: 40 }}>Carregando proposta...</p>
 
   return (
     <div style={container}>
 
       <div style={card}>
 
-        <h1 style={titulo}>Proposta Comercial</h1>
-
-        <p><strong>Cliente:</strong> {orcamento?.cliente_nome}</p>
-        <p><strong>Descrição:</strong> {orcamento?.descricao}</p>
-
-        <h2 style={{ marginTop: 20 }}>Itens</h2>
-
-        <table style={tabela}>
-          <thead>
-            <tr>
-              <th>Descrição</th>
-              <th>Qtd</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {itens.map((i, index) => (
-              <tr key={index}>
-                <td>{i.descricao}</td>
-                <td>{i.quantidade}</td>
-                <td>R$ {totalItem(i).toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <h2 style={total}>
-          Total: R$ {totalGeral().toFixed(2)}
-        </h2>
-
-        <div style={acoes}>
-
-          <button
-            style={btnAprovar}
-            onClick={() => atualizarStatus('aprovado')}
-          >
-            Aprovar Orçamento
-          </button>
-
-          <button
-            style={btnRecusar}
-            onClick={() => atualizarStatus('recusado')}
-          >
-            Recusar
-          </button>
-
+        {/* HEADER */}
+        <div style={header}>
+          <h1 style={titulo}>Proposta Comercial</h1>
+          <span style={empresa}>DudaBuild Engenharia</span>
         </div>
 
+        {/* CLIENTE */}
+        <div style={bloco}>
+          <p><strong>Cliente:</strong> {orcamento?.cliente_nome}</p>
+          <p><strong>Descrição:</strong> {orcamento?.descricao}</p>
+        </div>
+
+        {/* ITENS */}
+        <div style={bloco}>
+          <h2>Itens do Orçamento</h2>
+
+          <table style={tabela}>
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>Qtd</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {itens.map((i, index) => (
+                <tr key={index}>
+                  <td>{i.descricao}</td>
+                  <td>{i.quantidade}</td>
+                  <td>R$ {totalItem(i).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* TOTAL */}
+        <div style={totalBox}>
+          Total: R$ {totalGeral().toFixed(2)}
+        </div>
+
+        {/* AÇÕES */}
+        {!orcamento.status && (
+          <div style={acoes}>
+
+            <button
+              style={btnAprovar}
+              onClick={() => atualizarStatus('aprovado')}
+            >
+              ✅ Aprovar Orçamento
+            </button>
+
+            <button
+              style={btnRecusar}
+              onClick={() => atualizarStatus('recusado')}
+            >
+              ❌ Recusar
+            </button>
+
+          </div>
+        )}
+
+        {/* STATUS */}
         {orcamento.status && (
-          <p style={{ marginTop: 20 }}>
+          <div style={statusBox}>
             Status: <strong>{orcamento.status}</strong>
-          </p>
+          </div>
         )}
 
       </div>
@@ -161,26 +164,42 @@ export default function OrcamentoCliente() {
   )
 }
 
-/* 🎨 ESTILO */
+/* 🎨 UI */
 
 const container = {
   background: '#f1f5f9',
   minHeight: '100vh',
   display: 'flex',
   justifyContent: 'center',
-  alignItems: 'center'
+  alignItems: 'center',
+  padding: 20
 }
 
 const card = {
   background: '#fff',
-  padding: 30,
-  borderRadius: 10,
-  width: 800
+  padding: 40,
+  borderRadius: 12,
+  width: 900,
+  boxShadow: '0 10px 30px rgba(0,0,0,0.05)'
+}
+
+const header = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  marginBottom: 20
 }
 
 const titulo = {
   fontSize: 28,
   fontWeight: 700
+}
+
+const empresa = {
+  color: '#64748b'
+}
+
+const bloco = {
+  marginTop: 20
 }
 
 const tabela = {
@@ -189,32 +208,43 @@ const tabela = {
   borderCollapse: 'collapse'
 }
 
-const total = {
-  fontSize: 24,
+const totalBox = {
+  fontSize: 26,
   fontWeight: 700,
-  marginTop: 20
+  marginTop: 20,
+  textAlign: 'right'
 }
 
 const acoes = {
   display: 'flex',
   gap: 10,
-  marginTop: 20
+  marginTop: 30
 }
 
 const btnAprovar = {
   background: '#16a34a',
   color: '#fff',
-  padding: 12,
+  padding: 14,
   border: 'none',
   borderRadius: 8,
-  cursor: 'pointer'
+  cursor: 'pointer',
+  flex: 1
 }
 
 const btnRecusar = {
   background: '#dc2626',
   color: '#fff',
-  padding: 12,
+  padding: 14,
   border: 'none',
   borderRadius: 8,
-  cursor: 'pointer'
+  cursor: 'pointer',
+  flex: 1
+}
+
+const statusBox = {
+  marginTop: 30,
+  padding: 15,
+  background: '#e2e8f0',
+  borderRadius: 8,
+  textAlign: 'center'
 }
