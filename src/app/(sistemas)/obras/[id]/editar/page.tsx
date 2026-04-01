@@ -20,10 +20,11 @@ export default function EditarObra() {
 
   async function buscar() {
     const { data } = await supabase
-      .from('obras')
-      .select('*')
-      .eq('empresa_id', empresaId)
-      .single()
+  .from('obras')
+  .select('*')
+  .eq('id', id)
+  .eq('empresa_id', empresaId)
+  .single()
 
     if (data) {
       setNome(data.nome)

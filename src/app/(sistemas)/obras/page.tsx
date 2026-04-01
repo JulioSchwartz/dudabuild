@@ -104,15 +104,14 @@ export default function Obras() {
         {obras.map((obra) => (
           <div key={obra.id} style={card}>
             <h3 style={nome}>{obra.nome}</h3>
-            <p style={cliente}>{obra.cliente_nome}</p>
+            <p style={cliente}>{obra.cliente}</p>
 
-            {/* 💰 VALOR DA OBRA */}
-            <p style={valorObra}>
-              💰 {Number(obra.valor_total || 0).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </p>
+<p style={valorObra}>
+  💰 {Number(obra.valor || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })}
+</p>
 
             <div style={botoes}>
               <Link href={`/obras/${obra.id}`}>
