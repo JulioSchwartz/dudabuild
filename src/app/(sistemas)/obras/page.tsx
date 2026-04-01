@@ -20,25 +20,18 @@ export default function Obras() {
     } else {
       buscar()
     }
-  }, [])
+  }, [empresaId])
 
-
-  await supabase.from('orcamentos').insert({
-  cliente_nome,
-  descricao,
-  valor_total,
-  empresa_id: empresaId
-})
-  
   async function buscar() {
-    const empresa_id = localStorage.getItem('empresa_id')
 
-    const { data } = await supabase
-      .from('orcamentos')
+    const { data, error } = await supabase
+      .from('orcamentos') // (mantive como você já estava usando)
       .select('*')
       .eq('empresa_id', empresaId)
 
-    setObras(data || [])
+    if (!error && data) {
+      setObras(data)
+    }
   }
 
   async function excluir(id: number) {
@@ -86,9 +79,7 @@ export default function Obras() {
   )
 }
 
-/* =========================
-   🎨 ESTILO PROFISSIONAL
-========================= */
+/* 🎨 ESTILO */
 
 const header = {
   display: 'flex',
@@ -98,7 +89,7 @@ const header = {
 }
 
 const titulo = {
-  color: '#0f172a', // 🔥 escuro forte
+  color: '#0f172a',
 }
 
 const grid = {
@@ -116,12 +107,12 @@ const card = {
 }
 
 const nome = {
-  color: '#0f172a', // 🔥 título visível
+  color: '#0f172a',
   marginBottom: '5px',
 }
 
 const cliente = {
-  color: '#64748b', // 🔥 cinza médio (legível)
+  color: '#64748b',
 }
 
 const botoes = {

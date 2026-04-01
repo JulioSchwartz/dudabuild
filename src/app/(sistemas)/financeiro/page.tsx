@@ -19,13 +19,7 @@ export default function FinanceiroBI() {
     carregar()
   }, [])
 
-  await supabase.from('orcamentos').insert({
-  cliente_nome,
-  descricao,
-  valor_total,
-  empresa_id: empresaId
-})
-
+ 
   async function carregar() {
 
     const { data: f } = await supabase

@@ -11,6 +11,7 @@ type Orcamento = {
   valor_total: number
   status?: string
   created_at: string
+  telefone?: string
 }
 
 export default function OrcamentosPage() {
@@ -21,20 +22,14 @@ export default function OrcamentosPage() {
   const router = useRouter()
 
   useEffect(() => {
-    carregar()
-  }, [])
-
-
-  await supabase.from('orcamentos').insert({
-  cliente_nome,
-  descricao,
-  valor_total,
-  empresa_id: empresaId
-})
+    if (empresaId) {
+      carregar()
+    }
+  }, [empresaId])
 
   async function carregar() {
     
-   const { data } = await supabase
+    const { data, error } = await supabase
       .from('orcamentos')
       .select('*')
       .eq('empresa_id', empresaId)
@@ -113,9 +108,9 @@ export default function OrcamentosPage() {
                     Ver
                   </button>
 
-                  <button onClick={() => enviarCliente(o.id, o.telefone)}>
- 		   Enviar WhatsApp
-		  </button>
+                  <button onClick={() => enviarCliente(o.id, o.telefone || '')}>
+                    Enviar WhatsApp
+                  </button>
                 </td>
 
               </tr>
@@ -174,10 +169,11 @@ function status(s?: string) {
 function enviarCliente(id: string, telefone: string) {
 
   const link = `${window.location.origin}/orcamento/${id}`
-
   const texto = `Olá! Segue seu orçamento:\n${link}`
 
-  const url = `https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`
+  const url = telefone
+    ? `https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`
+    : `https://wa.me/?text=${encodeURIComponent(texto)}`
 
   window.open(url)
 }
