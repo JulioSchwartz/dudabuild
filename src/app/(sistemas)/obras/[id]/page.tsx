@@ -17,7 +17,7 @@ import {
 
 export default function DetalheObra() {
 
-  const empresaId = useEmpresa()
+  const { empresaId, loading: loadingEmpresa } = useEmpresa()
   const { id } = useParams()
   const router = useRouter()
 
@@ -29,17 +29,20 @@ export default function DetalheObra() {
   const [valor, setValor] = useState('')
 
   useEffect(() => {
-    const empresa = localStorage.getItem('empresa_id')
+  if (loadingEmpresa) return
 
-    if (!empresa) {
-      router.push('/login')
-      return
-    }
+  const empresa = localStorage.getItem('empresa_id')
 
-    if (id && empresaId) {
-      carregar()
-    }
-  }, [id, empresaId])
+  if (!empresa) {
+    router.push('/login')
+    return
+  }
+
+  if (!id || !empresaId) return
+
+  carregar()
+
+}, [id, empresaId, loadingEmpresa])
 
   async function carregar() {
 
@@ -108,6 +111,7 @@ export default function DetalheObra() {
     carregar()
   }
 
+  if (loadingEmpresa) return <Loader />
   if (!empresaId) return <Loader />
   if (!obra) return <SkeletonObra />
 
