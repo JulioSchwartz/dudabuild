@@ -51,35 +51,47 @@ export default function OrcamentoCliente() {
     return itens.reduce((acc, i) => acc + totalItem(i), 0)
   }
 
-  if (status === 'aprovado') {
+  // ✅ FUNÇÃO CORRETA (ANTES ESTAVA ERRADO)
+  async function atualizarStatus(status: string) {
 
-  const { data: obra } = await supabase
-    .from('obras')
-    .insert({
-      nome: `Obra - ${orcamento.cliente_nome}`,
-      cliente_nome: orcamento.cliente_nome,
-      valor_total: orcamento.valor_total
-    })
-    .select()
-    .single()
-
-  if (obra) {
-
-    // 🔗 vincula obra
     await supabase
       .from('orcamentos')
-      .update({ obra_id: obra.id })
+      .update({ status })
       .eq('id', id)
 
-    // 💰 REGISTRA RECEITA
-    await lancarMovimento({
-      obra_id: obra.id,
-      tipo: 'entrada',
-      descricao: 'Contrato aprovado',
-      valor: orcamento.valor_total
-    })
+    // 🚀 SE APROVADO → CRIA OBRA + FINANCEIRO
+    if (status === 'aprovado' && orcamento) {
+
+      const { data: obra } = await supabase
+        .from('obras')
+        .insert({
+          nome: `Obra - ${orcamento.cliente_nome}`,
+          cliente_nome: orcamento.cliente_nome,
+          valor_total: orcamento.valor_total
+        })
+        .select()
+        .single()
+
+      if (obra) {
+
+        // 🔗 vincula obra
+        await supabase
+          .from('orcamentos')
+          .update({ obra_id: obra.id })
+          .eq('id', id)
+
+        // 💰 lança receita
+        await lancarMovimento({
+          obra_id: obra.id,
+          tipo: 'entrada',
+          descricao: 'Contrato aprovado',
+          valor: orcamento.valor_total
+        })
+      }
+    }
+
+    setOrcamento({ ...orcamento, status })
   }
-}
 
   if (loading) return <p>Carregando...</p>
 
