@@ -8,7 +8,7 @@ import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function Obras() {
 
-  const empresaId = useEmpresa()
+  const { empresaId, limites, loading: loadingEmpresa } = useEmpresa()
   const router = useRouter()
   const [obras, setObras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,31 +52,63 @@ export default function Obras() {
     buscar()
   }
 
+  const limite = limites.obras
+  const atingiuLimite = limite !== Infinity && obras.length >= limite
+
   // 🔥 LOADER GLOBAL
-  if (!empresaId) return <Loader />
+  if (loadingEmpresa) return <Loader />
 
   // 🔥 LOADING
   if (loading) return <Loader />
 
   return (
-    <div>
-      <div style={header}>
-        <h1 style={titulo}>Obras</h1>
+    <div style={{ padding: 24 }}>
 
-        <Link href="/obras/nova">
-          <button style={btnNova}>+ Nova Obra</button>
-        </Link>
+      {/* 🚨 ALERTA DE LIMITE */}
+      {atingiuLimite && (
+        <div style={alerta}>
+          🚨 Você atingiu o limite do plano.
+          <button
+            style={btnUpgrade}
+            onClick={() => router.push('/bloqueado')}
+          >
+            Fazer upgrade
+          </button>
+        </div>
+      )}
+
+      <div style={header}>
+        <h1 style={titulo}>
+          Obras ({obras.length}/{limite === Infinity ? '∞' : limite})
+        </h1>
+
+        <button
+          style={{
+            ...btnNova,
+            opacity: atingiuLimite ? 0.5 : 1
+          }}
+          onClick={() => {
+            if (atingiuLimite) {
+              alert('Limite atingido. Faça upgrade.')
+              router.push('/bloqueado')
+              return
+            }
+            router.push('/obras/nova')
+          }}
+        >
+          + Nova Obra
+        </button>
       </div>
 
       <div style={grid}>
         {obras.map((obra) => (
           <div key={obra.id} style={card}>
             <h3 style={nome}>{obra.nome}</h3>
-            <p style={cliente}>{obra.cliente}</p>
+            <p style={cliente}>{obra.cliente_nome}</p>
 
             {/* 💰 VALOR DA OBRA */}
             <p style={valorObra}>
-              💰 {Number(obra.valor || 0).toLocaleString('pt-BR', {
+              💰 {Number(obra.valor_total || 0).toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
               })}
@@ -112,6 +144,25 @@ function Loader() {
 }
 
 /* 🎨 ESTILO */
+
+const alerta = {
+  background: '#fef3c7',
+  padding: 15,
+  borderRadius: 8,
+  marginBottom: 20,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+}
+
+const btnUpgrade = {
+  background: '#f59e0b',
+  color: '#fff',
+  padding: '6px 12px',
+  borderRadius: 6,
+  border: 'none',
+  cursor: 'pointer'
+}
 
 const loaderContainer = {
   display: 'flex',
@@ -184,6 +235,7 @@ const btnNova = {
   border: 'none',
   borderRadius: '8px',
   fontWeight: '500',
+  cursor: 'pointer'
 }
 
 const btnVer = {

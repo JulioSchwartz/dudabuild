@@ -16,7 +16,7 @@ type Orcamento = {
 
 export default function OrcamentosPage() {
   
-  const empresaId = useEmpresa()
+  const { empresaId, limites, loading: loadingEmpresa } = useEmpresa()
   const [lista, setLista] = useState<Orcamento[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -49,8 +49,11 @@ export default function OrcamentosPage() {
     })
   }
 
+  const limite = limites.orcamentos
+  const atingiuLimite = limite !== Infinity && lista.length >= limite
+
   // 🔥 LOADER GLOBAL
-  if (!empresaId) return <Loader />
+  if (loadingEmpresa) return <Loader />
 
   // 🔥 LOADING
   if (loading) return <Loader />
@@ -58,10 +61,38 @@ export default function OrcamentosPage() {
   return (
     <div style={container}>
 
-      <div style={header}>
-        <h1>Orçamentos</h1>
+      {/* 🚨 ALERTA DE LIMITE */}
+      {atingiuLimite && (
+        <div style={alerta}>
+          🚨 Você atingiu o limite do plano.
+          <button
+            style={btnUpgrade}
+            onClick={() => router.push('/bloqueado')}
+          >
+            Fazer upgrade
+          </button>
+        </div>
+      )}
 
-        <button style={btnNovo} onClick={() => router.push('/orcamentos/novo')}>
+      <div style={header}>
+        <h1>
+          Orçamentos ({lista.length}/{limite === Infinity ? '∞' : limite})
+        </h1>
+
+        <button
+          style={{
+            ...btnNovo,
+            opacity: atingiuLimite ? 0.5 : 1
+          }}
+          onClick={() => {
+            if (atingiuLimite) {
+              alert('Limite atingido. Faça upgrade.')
+              router.push('/bloqueado')
+              return
+            }
+            router.push('/orcamentos/novo')
+          }}
+        >
           + Novo Orçamento
         </button>
       </div>
@@ -138,6 +169,25 @@ function Loader() {
 }
 
 /* 🎨 ESTILO */
+
+const alerta = {
+  background: '#fef3c7',
+  padding: 15,
+  borderRadius: 8,
+  marginBottom: 20,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+}
+
+const btnUpgrade = {
+  background: '#f59e0b',
+  color: '#fff',
+  padding: '6px 12px',
+  borderRadius: 6,
+  border: 'none',
+  cursor: 'pointer'
+}
 
 const loaderContainer = {
   display: 'flex',

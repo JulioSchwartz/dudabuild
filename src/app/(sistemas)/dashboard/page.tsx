@@ -10,7 +10,7 @@ import {
 
 export default function Dashboard() {
 
-  const empresaId = useEmpresa()
+  const { empresaId, limites, plano, loading: loadingEmpresa } = useEmpresa()
   const [orcamentos, setOrcamentos] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -94,8 +94,14 @@ export default function Dashboard() {
     { name: 'Pausadas', value: obrasPausadas.length }
   ]
 
-  // 🔥 LOADER PROFISSIONAL
-  if (!empresaId) return <Loader />
+  const limiteOrc = limites.orcamentos
+  const limiteObras = limites.obras
+
+  const limiteOrcAtingido = limiteOrc !== Infinity && orcamentos.length >= limiteOrc
+  const limiteObrasAtingido = limiteObras !== Infinity && obras.length >= limiteObras
+
+  // 🔥 LOADER
+  if (loadingEmpresa) return <Loader />
   if (loading) return <Loader />
 
   return (
@@ -103,18 +109,35 @@ export default function Dashboard() {
 
       <h1 style={titulo}>📊 Dashboard Geral</h1>
 
+      {/* 🚨 ALERTA INTELIGENTE */}
+      {(limiteOrcAtingido || limiteObrasAtingido) && (
+        <div style={alerta}>
+          🚨 Você atingiu limites do plano <strong>{plano}</strong>.
+          <button
+            style={btnUpgrade}
+            onClick={() => window.location.href = '/bloqueado'}
+          >
+            Fazer upgrade
+          </button>
+        </div>
+      )}
+
+      {/* 📊 KPI */}
       <div style={grid}>
+
         <Card titulo="💰 Total Orçado" valor={format(totalOrcado)} cor="#2563eb" />
         <Card titulo="💵 Total em Obras" valor={format(totalObras)} cor="#16a34a" />
         <Card titulo="📈 Conversão" valor={`${taxaConversao}%`} cor="#7c3aed" />
         <Card titulo="💎 Ticket Médio" valor={`R$ ${ticketMedio}`} cor="#0ea5e9" />
 
-        <Card titulo="🏗️ Obras Ativas" valor={obrasAndamento.length} cor="#f59e0b" />
-        <Card titulo="✅ Obras Finalizadas" valor={obrasFinalizadas.length} cor="#16a34a" />
-        <Card titulo="⏸️ Obras Pausadas" valor={obrasPausadas.length} cor="#dc2626" />
+        <Card titulo={`🏗️ Obras (${obras.length}/${limiteObras === Infinity ? '∞' : limiteObras})`} valor={obrasAndamento.length} cor="#f59e0b" />
+        <Card titulo="✅ Finalizadas" valor={obrasFinalizadas.length} cor="#16a34a" />
+        <Card titulo="⏸️ Pausadas" valor={obrasPausadas.length} cor="#dc2626" />
         <Card titulo="⚙️ Progresso Médio" valor={`${progressoMedio}%`} cor="#6366f1" />
+
       </div>
 
+      {/* 📊 GRÁFICOS */}
       <div style={grid2}>
 
         <div style={cardGrande}>
@@ -206,6 +229,25 @@ function Card({ titulo, valor, cor }: any) {
 }
 
 /* ESTILO */
+
+const alerta = {
+  background: '#fef3c7',
+  padding: 15,
+  borderRadius: 8,
+  marginBottom: 20,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+}
+
+const btnUpgrade = {
+  background: '#f59e0b',
+  color: '#fff',
+  padding: '6px 12px',
+  borderRadius: 6,
+  border: 'none',
+  cursor: 'pointer'
+}
 
 const loaderContainer = {
   display: 'flex',
