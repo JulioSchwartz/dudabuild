@@ -51,7 +51,7 @@ export default function DetalheObra() {
     const { data: obraData } = await supabase
       .from('obras')
       .select('*')
-      .eq('id', id)
+      .eq('id', Number(id))
       .eq('empresa_id', empresaId)
       .maybeSingle()
 
@@ -92,14 +92,14 @@ const { data: financeiroData } = await supabase
     if (!valor || Number(valor) <= 0) return alert('Valor inválido')
 
     await supabase.from('financeiro').insert([
-      {
-        obra_id: id,
-        tipo,
-        descricao,
-        valor: Number(valor),
-        created_at: new Date().toISOString(),
-      },
-    ])
+  {
+    obra_id: Number(id), // 🔥 corrigido
+    tipo,
+    descricao,
+    valor: Number(valor),
+    created_at: new Date().toISOString(),
+  },
+])
 
     setDescricao('')
     setValor('')
