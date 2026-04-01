@@ -11,13 +11,17 @@ export default function Obras() {
   const empresaId = useEmpresa()
   const router = useRouter()
   const [obras, setObras] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const empresa = localStorage.getItem('empresa_id')
 
     if (!empresa) {
       router.push('/login')
-    } else if (empresaId) {
+      return
+    }
+
+    if (empresaId) {
       buscar()
     }
   }, [empresaId])
@@ -27,25 +31,32 @@ export default function Obras() {
     if (!empresaId) return
 
     const { data, error } = await supabase
-      .from('obras') // ✅ CORRIGIDO AQUI
+      .from('obras')
       .select('*')
       .eq('empresa_id', empresaId)
 
     if (!error && data) {
       setObras(data)
     }
+
+    setLoading(false)
   }
 
   async function excluir(id: number) {
     const confirmar = confirm('Deseja excluir esta obra?')
     if (!confirmar) return
 
-    // opcional: tratar erro
     await supabase.from('financeiro').delete().eq('obra_id', id)
     await supabase.from('obras').delete().eq('id', id)
 
     buscar()
   }
+
+  // 🔥 LOADER GLOBAL
+  if (!empresaId) return <Loader />
+
+  // 🔥 LOADING
+  if (loading) return <Loader />
 
   return (
     <div>
@@ -62,6 +73,14 @@ export default function Obras() {
           <div key={obra.id} style={card}>
             <h3 style={nome}>{obra.nome}</h3>
             <p style={cliente}>{obra.cliente}</p>
+
+            {/* 💰 VALOR DA OBRA */}
+            <p style={valorObra}>
+              💰 {Number(obra.valor || 0).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </p>
 
             <div style={botoes}>
               <Link href={`/obras/${obra.id}`}>
@@ -82,7 +101,34 @@ export default function Obras() {
   )
 }
 
+/* 🔥 LOADER */
+function Loader() {
+  return (
+    <div style={loaderContainer}>
+      <div style={spinner}></div>
+      <p>Carregando...</p>
+    </div>
+  )
+}
+
 /* 🎨 ESTILO */
+
+const loaderContainer = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '60vh',
+}
+
+const spinner = {
+  width: 40,
+  height: 40,
+  border: '4px solid #e2e8f0',
+  borderTop: '4px solid #2563eb',
+  borderRadius: '50%',
+  animation: 'spin 1s linear infinite',
+}
 
 const header = {
   display: 'flex',
@@ -116,6 +162,13 @@ const nome = {
 
 const cliente = {
   color: '#64748b',
+}
+
+const valorObra = {
+  fontSize: '16px',
+  fontWeight: '600',
+  color: '#16a34a',
+  marginTop: '4px',
 }
 
 const botoes = {

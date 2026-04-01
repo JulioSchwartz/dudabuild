@@ -16,19 +16,23 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!empresaId) return
     carregar()
-  }, [])
+  }, [empresaId])
 
   async function carregar() {
+
+    if (!empresaId) return
+
     const { data: o } = await supabase
-	.from('orcamentos')
-	.select('*')
-	.eq('empresa_id', empresaId)
+      .from('orcamentos')
+      .select('*')
+      .eq('empresa_id', empresaId)
 
     const { data: ob } = await supabase
-	.from('obras')
-	.select('*')
-	.eq('empresa_id', empresaId)
+      .from('obras')
+      .select('*')
+      .eq('empresa_id', empresaId)
 
     setOrcamentos(o || [])
     setObras(ob || [])
@@ -78,19 +82,11 @@ export default function Dashboard() {
     { name: 'Finalizados', value: obrasFinalizadas.length }
   ]
 
-  /* =========================
-     📊 STATUS ORÇAMENTOS
-  ========================= */
-
   const statusOrc = [
     { name: 'Aprovados', value: aprovados.length },
     { name: 'Recusados', value: recusados.length },
     { name: 'Pendentes', value: pendentes.length }
   ]
-
-  /* =========================
-     📊 STATUS OBRAS
-  ========================= */
 
   const statusObras = [
     { name: 'Andamento', value: obrasAndamento.length },
@@ -98,17 +94,16 @@ export default function Dashboard() {
     { name: 'Pausadas', value: obrasPausadas.length }
   ]
 
-  if (loading) return <p style={{ padding: 24 }}>Carregando...</p>
+  // 🔥 LOADER PROFISSIONAL
+  if (!empresaId) return <Loader />
+  if (loading) return <Loader />
 
   return (
     <div style={container}>
 
       <h1 style={titulo}>📊 Dashboard Geral</h1>
 
-      {/* ================= KPIs ================= */}
-
       <div style={grid}>
-
         <Card titulo="💰 Total Orçado" valor={format(totalOrcado)} cor="#2563eb" />
         <Card titulo="💵 Total em Obras" valor={format(totalObras)} cor="#16a34a" />
         <Card titulo="📈 Conversão" valor={`${taxaConversao}%`} cor="#7c3aed" />
@@ -118,17 +113,12 @@ export default function Dashboard() {
         <Card titulo="✅ Obras Finalizadas" valor={obrasFinalizadas.length} cor="#16a34a" />
         <Card titulo="⏸️ Obras Pausadas" valor={obrasPausadas.length} cor="#dc2626" />
         <Card titulo="⚙️ Progresso Médio" valor={`${progressoMedio}%`} cor="#6366f1" />
-
       </div>
-
-      {/* ================= GRÁFICOS ================= */}
 
       <div style={grid2}>
 
-        {/* FUNIL */}
         <div style={cardGrande}>
           <h3>📊 Funil Completo</h3>
-
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={funil}>
               <XAxis dataKey="name" />
@@ -139,10 +129,8 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* STATUS ORÇAMENTOS */}
         <div style={cardGrande}>
           <h3>📄 Status dos Orçamentos</h3>
-
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie data={statusOrc} dataKey="value" outerRadius={80}>
@@ -155,10 +143,8 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* STATUS OBRAS */}
         <div style={cardGrande}>
           <h3>🏗️ Status das Obras</h3>
-
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie data={statusObras} dataKey="value" outerRadius={80}>
@@ -171,10 +157,8 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* TOP CLIENTES */}
         <div style={cardGrande}>
           <h3>💰 Maiores Orçamentos</h3>
-
           <ResponsiveContainer width="100%" height={250}>
             <BarChart
               data={orcamentos
@@ -200,7 +184,17 @@ export default function Dashboard() {
   )
 }
 
-/* ================= COMPONENTES ================= */
+/* LOADER */
+function Loader() {
+  return (
+    <div style={loaderContainer}>
+      <div style={spinner}></div>
+      <p>Carregando...</p>
+    </div>
+  )
+}
+
+/* COMPONENTES */
 
 function Card({ titulo, valor, cor }: any) {
   return (
@@ -211,7 +205,24 @@ function Card({ titulo, valor, cor }: any) {
   )
 }
 
-/* ================= ESTILO ================= */
+/* ESTILO */
+
+const loaderContainer = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '60vh'
+}
+
+const spinner = {
+  width: 40,
+  height: 40,
+  border: '4px solid #e2e8f0',
+  borderTop: '4px solid #2563eb',
+  borderRadius: '50%',
+  animation: 'spin 1s linear infinite'
+}
 
 const container = {
   padding: 24,

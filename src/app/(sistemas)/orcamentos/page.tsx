@@ -22,13 +22,14 @@ export default function OrcamentosPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (empresaId) {
-      carregar()
-    }
+    if (!empresaId) return
+    carregar()
   }, [empresaId])
 
   async function carregar() {
     
+    if (!empresaId) return
+
     const { data, error } = await supabase
       .from('orcamentos')
       .select('*')
@@ -48,6 +49,12 @@ export default function OrcamentosPage() {
     })
   }
 
+  // 🔥 LOADER GLOBAL
+  if (!empresaId) return <Loader />
+
+  // 🔥 LOADING
+  if (loading) return <Loader />
+
   return (
     <div style={container}>
 
@@ -59,72 +66,95 @@ export default function OrcamentosPage() {
         </button>
       </div>
 
-      {loading ? (
-        <p>Carregando...</p>
-      ) : (
-        <table style={tabela}>
+      <table style={tabela}>
 
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th>Valor</th>
-              <th>Status</th>
-              <th>Data</th>
-              <th>Ações</th>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {lista.map(o => (
+            <tr key={o.id} style={linha}>
+
+              <td>{o.cliente_nome}</td>
+
+              <td>{formatarMoeda(o.valor_total)}</td>
+
+              <td>
+                <span style={status(o.status)}>
+                  {o.status || 'pendente'}
+                </span>
+              </td>
+
+              <td>
+                {new Date(o.created_at).toLocaleDateString()}
+              </td>
+
+              <td style={{ display: 'flex', gap: 6 }}>
+
+                <button
+                  style={btn}
+                  onClick={() => router.push(`/orcamentos/editar/${o.id}`)}
+                >
+                  Editar
+                </button>
+
+                <button
+                  style={btn}
+                  onClick={() => router.push(`/orcamentos/${o.id}`)}
+                >
+                  Ver
+                </button>
+
+                <button onClick={() => enviarCliente(o.id, o.telefone || '')}>
+                  WhatsApp
+                </button>
+              </td>
+
             </tr>
-          </thead>
+          ))}
+        </tbody>
 
-          <tbody>
-            {lista.map(o => (
-              <tr key={o.id} style={linha}>
-
-                <td>{o.cliente_nome}</td>
-
-                <td>{formatarMoeda(o.valor_total)}</td>
-
-                <td>
-                  <span style={status(o.status)}>
-                    {o.status || 'pendente'}
-                  </span>
-                </td>
-
-                <td>
-                  {new Date(o.created_at).toLocaleDateString()}
-                </td>
-
-                <td style={{ display: 'flex', gap: 6 }}>
-
-                  <button
-                    style={btn}
-                    onClick={() => router.push(`/orcamentos/editar/${o.id}`)}
-                  >
-                    Editar
-                  </button>
-
-                  <button
-                    style={btn}
-                    onClick={() => router.push(`/orcamentos/${o.id}`)} // ✅ CORRIGIDO
-                  >
-                    Ver
-                  </button>
-
-                  <button onClick={() => enviarCliente(o.id, o.telefone || '')}>
-                    Enviar WhatsApp
-                  </button>
-                </td>
-
-              </tr>
-            ))}
-          </tbody>
-
-        </table>
-      )}
+      </table>
 
     </div>
   )
 }
 
+/* 🔥 LOADER */
+function Loader() {
+  return (
+    <div style={loaderContainer}>
+      <div style={spinner}></div>
+      <p>Carregando...</p>
+    </div>
+  )
+}
+
 /* 🎨 ESTILO */
+
+const loaderContainer = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '60vh',
+}
+
+const spinner = {
+  width: 40,
+  height: 40,
+  border: '4px solid #e2e8f0',
+  borderTop: '4px solid #2563eb',
+  borderRadius: '50%',
+  animation: 'spin 1s linear infinite',
+}
 
 const container = { padding: 24 }
 
@@ -168,7 +198,7 @@ function status(s?: string) {
 
 function enviarCliente(id: string, telefone: string) {
 
-  const link = `${window.location.origin}/orcamentos/${id}` // ✅ CORRIGIDO
+  const link = `${window.location.origin}/orcamentos/${id}`
   const texto = `Olá! Segue seu orçamento:\n${link}`
 
   const url = telefone
