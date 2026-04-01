@@ -28,40 +28,40 @@ export default function DetalheObra() {
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
 
- useEffect(() => {
-  const empresa = localStorage.getItem('empresa_id')
+  useEffect(() => {
+    const empresa = localStorage.getItem('empresa_id')
 
-  if (!empresa) {
-    router.push('/login')
-    return
-  }
+    if (!empresa) {
+      router.push('/login')
+      return
+    }
 
-  if (id && empresaId) {
-    carregar()
-  }
-}, [id, empresaId])
+    if (id && empresaId) {
+      carregar()
+    }
+  }, [id, empresaId])
 
   async function carregar() {
 
-  if (!empresaId) return <p style={{ padding: 24 }}>Carregando empresa...</p> // ✅ PROTEÇÃO
+    if (!empresaId) return
 
-  const { data: obraData } = await supabase
-    .from('obras')
-    .select('*')
-    .eq('id', id)
-    .eq('empresa_id', empresaId)
-    .maybeSingle()
+    const { data: obraData } = await supabase
+      .from('obras')
+      .select('*')
+      .eq('id', id)
+      .eq('empresa_id', empresaId)
+      .maybeSingle()
 
-  const { data: financeiroData } = await supabase
-    .from('financeiro')
-    .select('*')
-    .eq('obra_id', id)
-    .eq('empresa_id', empresaId)
-    .order('created_at', { ascending: true })
+    const { data: financeiroData } = await supabase
+      .from('financeiro')
+      .select('*')
+      .eq('obra_id', id)
+      .eq('empresa_id', empresaId)
+      .order('created_at', { ascending: true })
 
-  setObra(obraData)
-  setFinanceiro(financeiroData || [])
-}
+    setObra(obraData)
+    setFinanceiro(financeiroData || [])
+  }
 
   function copiarLink() {
     if (!obra?.token) return alert('Token não encontrado')
@@ -108,7 +108,8 @@ export default function DetalheObra() {
     carregar()
   }
 
-  if (!obra) return <p>Carregando...</p>
+  if (!empresaId) return <Loader />
+  if (!obra) return <SkeletonObra />
 
   const lista = financeiro || []
 
@@ -117,17 +118,13 @@ export default function DetalheObra() {
 
   const categoriasEntrada: any = {}
   entradas.forEach((e) => {
-    if (!categoriasEntrada[e.descricao]) {
-      categoriasEntrada[e.descricao] = 0
-    }
+    if (!categoriasEntrada[e.descricao]) categoriasEntrada[e.descricao] = 0
     categoriasEntrada[e.descricao] += Number(e.valor)
   })
 
   const categorias: any = {}
   saidas.forEach((s) => {
-    if (!categorias[s.descricao]) {
-      categorias[s.descricao] = 0
-    }
+    if (!categorias[s.descricao]) categorias[s.descricao] = 0
     categorias[s.descricao] += Number(s.valor)
   })
 
@@ -166,7 +163,6 @@ export default function DetalheObra() {
       <h1 style={titulo}>{obra.nome}</h1>
       <p style={subtitulo}>{obra.cliente}</p>
 
-      {/* 💰 VALOR DA OBRA */}
       <p style={valorObra}>
         💰 {Number(obra.valor || 0).toLocaleString('pt-BR', {
           style: 'currency',
@@ -175,20 +171,12 @@ export default function DetalheObra() {
       </p>
 
       <div style={boxAcoes}>
-        <button onClick={copiarLink} style={btnCopiar}>
-          🔗 Copiar link do cliente
-        </button>
-
-        <button onClick={enviarWhatsApp} style={btnWhats}>
-          📤 Enviar no WhatsApp
-        </button>
+        <button onClick={copiarLink} style={btnCopiar}>🔗 Copiar link</button>
+        <button onClick={enviarWhatsApp} style={btnWhats}>📤 WhatsApp</button>
       </div>
 
-      <button
-        style={btnFotos}
-        onClick={() => router.push(`/obras/${id}/fotos`)}
-      >
-        📸 Fotos da Obra
+      <button style={btnFotos} onClick={() => router.push(`/obras/${id}/fotos`)}>
+        📸 Fotos
       </button>
 
       <div style={grid}>
@@ -200,7 +188,7 @@ export default function DetalheObra() {
         <Card titulo="Custo/m²" valor={custoPorMetro} cor="#f59e0b" />
       </div>
 
-      <h2 style={sectionTitle}>Fluxo de Caixa Mensal</h2>
+      <h2 style={sectionTitle}>Fluxo de Caixa</h2>
 
       <div style={box}>
         <ResponsiveContainer width="100%" height={300}>
@@ -209,271 +197,66 @@ export default function DetalheObra() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="entrada" stroke="#22c55e" name="Entradas" />
-            <Line type="monotone" dataKey="saida" stroke="#ef4444" name="Saídas" />
+            <Line type="monotone" dataKey="entrada" stroke="#22c55e" />
+            <Line type="monotone" dataKey="saida" stroke="#ef4444" />
           </LineChart>
         </ResponsiveContainer>
-      </div>
-
-      <h3 style={sectionTitle}>Adicionar lançamento</h3>
-
-      <form onSubmit={adicionar} style={form}>
-        <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={input}>
-          <option value="entrada">Entrada</option>
-          <option value="saida">Saída</option>
-        </select>
-
-        <select value={descricao} onChange={(e) => setDescricao(e.target.value)} style={input}>
-          <option value="">Selecione...</option>
-          {(tipo === 'entrada'
-            ? (opcoesFinanceiro?.entrada || [])
-            : (opcoesFinanceiro?.saida || [])
-          ).map((item, i) => (
-            <option key={i}>{item}</option>
-          ))}
-        </select>
-
-        <input
-          type="number"
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          style={input}
-        />
-
-        <button style={btnAdicionar}>Adicionar</button>
-      </form>
-
-      <h2 style={sectionTitle}>Receitas por categoria</h2>
-
-      <div style={box}>
-        {Object.entries(categoriasEntrada).map(([nome, valor]: any) => (
-          <div key={nome} style={linha}>
-            <span>{nome}</span>
-            <strong style={{ color: '#22c55e' }}>
-              {Number(valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </strong>
-          </div>
-        ))}
-      </div>
-
-      <h2 style={sectionTitle}>Custos por categoria</h2>
-
-      <div style={box}>
-        {Object.entries(categorias).map(([nome, valor]: any) => (
-          <div key={nome} style={linha}>
-            <span>{nome}</span>
-            <strong>
-              {Number(valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </strong>
-          </div>
-        ))}
-      </div>
-
-      <h3 style={sectionTitle}>Entradas</h3>
-
-      <div style={box}>
-        {entradas.map((item) => (
-          <div key={item.id} style={linhaLancamento}>
-            <div>
-              <strong style={{ color: '#22c55e' }}>{item.descricao}</strong><br />
-              <span style={data}>
-                {new Date(item.created_at).toLocaleDateString('pt-BR')}
-              </span><br />
-              <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
-                {Number(item.valor).toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                })}
-              </span>
-            </div>
-
-            <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
-              Excluir
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <h3 style={sectionTitle}>Saídas</h3>
-
-      <div style={box}>
-        {saidas.map((item) => (
-          <div key={item.id} style={linhaLancamento}>
-            <div>
-              <strong style={{ color: '#ef4444' }}>{item.descricao}</strong><br />
-              <span style={data}>
-                {new Date(item.created_at).toLocaleDateString('pt-BR')}
-              </span><br />
-              <span style={{ color: '#dc2626', fontWeight: 'bold' }}>
-                {Number(item.valor).toLocaleString('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                })}
-              </span>
-            </div>
-
-            <button onClick={() => excluirLancamento(item.id)} style={btnExcluir}>
-              Excluir
-            </button>
-          </div>
-        ))}
       </div>
     </div>
   )
 }
 
-/* COMPONENTE CARD */
+/* LOADER */
+function Loader() {
+  return (
+    <div style={loaderContainer}>
+      <div style={spinner}></div>
+      <p>Carregando...</p>
+    </div>
+  )
+}
 
+/* SKELETON */
+function SkeletonObra() {
+  return (
+    <div style={{ padding: 24 }}>
+      <div style={skeletonTitle}></div>
+      <div style={skeletonSub}></div>
+      {[1,2,3].map(i => <div key={i} style={skeletonCard}></div>)}
+    </div>
+  )
+}
+
+/* COMPONENT CARD */
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
     <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
-      <p style={{ color: '#64748b' }}>{titulo}</p>
-      <h2 style={{ color: '#0f172a' }}>
+      <p>{titulo}</p>
+      <h2>
         {tipo === 'porcentagem'
           ? valor.toFixed(2) + '%'
-          : Number(valor).toLocaleString('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            })}
+          : valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
       </h2>
     </div>
   )
 }
 
-/* NOVO ESTILO */
+/* ESTILOS */
+const valorObra = { fontSize: 18, fontWeight: 600, color: '#16a34a' }
+const loaderContainer = { display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'60vh' }
+const spinner = { width:40,height:40,border:'4px solid #e2e8f0',borderTop:'4px solid #2563eb',borderRadius:'50%',animation:'spin 1s linear infinite' }
+const skeletonTitle = { width:'40%',height:24,background:'#e2e8f0',borderRadius:6 }
+const skeletonSub = { width:'30%',height:16,background:'#e2e8f0',borderRadius:6,marginTop:10 }
+const skeletonCard = { height:80,background:'#e2e8f0',borderRadius:10,marginTop:10 }
 
-const valorObra = {
-  fontSize: '18px',
-  fontWeight: '600',
-  color: '#16a34a',
-  marginTop: '5px',
-}
+const boxAcoes = { display:'flex',gap:10 }
+const btnCopiar = { background:'#0ea5e9',color:'#fff',padding:10,border:'none',borderRadius:8 }
+const btnWhats = { background:'#22c55e',color:'#fff',padding:10,border:'none',borderRadius:8 }
+const btnFotos = { background:'#0ea5e9',color:'#fff',padding:10,border:'none',borderRadius:8,marginTop:10 }
 
-/* RESTO ORIGINAL */
-
-const boxAcoes = {
-  display: 'flex',
-  gap: '10px',
-  marginTop: '10px',
-}
-
-const btnCopiar = {
-  background: '#0ea5e9',
-  color: '#fff',
-  padding: '10px 14px',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-}
-
-const btnWhats = {
-  background: '#22c55e',
-  color: '#fff',
-  padding: '10px 14px',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-}
-
-const btnFotos = {
-  background: '#0ea5e9',
-  color: '#fff',
-  padding: '10px 14px',
-  border: 'none',
-  borderRadius: '8px',
-  marginTop: '10px',
-  cursor: 'pointer',
-}
-
-const form = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 2fr 1fr auto',
-  gap: '10px',
-  background: '#fff',
-  padding: '20px',
-  borderRadius: '12px',
-  marginTop: '10px',
-}
-
-const linhaLancamento = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '12px',
-  padding: '10px',
-  borderRadius: '8px',
-  background: '#f8fafc',
-}
-
-const data = {
-  fontSize: '12px',
-  color: '#64748b',
-}
-
-const titulo = { color: '#0f172a' }
-const subtitulo = { color: '#64748b' }
-
-const sectionTitle = {
-  marginTop: '30px',
-  marginBottom: '10px',
-  color: '#0f172a',
-}
-
-const grid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-  gap: '20px',
-  marginTop: '20px',
-}
-
-const card = {
-  background: '#ffffff',
-  padding: '20px',
-  borderRadius: '12px',
-  boxShadow: '0 6px 20px rgba(0,0,0,0.05)',
-}
-
-const box = {
-  background: '#ffffff',
-  padding: '20px',
-  borderRadius: '12px',
-  marginTop: '10px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-}
-
-const linha = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginBottom: '10px',
-  color: '#1e293b',
-}
-
-const input = {
-  padding: '10px',
-  borderRadius: '6px',
-  border: '1px solid #cbd5f5',
-}
-
-const btnAdicionar = {
-  background: '#2563eb',
-  color: '#fff',
-  padding: '10px 15px',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-}
-
-const btnExcluir = {
-  background: '#ef4444',
-  color: '#fff',
-  border: 'none',
-  padding: '6px 10px',
-  borderRadius: '6px',
-  cursor: 'pointer',
-}
+const grid = { display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))',gap:20 }
+const card = { background:'#fff',padding:20,borderRadius:12 }
+const box = { background:'#fff',padding:20,borderRadius:12 }
+const titulo = { color:'#0f172a' }
+const subtitulo = { color:'#64748b' }
+const sectionTitle = { marginTop:20 }
