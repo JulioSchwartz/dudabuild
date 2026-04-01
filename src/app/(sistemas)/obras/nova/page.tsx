@@ -6,26 +6,31 @@ import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function NovaObra() {
-  const empresaId = useEmpresa()
+  const { empresaId, loading } = useEmpresa()
   const router = useRouter()
 
   const [nome, setNome] = useState('')
   const [cliente, setCliente] = useState('')
   const [valor, setValor] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [salvando, setSalvando] = useState(false)
 
   async function salvar(e: any) {
     e.preventDefault()
 
+    if (!empresaId) {
+      alert('Erro de empresa')
+      return
+    }
+
+    if (!nome || !cliente || !valor) {
+      alert('Preencha todos os campos')
+      return
+    }
+
     try {
-      if (!empresaId) {
-        alert('Erro de empresa')
-        return
-      }
+      setSalvando(true)
 
-      setLoading(true)
-
-      // 🔒 EMPRESA
+      // 🔒 BUSCAR EMPRESA
       const { data: empresa, error: erroEmpresa } = await supabase
         .from('empresas')
         .select('*')
@@ -35,7 +40,6 @@ export default function NovaObra() {
       if (erroEmpresa) {
         console.error('Erro empresa:', erroEmpresa)
         alert('Erro ao buscar empresa')
-        setLoading(false)
         return
       }
 
@@ -48,17 +52,15 @@ export default function NovaObra() {
       if (erroCount) {
         console.error('Erro count:', erroCount)
         alert('Erro ao contar obras')
-        setLoading(false)
         return
       }
 
       if (empresa?.plano === 'free' && (count || 0) >= 3) {
         alert('Limite de obras atingido no plano Free')
-        setLoading(false)
         return
       }
 
-      // ✅ SALVAR OBRA
+      // ✅ INSERT
       const { error: erroInsert } = await supabase
         .from('obras')
         .insert([
@@ -73,7 +75,6 @@ export default function NovaObra() {
       if (erroInsert) {
         console.error('Erro insert:', erroInsert)
         alert('Erro ao salvar obra')
-        setLoading(false)
         return
       }
 
@@ -82,12 +83,14 @@ export default function NovaObra() {
     } catch (err) {
       console.error(err)
       alert('Erro inesperado')
-      setLoading(false)
+    } finally {
+      setSalvando(false)
     }
   }
 
-  // 🔥 LOADER GLOBAL
-  if (!empresaId) return <Loader />
+  // 🔥 LOADING CORRETO
+  if (loading) return <Loader />
+  if (!empresaId) return <p>Erro ao carregar empresa</p>
 
   return (
     <div style={{ padding: 24 }}>
@@ -116,8 +119,8 @@ export default function NovaObra() {
           style={input}
         />
 
-        <button style={botao}>
-          {loading ? 'Salvando...' : 'Salvar'}
+        <button style={botao} disabled={salvando}>
+          {salvando ? 'Salvando...' : 'Salvar'}
         </button>
       </form>
     </div>
