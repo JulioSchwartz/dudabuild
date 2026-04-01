@@ -1,21 +1,44 @@
 'use client'
 
-import { useEffect,useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
-import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function EditarOrcamento(){
 
-  const {id}=useParams()
-  const [itens,setItens]=useState<any[]>([])
+  const { id } = useParams()
 
-  useEffect(()=>{carregar()},[])
+  const [cliente, setCliente] = useState('')
+  const [descricao, setDescricao] = useState('')
+  const [itens, setItens] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (id) carregar()
+  }, [id])
 
   async function carregar(){
-    const {data}=await supabase.from('orcamento_itens').select('*').eq('orcamento_id',id)
-    setItens(data||[])
+
+    // 🔹 ORÇAMENTO
+    const { data: orc } = await supabase
+      .from('orcamentos')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (orc) {
+      setCliente(orc.cliente_nome || '')
+      setDescricao(orc.descricao || '')
+    }
+
+    // 🔹 ITENS
+    const { data: itens } = await supabase
+      .from('orcamento_itens')
+      .select('*')
+      .eq('orcamento_id', id)
+
+    setItens(itens || [])
   }
 
   function atualizarItem(index:number,campo:string,valor:any){
@@ -38,26 +61,103 @@ export default function EditarOrcamento(){
     return itens.reduce((a,i)=>a+totalItem(i),0)
   }
 
+  async function salvar(){
+
+    setLoading(true)
+
+    // 🔹 ATUALIZA ORÇAMENTO
+    await supabase
+      .from('orcamentos')
+      .update({
+        cliente_nome: cliente,
+        descricao,
+        valor_total: totalGeral()
+      })
+      .eq('id', id)
+
+    // 🔹 DELETA ITENS ANTIGOS
+    await supabase
+      .from('orcamento_itens')
+      .delete()
+      .eq('orcamento_id', id)
+
+    // 🔹 INSERE NOVOS ITENS
+    await supabase.from('orcamento_itens').insert(
+      itens.map(i => ({
+        ...i,
+        orcamento_id: id,
+        valor_total: totalItem(i)
+      }))
+    )
+
+    alert('Atualizado com sucesso!')
+    setLoading(false)
+  }
+
   function enviarWhatsApp() {
-  const total = totalGeral()
 
-  const texto = `Olá! Segue seu orçamento no valor de R$ ${total.toFixed(2)}.`
+    const link = `${window.location.origin}/orcamento/${id}`
 
-  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`)
-}
+    const texto = `Olá! Segue seu orçamento:\n${link}`
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`)
+  }
 
   return(
     <div style={container}>
 
       <h1>Editar Orçamento</h1>
 
-      <TabelaOrcamento itens={itens} atualizarItem={atualizarItem} removerItem={removerItem} totalItem={totalItem}/>
+      <input
+        placeholder="Cliente"
+        value={cliente}
+        onChange={e => setCliente(e.target.value)}
+        style={input}
+      />
+
+      <input
+        placeholder="Descrição"
+        value={descricao}
+        onChange={e => setDescricao(e.target.value)}
+        style={input}
+      />
+
+      <TabelaOrcamento
+        itens={itens}
+        atualizarItem={atualizarItem}
+        removerItem={removerItem}
+        totalItem={totalItem}
+      />
 
       <div style={total}>R$ {totalGeral().toFixed(2)}</div>
+
+      <button onClick={salvar} style={btn}>
+        {loading ? 'Salvando...' : 'Salvar'}
+      </button>
+
+      <button onClick={enviarWhatsApp} style={btn}>
+        WhatsApp
+      </button>
 
     </div>
   )
 }
 
 const container={maxWidth:1100,margin:'0 auto',padding:24}
-const total={fontSize:24,fontWeight:700}
+const total={fontSize:24,fontWeight:700,marginTop:20}
+
+const input={
+  width:'100%',
+  marginTop:10,
+  padding:12,
+  borderRadius:8
+}
+
+const btn={
+  marginTop:10,
+  padding:12,
+  borderRadius:8,
+  border:'none',
+  background:'#2563eb',
+  color:'#fff'
+}

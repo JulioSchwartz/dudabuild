@@ -103,7 +103,7 @@ export default function OrcamentosPage() {
 
                   <button
                     style={btn}
-                    onClick={() => router.push(`/orcamento/${o.id}`)}
+                    onClick={() => router.push(`/orcamentos/${o.id}`)} // ✅ CORRIGIDO
                   >
                     Ver
                   </button>
@@ -168,7 +168,7 @@ function status(s?: string) {
 
 function enviarCliente(id: string, telefone: string) {
 
-  const link = `${window.location.origin}/orcamento/${id}`
+  const link = `${window.location.origin}/orcamentos/${id}` // ✅ CORRIGIDO
   const texto = `Olá! Segue seu orçamento:\n${link}`
 
   const url = telefone

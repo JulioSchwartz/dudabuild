@@ -17,15 +17,17 @@ export default function Obras() {
 
     if (!empresa) {
       router.push('/login')
-    } else {
+    } else if (empresaId) {
       buscar()
     }
   }, [empresaId])
 
   async function buscar() {
 
+    if (!empresaId) return
+
     const { data, error } = await supabase
-      .from('orcamentos') // (mantive como você já estava usando)
+      .from('obras') // ✅ CORRIGIDO AQUI
       .select('*')
       .eq('empresa_id', empresaId)
 
@@ -38,6 +40,7 @@ export default function Obras() {
     const confirmar = confirm('Deseja excluir esta obra?')
     if (!confirmar) return
 
+    // opcional: tratar erro
     await supabase.from('financeiro').delete().eq('obra_id', id)
     await supabase.from('obras').delete().eq('id', id)
 

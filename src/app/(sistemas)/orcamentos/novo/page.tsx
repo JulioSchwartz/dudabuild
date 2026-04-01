@@ -93,27 +93,23 @@ export default function NovoOrcamento() {
 
     setLoading(true)
 
-    // 🔒 BUSCAR EMPRESA
     const { data: empresa } = await supabase
       .from('empresas')
       .select('*')
       .eq('id', empresaId)
       .single()
 
-    // 🔒 CONTAR ORÇAMENTOS
     const { count } = await supabase
       .from('orcamentos')
       .select('*', { count: 'exact', head: true })
       .eq('empresa_id', empresaId)
 
-    // 🚫 LIMITE
     if (empresa?.plano === 'free' && (count || 0) >= 5) {
       alert('Limite do plano Free atingido. Faça upgrade.')
       setLoading(false)
       return
     }
 
-    // ✅ CRIAR ORÇAMENTO
     const { data: orc, error } = await supabase
       .from('orcamentos')
       .insert({
@@ -133,7 +129,6 @@ export default function NovoOrcamento() {
 
     setOrcamentoId(orc.id)
 
-    // ✅ ITENS
     await supabase.from('orcamento_itens').insert(
       itens.map(i => ({
         ...i,
@@ -182,25 +177,125 @@ export default function NovoOrcamento() {
     w?.print()
   }
 
-  const input = { width: '100%', marginTop: 10, padding: 12, borderRadius: 8 }
-  const btn = { marginTop: 10, padding: 12, borderRadius: 8 }
-
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 700 }}>Novo Orçamento</h1>
+    <div style={container}>
 
-      <input placeholder="Nome do cliente" value={cliente} onChange={e => setCliente(e.target.value)} style={input} />
-      <input placeholder="Descrição" value={descricao} onChange={e => setDescricao(e.target.value)} style={input} />
+      <h1 style={titulo}>Novo Orçamento</h1>
 
-      <TabelaOrcamento itens={itens} atualizarItem={atualizarItem} removerItem={removerItem} />
+      {/* 🔹 DADOS */}
+      <div style={card}>
+        <h3>Dados do Cliente</h3>
 
-      <button onClick={adicionarItem} style={btn}>+ Adicionar Item</button>
+        <input
+          placeholder="Nome do cliente"
+          value={cliente}
+          onChange={e => setCliente(e.target.value)}
+          style={input}
+        />
 
-      <h2>Total: {formatarMoeda(totalGeral())}</h2>
+        <input
+          placeholder="Descrição do serviço"
+          value={descricao}
+          onChange={e => setDescricao(e.target.value)}
+          style={input}
+        />
+      </div>
 
-      <button onClick={salvar} style={btn}>{loading ? 'Salvando...' : 'Salvar'}</button>
-      <button onClick={gerarPDF} style={btn}>PDF</button>
-      <button onClick={enviarWhatsApp} style={btn}>WhatsApp</button>
+      {/* 🔹 ITENS */}
+      <div style={card}>
+        <h3>Itens do Orçamento</h3>
+
+        <TabelaOrcamento
+          itens={itens}
+          atualizarItem={atualizarItem}
+          removerItem={removerItem}
+        />
+
+        <button onClick={adicionarItem} style={btnSecundario}>
+          + Adicionar Item
+        </button>
+      </div>
+
+      {/* 🔹 TOTAL */}
+      <div style={totalBox}>
+        Total: {formatarMoeda(totalGeral())}
+      </div>
+
+      {/* 🔹 AÇÕES */}
+      <div style={acoes}>
+        <button onClick={salvar} style={btn}>
+          {loading ? 'Salvando...' : 'Salvar'}
+        </button>
+
+        <button onClick={gerarPDF} style={btnSecundario}>
+          PDF
+        </button>
+
+        <button onClick={enviarWhatsApp} style={btnWhats}>
+          WhatsApp
+        </button>
+      </div>
+
     </div>
   )
+}
+
+/* 🎨 UI */
+
+const container = { maxWidth: 1100, margin: '0 auto', padding: 24 }
+
+const titulo = {
+  fontSize: 28,
+  fontWeight: 700,
+  marginBottom: 20
+}
+
+const card = {
+  background: '#fff',
+  padding: 20,
+  borderRadius: 10,
+  marginBottom: 20,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
+}
+
+const input = {
+  width: '100%',
+  marginTop: 10,
+  padding: 12,
+  borderRadius: 8,
+  border: '1px solid #e2e8f0'
+}
+
+const totalBox = {
+  fontSize: 24,
+  fontWeight: 700,
+  marginTop: 20
+}
+
+const acoes = {
+  display: 'flex',
+  gap: 10,
+  marginTop: 20
+}
+
+const btn = {
+  padding: 12,
+  borderRadius: 8,
+  border: 'none',
+  background: '#2563eb',
+  color: '#fff'
+}
+
+const btnSecundario = {
+  padding: 12,
+  borderRadius: 8,
+  border: '1px solid #cbd5e1'
+}
+
+const btnWhats = {
+  padding: 12,
+  borderRadius: 8,
+  border: 'none',
+  background: '#22c55e',
+  color: '#fff'
 }
