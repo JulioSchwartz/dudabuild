@@ -3,9 +3,8 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
-import jsPDF from 'jspdf'
+import { useEmpresa } from '@/hooks/useEmpresa'
 
-// 🚀 TIPAGEM PROFISSIONAL
 type Item = {
   categoria: string
   codigo: string
@@ -25,6 +24,8 @@ function formatarMoeda(valor: number) {
 }
 
 export default function NovoOrcamento() {
+  const empresaId = useEmpresa()
+
   const [cliente, setCliente] = useState('')
   const [descricao, setDescricao] = useState('')
   const [orcamentoId, setOrcamentoId] = useState<string | null>(null)
@@ -85,14 +86,38 @@ export default function NovoOrcamento() {
       return
     }
 
+    if (!empresaId) {
+      alert('Erro de empresa')
+      return
+    }
+
     setLoading(true)
 
-    const empresa_id = localStorage.getItem('empresa_id')
+    // 🔒 BUSCAR EMPRESA
+    const { data: empresa } = await supabase
+      .from('empresas')
+      .select('*')
+      .eq('id', empresaId)
+      .single()
 
+    // 🔒 CONTAR ORÇAMENTOS
+    const { count } = await supabase
+      .from('orcamentos')
+      .select('*', { count: 'exact', head: true })
+      .eq('empresa_id', empresaId)
+
+    // 🚫 LIMITE
+    if (empresa?.plano === 'free' && (count || 0) >= 5) {
+      alert('Limite do plano Free atingido. Faça upgrade.')
+      setLoading(false)
+      return
+    }
+
+    // ✅ CRIAR ORÇAMENTO
     const { data: orc, error } = await supabase
       .from('orcamentos')
       .insert({
-        empresa_id,
+        empresa_id: empresaId,
         cliente_nome: cliente,
         descricao,
         valor_total: totalGeral()
@@ -108,6 +133,7 @@ export default function NovoOrcamento() {
 
     setOrcamentoId(orc.id)
 
+    // ✅ ITENS
     await supabase.from('orcamento_itens').insert(
       itens.map(i => ({
         ...i,
@@ -126,52 +152,35 @@ export default function NovoOrcamento() {
       return
     }
 
-    const link = `https://dudabuild.vercel.app/orcamento/${orcamentoId}`
+    const link = `${window.location.origin}/orcamento/${orcamentoId}`
     const msg = `Olá! Segue seu orçamento:\n${link}`
 
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`)
   }
 
   function gerarPDF() {
-  const html = `
-    <html>
-    <body style="font-family: Arial; padding: 40px">
+    const html = `
+      <html>
+      <body style="font-family: Arial; padding: 40px">
+        <h1>DudaBuild Engenharia</h1>
+        <h2>Proposta Comercial</h2>
+        <p><b>Cliente:</b> ${cliente}</p>
+        <p><b>Descrição:</b> ${descricao}</p>
+        <hr/>
+        ${itens.map(i => `
+          <p>${i.descricao} - ${i.quantidade}x - R$ ${totalItem(i).toFixed(2)}</p>
+        `).join('')}
+        <hr/>
+        <h2>Total: R$ ${totalGeral().toFixed(2)}</h2>
+      </body>
+      </html>
+    `
 
-      <h1>DudaBuild Engenharia</h1>
-      <h2>Proposta Comercial</h2>
-
-      <p><b>Cliente:</b> ${cliente}</p>
-      <p><b>Descrição:</b> ${descricao}</p>
-
-      <hr/>
-
-      ${itens.map(i => `
-        <p>${i.descricao} - ${i.quantidade}x - R$ ${totalItem(i).toFixed(2)}</p>
-      `).join('')}
-
-      <hr/>
-
-      <h2>Total: R$ ${totalGeral().toFixed(2)}</h2>
-
-      <br/>
-
-      <p><b>CNPJ:</b> 00.000.000/0001-00</p>
-      <p><b>Responsável:</b> Eng. Civil</p>
-
-      <br/><br/>
-
-      <p>__________________________</p>
-      <p>Assinatura</p>
-
-    </body>
-    </html>
-  `
-
-  const w = window.open('', '', 'width=900,height=700')
-  w?.document.write(html)
-  w?.document.close()
-  w?.print()
-}
+    const w = window.open('', '', 'width=900,height=700')
+    w?.document.write(html)
+    w?.document.close()
+    w?.print()
+  }
 
   const input = { width: '100%', marginTop: 10, padding: 12, borderRadius: 8 }
   const btn = { marginTop: 10, padding: 12, borderRadius: 8 }
@@ -180,45 +189,18 @@ export default function NovoOrcamento() {
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>Novo Orçamento</h1>
 
-      <input
-        placeholder="Nome do cliente"
-        value={cliente}
-        onChange={e => setCliente(e.target.value)}
-        style={input}
-      />
+      <input placeholder="Nome do cliente" value={cliente} onChange={e => setCliente(e.target.value)} style={input} />
+      <input placeholder="Descrição" value={descricao} onChange={e => setDescricao(e.target.value)} style={input} />
 
-      <input
-        placeholder="Descrição do serviço"
-        value={descricao}
-        onChange={e => setDescricao(e.target.value)}
-        style={input}
-      />
+      <TabelaOrcamento itens={itens} atualizarItem={atualizarItem} removerItem={removerItem} />
 
-      <TabelaOrcamento
-        itens={itens}
-        atualizarItem={atualizarItem}
-        removerItem={removerItem}
-      />
+      <button onClick={adicionarItem} style={btn}>+ Adicionar Item</button>
 
-      <button onClick={adicionarItem} style={btn}>
-        + Adicionar Item
-      </button>
+      <h2>Total: {formatarMoeda(totalGeral())}</h2>
 
-      <h2 style={{ fontSize: 26, marginTop: 20 }}>
-        Total: {formatarMoeda(totalGeral())}
-      </h2>
-
-      <button onClick={salvar} style={btn} disabled={loading}>
-        {loading ? 'Salvando...' : 'Salvar Orçamento'}
-      </button>
-
-      <button onClick={gerarPDF} style={{ ...btn, background: '#000', color: '#fff' }}>
-        Gerar PDF
-      </button>
-
-      <button onClick={enviarWhatsApp} style={{ ...btn, background: '#25D366', color: '#fff' }}>
-        Enviar WhatsApp
-      </button>
+      <button onClick={salvar} style={btn}>{loading ? 'Salvando...' : 'Salvar'}</button>
+      <button onClick={gerarPDF} style={btn}>PDF</button>
+      <button onClick={enviarWhatsApp} style={btn}>WhatsApp</button>
     </div>
   )
 }

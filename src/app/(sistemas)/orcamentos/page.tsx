@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useEmpresa } from '@/hooks/useEmpresa'
 
 type Orcamento = {
   id: string
@@ -13,7 +14,8 @@ type Orcamento = {
 }
 
 export default function OrcamentosPage() {
-
+  
+  const empresaId = useEmpresa()
   const [lista, setLista] = useState<Orcamento[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -22,11 +24,20 @@ export default function OrcamentosPage() {
     carregar()
   }, [])
 
+
+  await supabase.from('orcamentos').insert({
+  cliente_nome,
+  descricao,
+  valor_total,
+  empresa_id: empresaId
+})
+
   async function carregar() {
-    const { data, error } = await supabase
+    
+   const { data } = await supabase
       .from('orcamentos')
       .select('*')
-      .order('created_at', { ascending: false })
+      .eq('empresa_id', empresaId)
 
     if (!error && data) {
       setLista(data)
@@ -102,6 +113,9 @@ export default function OrcamentosPage() {
                     Ver
                   </button>
 
+                  <button onClick={() => enviarCliente(o.id, o.telefone)}>
+ 		   Enviar WhatsApp
+		  </button>
                 </td>
 
               </tr>
@@ -155,4 +169,15 @@ function status(s?: string) {
   if (s === 'aprovado') return { color: '#16a34a', fontWeight: 600 }
   if (s === 'recusado') return { color: '#dc2626', fontWeight: 600 }
   return { color: '#f59e0b', fontWeight: 600 }
+}
+
+function enviarCliente(id: string, telefone: string) {
+
+  const link = `${window.location.origin}/orcamento/${id}`
+
+  const texto = `Olá! Segue seu orçamento:\n${link}`
+
+  const url = `https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`
+
+  window.open(url)
 }

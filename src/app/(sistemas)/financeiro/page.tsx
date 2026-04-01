@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useEmpresa } from '@/hooks/useEmpresa'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar
@@ -9,6 +10,7 @@ import {
 
 export default function FinanceiroBI() {
 
+  const empresaId = useEmpresa()
   const [dados, setDados] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -17,10 +19,25 @@ export default function FinanceiroBI() {
     carregar()
   }, [])
 
+  await supabase.from('orcamentos').insert({
+  cliente_nome,
+  descricao,
+  valor_total,
+  empresa_id: empresaId
+})
+
   async function carregar() {
 
-    const { data: f } = await supabase.from('financeiro').select('*')
-    const { data: o } = await supabase.from('obras').select('*')
+    const { data: f } = await supabase
+	.from('financeiro')
+	.select('*')
+    	.eq('empresa_id', empresaId)
+
+const { data: o } = await supabase
+	.from('obras')
+	.select('*')
+	.eq('empresa_id', empresaId)
+
 
     setDados(f || [])
     setObras(o || [])

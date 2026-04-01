@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useEmpresa } from '@/hooks/useEmpresa'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
@@ -9,6 +10,7 @@ import {
 
 export default function Dashboard() {
 
+  const empresaId = useEmpresa()
   const [orcamentos, setOrcamentos] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -18,8 +20,15 @@ export default function Dashboard() {
   }, [])
 
   async function carregar() {
-    const { data: o } = await supabase.from('orcamentos').select('*')
-    const { data: ob } = await supabase.from('obras').select('*')
+    const { data: o } = await supabase
+	.from('orcamentos')
+	.select('*')
+	.eq('empresa_id', empresaId)
+
+    const { data: ob } = await supabase
+	.from('obras')
+	.select('*')
+	.eq('empresa_id', empresaId)
 
     setOrcamentos(o || [])
     setObras(ob || [])

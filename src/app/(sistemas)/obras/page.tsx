@@ -8,6 +8,7 @@ import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function Obras() {
 
+  const empresaId = useEmpresa()
   const router = useRouter()
   const [obras, setObras] = useState<any[]>([])
 
@@ -21,14 +22,21 @@ export default function Obras() {
     }
   }, [])
 
+
+  await supabase.from('orcamentos').insert({
+  cliente_nome,
+  descricao,
+  valor_total,
+  empresa_id: empresaId
+})
+  
   async function buscar() {
     const empresa_id = localStorage.getItem('empresa_id')
 
     const { data } = await supabase
-      .from('obras')
+      .from('orcamentos')
       .select('*')
-      .eq('empresa_id', empresa_id)
-      .order('id', { ascending: false })
+      .eq('empresa_id', empresaId)
 
     setObras(data || [])
   }

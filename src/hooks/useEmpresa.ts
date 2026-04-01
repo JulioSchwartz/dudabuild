@@ -1,32 +1,26 @@
-'use client'
-
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export function useEmpresa() {
-  const router = useRouter()
+
+  const [empresaId, setEmpresaId] = useState<string | null>(null)
 
   useEffect(() => {
-    verificar()
+    carregar()
   }, [])
 
-  async function verificar() {
-    const empresa_id = localStorage.getItem('empresa_id')
+  async function carregar() {
 
-    if (!empresa_id) {
-      router.push('/login')
-      return
-    }
+    const { data: { user } } = await supabase.auth.getUser()
 
     const { data } = await supabase
-      .from('empresas')
-      .select('status')
-      .eq('id', empresa_id)
+      .from('usuarios')
+      .select('empresa_id')
+      .eq('user_id', user?.id)
       .single()
 
-    if (data?.status !== 'ativo') {
-      router.push('/bloqueado')
-    }
+    setEmpresaId(data?.empresa_id)
   }
+
+  return empresaId
 }

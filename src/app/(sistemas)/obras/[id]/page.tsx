@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { opcoesFinanceiro } from '@/lib/financeiro'
+import { useEmpresa } from '@/hooks/useEmpresa'
 import {
   LineChart,
   Line,
@@ -15,6 +16,8 @@ import {
 } from 'recharts'
 
 export default function DetalheObra() {
+
+  const empresaId = useEmpresa()
   const { id } = useParams()
   const router = useRouter()
 
@@ -42,14 +45,14 @@ export default function DetalheObra() {
       .from('obras')
       .select('*')
       .eq('id', Number(id))
-      .eq('empresa_id', empresa_id)
+      .eq('empresa_id', empresaId)
       .single()
 
     const { data: financeiroData } = await supabase
       .from('financeiro')
       .select('*')
       .eq('obra_id', Number(id))
-      .eq('empresa_id', empresa_id)
+      .eq('empresa_id', empresaId)
       .order('created_at', { ascending: true })
 
     setObra(obraData)

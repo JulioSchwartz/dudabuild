@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function EditarObra() {
+  const empresaId = useEmpresa()
   const { id } = useParams()
   const router = useRouter()
 
@@ -20,7 +22,7 @@ export default function EditarObra() {
     const { data } = await supabase
       .from('obras')
       .select('*')
-      .eq('id', id)
+      .eq('empresa_id', empresaId)
       .single()
 
     if (data) {
