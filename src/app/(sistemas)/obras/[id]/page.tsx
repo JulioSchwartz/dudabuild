@@ -56,11 +56,10 @@ export default function DetalheObra() {
       .maybeSingle()
 
     const { data: financeiroData } = await supabase
-      .from('financeiro')
-      .select('*')
-      .eq('obra_id', id)
-      .eq('empresa_id', empresaId)
-      .order('created_at', { ascending: true })
+  .from('financeiro')
+  .select('*')
+  .eq('obra_id', Number(id)) // 🔥 importante
+  .order('created_at', { ascending: true })
 
     setObra(obraData)
     setFinanceiro(financeiroData || [])
