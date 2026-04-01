@@ -61,6 +61,13 @@ export default function DetalheObra() {
   .eq('obra_id', Number(id)) // 🔥 importante
   .order('created_at', { ascending: true })
 
+const { data: financeiroData } = await supabase
+  .from('financeiro')
+  .select('*')
+  .eq('obra_id', Number(id))
+  .or(`empresa_id.eq.${empresaId},empresa_id.is.null`)
+  .order('created_at', { ascending: true })
+
     setObra(obraData)
     setFinanceiro(financeiroData || [])
   }
