@@ -62,15 +62,15 @@ export default function NovaObra() {
 
       // ✅ INSERT
       const { error: erroInsert } = await supabase
-        .from('obras')
-        .insert([
-          {
-            nome,
-            cliente_nome: cliente,
-            valor_total: Number(valor),
-            empresa_id: empresaId
-          }
-        ])
+  .from('obras')
+  .insert([
+    {
+      nome,
+      cliente: cliente, // ✅ correto
+      valor: Number(valor), // ✅ correto
+      empresa_id: empresaId
+    }
+  ])
 
       if (erroInsert) {
         console.error('Erro insert:', erroInsert)
