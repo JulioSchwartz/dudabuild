@@ -1,16 +1,16 @@
-export const opcoesFinanceiro = {
-  entrada: [
-    'Entrada inicial',
-    'Parcela cliente',
-    'Pagamento final',
-    'Aditivo de contrato',
-  ],
-  saida: [
-    'Material',
-    'Mão de obra',
-    'Equipamentos',
-    'Transporte',
-    'Aluguel de máquinas',
-    'Outros',
-  ],
+import { supabase } from './supabase'
+
+export async function lancarMovimento({
+  obra_id,
+  tipo,
+  descricao,
+  valor
+}: any) {
+
+  await supabase.from('financeiro').insert({
+    obra_id,
+    tipo,
+    descricao,
+    valor
+  })
 }

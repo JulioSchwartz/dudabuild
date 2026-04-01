@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { lancarMovimento } from '@/lib/financeiro'
 
 type Item = {
   descricao: string
@@ -50,36 +51,34 @@ export default function OrcamentoCliente() {
     return itens.reduce((acc, i) => acc + totalItem(i), 0)
   }
 
-  async function atualizarStatus(status: string) {
-
-  await supabase
-    .from('orcamentos')
-    .update({ status })
-    .eq('id', id)
-
-  // 🚀 SE APROVADO → CRIA OBRA
   if (status === 'aprovado') {
 
-    const { data: obra } = await supabase
-      .from('obras')
-      .insert({
-        nome: `Obra - ${orcamento.cliente_nome}`,
-        cliente_nome: orcamento.cliente_nome,
-        valor_total: orcamento.valor_total
-      })
-      .select()
-      .single()
+  const { data: obra } = await supabase
+    .from('obras')
+    .insert({
+      nome: `Obra - ${orcamento.cliente_nome}`,
+      cliente_nome: orcamento.cliente_nome,
+      valor_total: orcamento.valor_total
+    })
+    .select()
+    .single()
 
-    // vincula obra ao orçamento
-    if (obra) {
-      await supabase
-        .from('orcamentos')
-        .update({ obra_id: obra.id })
-        .eq('id', id)
-    }
+  if (obra) {
+
+    // 🔗 vincula obra
+    await supabase
+      .from('orcamentos')
+      .update({ obra_id: obra.id })
+      .eq('id', id)
+
+    // 💰 REGISTRA RECEITA
+    await lancarMovimento({
+      obra_id: obra.id,
+      tipo: 'entrada',
+      descricao: 'Contrato aprovado',
+      valor: orcamento.valor_total
+    })
   }
-
-  setOrcamento({ ...orcamento, status })
 }
 
   if (loading) return <p>Carregando...</p>
