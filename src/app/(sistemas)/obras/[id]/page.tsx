@@ -33,33 +33,30 @@ export default function DetalheObra() {
 
     if (!empresa) {
       router.push('/login')
-    } else {
+    } else if (id && empresaId) {
       carregar()
     }
-  }, [])
+  }, [id, empresaId])
 
   async function carregar() {
-    const empresa_id = localStorage.getItem('empresa_id')
 
     const { data: obraData } = await supabase
       .from('obras')
       .select('*')
-      .eq('id', Number(id))
+      .eq('id', id) // ✅ CORRIGIDO
       .eq('empresa_id', empresaId)
-      .single()
+      .maybeSingle()
 
     const { data: financeiroData } = await supabase
       .from('financeiro')
       .select('*')
-      .eq('obra_id', Number(id))
+      .eq('obra_id', id) // ✅ CORRIGIDO
       .eq('empresa_id', empresaId)
       .order('created_at', { ascending: true })
 
     setObra(obraData)
     setFinanceiro(financeiroData || [])
   }
-
-  // 🔥 NOVAS FUNÇÕES
 
   function copiarLink() {
     if (!obra?.token) return alert('Token não encontrado')
@@ -82,18 +79,16 @@ export default function DetalheObra() {
   async function adicionar(e: any) {
     e.preventDefault()
 
-    const empresa_id = localStorage.getItem('empresa_id')
-
     if (!descricao) return alert('Selecione uma descrição')
     if (!valor || Number(valor) <= 0) return alert('Valor inválido')
 
     await supabase.from('financeiro').insert([
       {
-        obra_id: Number(id),
+        obra_id: id, // ✅ CORRIGIDO
         tipo,
         descricao,
         valor: Number(valor),
-        empresa_id,
+        empresa_id: empresaId,
         created_at: new Date().toISOString(),
       },
     ])
@@ -166,7 +161,6 @@ export default function DetalheObra() {
       <h1 style={titulo}>{obra.nome}</h1>
       <p style={subtitulo}>{obra.cliente}</p>
 
-      {/* 🔥 BOTÕES NOVOS */}
       <div style={boxAcoes}>
         <button onClick={copiarLink} style={btnCopiar}>
           🔗 Copiar link do cliente
@@ -177,7 +171,6 @@ export default function DetalheObra() {
         </button>
       </div>
 
-      {/* BOTÃO DE FOTOS */}
       <button
         style={btnFotos}
         onClick={() => router.push(`/obras/${id}/fotos`)}
