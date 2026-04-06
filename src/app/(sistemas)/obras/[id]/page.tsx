@@ -150,6 +150,37 @@ export default function DetalheObra() {
   return (
     <div>
 
+      {lucro < 0 && (
+  <div style={{
+    background: '#fee2e2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    color: '#991b1b',
+    fontWeight: 600
+  }}>
+    ⚠️ Esta obra está em PREJUÍZO
+  </div>
+)}
+
+<div style={{
+  background: '#fff',
+  padding: 16,
+  borderRadius: 12,
+  marginBottom: 20,
+  display: 'flex',
+  justifyContent: 'space-between'
+}}>
+  <strong>📊 Resultado</strong>
+
+  <span style={{
+    color: lucro < 0 ? '#dc2626' : '#16a34a',
+    fontWeight: 700
+  }}>
+    {format(lucro)}
+  </span>
+</div>
+
       <h1 style={titulo}>{obra.nome}</h1>
       <p style={subtitulo}>{obra.cliente}</p>
 

@@ -134,12 +134,16 @@ export default function OrcamentoCliente() {
         {!orcamento.status && (
           <div style={acoes}>
 
-            <button
-              style={btnAprovar}
-              onClick={() => atualizarStatus('aprovado')}
-            >
-              ✅ Aprovar Orçamento
-            </button>
+            <button style={{
+  background: '#16a34a',
+  color: '#fff',
+  padding: 16,
+  borderRadius: 10,
+  fontSize: 16,
+  flex: 1
+}}>
+  ✅ Aprovar Orçamento
+</button>
 
             <button
               style={btnRecusar}

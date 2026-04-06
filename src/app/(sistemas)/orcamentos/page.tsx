@@ -129,6 +129,13 @@ export default function OrcamentosPage() {
 
               <td style={{ display: 'flex', gap: 6 }}>
 
+              <button onClick={() => {
+  const link = `${window.location.origin}/orcamentos/${o.id}`
+  navigator.clipboard.writeText(link)
+}}>
+  🔗 Link
+</button>
+
                 <button
                   style={btn}
                   onClick={() => router.push(`/orcamentos/editar/${o.id}`)}

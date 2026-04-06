@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
+import Layout from '@/components/Layout'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
@@ -118,96 +119,42 @@ export default function Dashboard() {
   if (loadingEmpresa || loading) return <Loader />
 
   return (
-    <div style={container}>
+  <Layout>
 
-      <h1 style={titulo}>🚀 Dashboard Executivo</h1>
+    <h1 style={titulo}>🚀 Dashboard Executivo</h1>
 
-      {/* ALERTA */}
-      {(limiteOrcAtingido || limiteObrasAtingido) && (
-        <div style={alerta}>
-          🚨 Você atingiu limites do plano <strong>{plano}</strong>.
-        </div>
-      )}
-
-      {/* KPI PRINCIPAL */}
-      <div style={grid}>
-
-        <Card titulo="💰 Receita" valor={format(totalEntrada)} cor="#16a34a" />
-        <Card titulo="💸 Custos" valor={format(totalSaida)} cor="#dc2626" />
-        <Card titulo="📊 Lucro" valor={format(lucro)} cor="#2563eb" />
-        <Card titulo="📈 Conversão" valor={`${taxaConversao}%`} cor="#7c3aed" />
-
-        <Card titulo="💰 Total Orçado" valor={format(totalOrcado)} cor="#0ea5e9" />
-        <Card titulo="💵 Total em Obras" valor={format(totalObras)} cor="#22c55e" />
-        <Card titulo="💎 Ticket Médio" valor={`R$ ${ticketMedio}`} cor="#6366f1" />
-        <Card titulo="⚙️ Progresso Médio" valor={`${progressoMedio}%`} cor="#f59e0b" />
-
+    {(limiteOrcAtingido || limiteObrasAtingido) && (
+      <div style={alerta}>
+        🚨 Você atingiu limites do plano <strong>{plano}</strong>.
       </div>
+    )}
 
-      {/* GRÁFICO FINANCEIRO */}
-      <div style={cardGrande}>
-        <h3>📈 Fluxo Financeiro</h3>
+    <div style={grid}>
 
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={graficoFluxo}>
-            <XAxis dataKey="mes" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line dataKey="entrada" stroke="#16a34a" />
-            <Line dataKey="saida" stroke="#dc2626" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* GRÁFICOS */}
-      <div style={grid2}>
-
-        <div style={cardGrande}>
-          <h3>📊 Funil</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={funil}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div style={cardGrande}>
-          <h3>📄 Status Orçamentos</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie data={statusOrc} dataKey="value" outerRadius={80}>
-                <Cell fill="#16a34a" />
-                <Cell fill="#dc2626" />
-                <Cell fill="#f59e0b" />
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div style={cardGrande}>
-          <h3>🏗️ Status Obras</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie data={statusObras} dataKey="value" outerRadius={80}>
-                <Cell fill="#f59e0b" />
-                <Cell fill="#16a34a" />
-                <Cell fill="#dc2626" />
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-      </div>
+      <Card titulo="💰 Receita" valor={format(totalEntrada)} cor="#16a34a" />
+      <Card titulo="💸 Custos" valor={format(totalSaida)} cor="#dc2626" />
+      <Card titulo="📊 Lucro" valor={format(lucro)} cor="#2563eb" />
+      <Card titulo="📈 Conversão" valor={`${taxaConversao}%`} cor="#7c3aed" />
 
     </div>
-  )
-}
+
+    <div style={cardGrande}>
+      <h3>📈 Fluxo Financeiro</h3>
+
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={graficoFluxo}>
+          <XAxis dataKey="mes" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line dataKey="entrada" stroke="#16a34a" />
+          <Line dataKey="saida" stroke="#dc2626" />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+
+  </Layout>
+)
 
 /* COMPONENTES */
 
