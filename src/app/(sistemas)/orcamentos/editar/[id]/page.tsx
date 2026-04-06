@@ -20,17 +20,11 @@ export default function EditarOrcamento(){
 
   async function carregar(){
 
-    const { data: orc, error } = await supabase
+    const { data: orc } = await supabase
       .from('orcamentos')
       .select('*')
       .eq('id', id)
       .single()
-
-    if (error) {
-      console.error(error)
-      alert('Erro ao carregar orçamento')
-      return
-    }
 
     setCliente(orc?.cliente_nome || '')
     setDescricao(orc?.descricao || '')
@@ -55,6 +49,18 @@ export default function EditarOrcamento(){
     setItens(novos)
   }
 
+  function adicionarItem(){
+    setItens([...itens,{
+      codigo:'',
+      descricao:'',
+      unidade:'m²',
+      quantidade:1,
+      material:0,
+      mao_obra:0,
+      equipamentos:0
+    }])
+  }
+
   function totalItem(i:any){
     return (Number(i.material||0)+Number(i.mao_obra||0)+Number(i.equipamentos||0)) * Number(i.quantidade||0)
   }
@@ -67,7 +73,7 @@ export default function EditarOrcamento(){
 
     setLoading(true)
 
-    const { error } = await supabase
+    await supabase
       .from('orcamentos')
       .update({
         cliente_nome: cliente,
@@ -75,13 +81,6 @@ export default function EditarOrcamento(){
         valor_total: totalGeral()
       })
       .eq('id', id)
-
-    if (error) {
-      console.error(error)
-      alert('Erro ao salvar')
-      setLoading(false)
-      return
-    }
 
     await supabase
       .from('orcamento_itens')
@@ -101,11 +100,8 @@ export default function EditarOrcamento(){
   }
 
   function enviarWhatsApp() {
-
     const link = `${window.location.origin}/orcamentos/${id}`
-
     const texto = `Olá! Segue seu orçamento:\n${link}`
-
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`)
   }
 
@@ -114,38 +110,53 @@ export default function EditarOrcamento(){
 
       <h1 style={titulo}>✏️ Editar Orçamento</h1>
 
-      <input
-        placeholder="Cliente"
-        value={cliente}
-        onChange={e => setCliente(e.target.value)}
-        style={input}
-      />
+      {/* CLIENTE */}
+      <div style={card}>
+        <input
+          placeholder="Cliente"
+          value={cliente}
+          onChange={e => setCliente(e.target.value)}
+          style={input}
+        />
 
-      <input
-        placeholder="Descrição"
-        value={descricao}
-        onChange={e => setDescricao(e.target.value)}
-        style={input}
-      />
+        <input
+          placeholder="Descrição"
+          value={descricao}
+          onChange={e => setDescricao(e.target.value)}
+          style={input}
+        />
+      </div>
 
-      <TabelaOrcamento
-        itens={itens}
-        atualizarItem={atualizarItem}
-        removerItem={removerItem}
-        totalItem={totalItem}
-      />
+      {/* TABELA */}
+      <div style={card}>
+        <TabelaOrcamento
+          itens={itens}
+          atualizarItem={atualizarItem}
+          removerItem={removerItem}
+        />
 
-      <div style={total}>
+        <button onClick={adicionarItem} style={btnAdd}>
+          + Adicionar Item
+        </button>
+      </div>
+
+      {/* TOTAL */}
+      <div style={totalBox}>
         {format(totalGeral())}
       </div>
 
-      <button onClick={salvar} style={btnPrim}>
-        {loading ? 'Salvando...' : 'Salvar'}
-      </button>
+      {/* AÇÕES */}
+      <div style={acoes}>
 
-      <button onClick={enviarWhatsApp} style={btnWhats}>
-        WhatsApp
-      </button>
+        <button onClick={salvar} style={btnPrim}>
+          {loading ? 'Salvando...' : 'Salvar Alterações'}
+        </button>
+
+        <button onClick={enviarWhatsApp} style={btnWhats}>
+          Enviar WhatsApp
+        </button>
+
+      </div>
 
     </div>
   )
@@ -162,15 +173,16 @@ function format(v:number){
 const container={maxWidth:1100,margin:'0 auto',padding:24}
 
 const titulo={
-  fontSize:24,
+  fontSize:26,
   fontWeight:700
 }
 
-const total={
-  fontSize:26,
-  fontWeight:700,
+const card={
+  background:'#fff',
+  padding:20,
+  borderRadius:12,
   marginTop:20,
-  color:'#16a34a'
+  boxShadow:'0 10px 30px rgba(0,0,0,0.05)'
 }
 
 const input={
@@ -181,20 +193,41 @@ const input={
   border:'1px solid #e2e8f0'
 }
 
+const totalBox={
+  fontSize:28,
+  fontWeight:700,
+  marginTop:20,
+  color:'#16a34a'
+}
+
+const acoes={
+  display:'flex',
+  gap:10,
+  marginTop:20
+}
+
 const btnPrim={
-  marginTop:10,
-  padding:12,
-  borderRadius:8,
+  padding:14,
+  borderRadius:10,
   border:'none',
   background:'#2563eb',
-  color:'#fff'
+  color:'#fff',
+  fontWeight:600
 }
 
 const btnWhats={
-  marginTop:10,
-  padding:12,
-  borderRadius:8,
+  padding:14,
+  borderRadius:10,
   border:'none',
   background:'#22c55e',
-  color:'#fff'
+  color:'#fff',
+  fontWeight:600
+}
+
+const btnAdd={
+  marginTop:15,
+  padding:12,
+  borderRadius:8,
+  border:'1px solid #cbd5e1',
+  cursor:'pointer'
 }

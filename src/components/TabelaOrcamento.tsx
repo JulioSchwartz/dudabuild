@@ -29,21 +29,24 @@ export default function TabelaOrcamento({
   }
 
   return (
-    <>
+    <div style={wrapper}>
+
+      {/* HEADER */}
       <div style={header}>
         <span>Cód</span>
         <span>Descrição</span>
         <span>Un</span>
         <span>Qtd</span>
-        <span>Material</span>
-        <span>M.O</span>
-        <span>Equip</span>
+        <span style={colMaterial}>Material</span>
+        <span style={colMao}>M.O</span>
+        <span style={colEquip}>Equip</span>
         <span>Total</span>
         <span></span>
       </div>
 
+      {/* LINHAS */}
       {itens.map((item, index) => (
-        <div key={index} style={linha(index)}>
+        <div key={index} style={linha}>
 
           <input
             disabled={readOnly}
@@ -56,7 +59,7 @@ export default function TabelaOrcamento({
             disabled={readOnly}
             value={item.descricao}
             onChange={e => atualizarItem(index,'descricao',e.target.value)}
-            style={input}
+            style={inputDescricao}
           />
 
           <input
@@ -79,7 +82,7 @@ export default function TabelaOrcamento({
             type="number"
             value={item.material}
             onChange={e => atualizarItem(index,'material', Number(e.target.value))}
-            style={input}
+            style={inputValor}
           />
 
           <input
@@ -87,7 +90,7 @@ export default function TabelaOrcamento({
             type="number"
             value={item.mao_obra}
             onChange={e => atualizarItem(index,'mao_obra', Number(e.target.value))}
-            style={input}
+            style={inputValor}
           />
 
           <input
@@ -95,52 +98,103 @@ export default function TabelaOrcamento({
             type="number"
             value={item.equipamentos}
             onChange={e => atualizarItem(index,'equipamentos', Number(e.target.value))}
-            style={input}
+            style={inputValor}
           />
 
-          <strong>
-            R$ {totalItem(item).toFixed(2)}
-          </strong>
+          <div style={total}>
+            {format(totalItem(item))}
+          </div>
 
           {!readOnly && (
             <button onClick={() => removerItem(index)} style={btnRemover}>
-              X
+              ✕
             </button>
           )}
 
         </div>
       ))}
-    </>
+
+    </div>
   )
 }
 
-/* 🎨 ESTILO */
+/* HELPERS */
+
+function format(v:number){
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+}
+
+/* 🎨 UI PREMIUM */
+
+const wrapper = {
+  marginTop: 20
+}
 
 const header = {
   display:'grid',
-  gridTemplateColumns:'80px 2fr 80px 80px 120px 120px 120px 120px 50px',
-  background:'#e2e8f0',
-  padding:10,
-  borderRadius:8
+  gridTemplateColumns:'80px 2fr 70px 70px 120px 120px 120px 140px 50px',
+  background:'#0f172a',
+  color:'#fff',
+  padding:12,
+  borderRadius:10,
+  fontSize:13,
+  fontWeight:600
 }
 
-const linha = (i:number)=>( {
+const linha = {
   display:'grid',
-  gridTemplateColumns:'80px 2fr 80px 80px 120px 120px 120px 120px 50px',
-  gap:8,
-  marginTop:8
-})
+  gridTemplateColumns:'80px 2fr 70px 70px 120px 120px 120px 140px 50px',
+  gap:10,
+  marginTop:10,
+  alignItems:'center',
+  background:'#fff',
+  padding:10,
+  borderRadius:10,
+  boxShadow:'0 5px 15px rgba(0,0,0,0.04)'
+}
 
 const input = {
-  padding:8,
-  border:'1px solid #cbd5e1',
-  borderRadius:6
+  padding:10,
+  border:'1px solid #e2e8f0',
+  borderRadius:8,
+  fontSize:13
+}
+
+const inputDescricao = {
+  padding:10,
+  border:'1px solid #e2e8f0',
+  borderRadius:8,
+  fontSize:13,
+  width:'100%'
+}
+
+const inputValor = {
+  padding:10,
+  border:'1px solid #e2e8f0',
+  borderRadius:8,
+  fontSize:13,
+  textAlign:'right' as const
+}
+
+const total = {
+  fontWeight:700,
+  color:'#16a34a',
+  textAlign:'right' as const
 }
 
 const btnRemover = {
-  background:'red',
+  background:'#ef4444',
   color:'#fff',
   border:'none',
-  borderRadius:6,
-  cursor:'pointer'
+  borderRadius:8,
+  width:32,
+  height:32,
+  cursor:'pointer',
+  fontSize:16
 }
+
+/* CORES VISUAIS */
+
+const colMaterial = { color:'#38bdf8' }
+const colMao = { color:'#f59e0b' }
+const colEquip = { color:'#a78bfa' }
