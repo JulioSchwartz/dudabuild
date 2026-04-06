@@ -100,15 +100,18 @@ export default function OrcamentoCliente() {
           <p><strong>Descrição:</strong> {orcamento?.descricao}</p>
         </div>
 
-        {/* ITENS */}
+        {/* TABELA PREMIUM */}
         <div style={bloco}>
-          <h2>Itens do Orçamento</h2>
+          <h2 style={subtitulo}>Detalhamento</h2>
 
           <table style={tabela}>
             <thead>
               <tr>
                 <th>Descrição</th>
                 <th>Qtd</th>
+                <th>Material</th>
+                <th>M.O</th>
+                <th>Equip</th>
                 <th>Total</th>
               </tr>
             </thead>
@@ -118,32 +121,34 @@ export default function OrcamentoCliente() {
                 <tr key={index}>
                   <td>{i.descricao}</td>
                   <td>{i.quantidade}</td>
-                  <td>R$ {totalItem(i).toFixed(2)}</td>
+                  <td>{format(i.material)}</td>
+                  <td>{format(i.mao_obra)}</td>
+                  <td>{format(i.equipamentos)}</td>
+                  <td style={{ fontWeight: 600 }}>
+                    {format(totalItem(i))}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* TOTAL */}
+        {/* TOTAL DESTACADO */}
         <div style={totalBox}>
-          Total: R$ {totalGeral().toFixed(2)}
+          <span>Valor do Investimento</span>
+          <h2>{format(totalGeral())}</h2>
         </div>
 
-        {/* AÇÕES */}
+        {/* BOTÕES */}
         {!orcamento.status && (
           <div style={acoes}>
 
-            <button style={{
-  background: '#16a34a',
-  color: '#fff',
-  padding: 16,
-  borderRadius: 10,
-  fontSize: 16,
-  flex: 1
-}}>
-  ✅ Aprovar Orçamento
-</button>
+            <button
+              style={btnAprovar}
+              onClick={() => atualizarStatus('aprovado')}
+            >
+              ✅ Aprovar Proposta
+            </button>
 
             <button
               style={btnRecusar}
@@ -155,7 +160,6 @@ export default function OrcamentoCliente() {
           </div>
         )}
 
-        {/* STATUS */}
         {orcamento.status && (
           <div style={statusBox}>
             Status: <strong>{orcamento.status}</strong>
@@ -168,14 +172,13 @@ export default function OrcamentoCliente() {
   )
 }
 
-/* 🎨 UI */
+/* ================= UI ================= */
 
 const container = {
   background: '#f1f5f9',
   minHeight: '100vh',
   display: 'flex',
   justifyContent: 'center',
-  alignItems: 'center',
   padding: 20
 }
 
@@ -184,7 +187,7 @@ const card = {
   padding: 40,
   borderRadius: 12,
   width: 900,
-  boxShadow: '0 10px 30px rgba(0,0,0,0.05)'
+  boxShadow: '0 20px 50px rgba(0,0,0,0.05)'
 }
 
 const header = {
@@ -206,6 +209,11 @@ const bloco = {
   marginTop: 20
 }
 
+const subtitulo = {
+  fontSize: 18,
+  fontWeight: 600
+}
+
 const tabela = {
   width: '100%',
   marginTop: 10,
@@ -213,10 +221,11 @@ const tabela = {
 }
 
 const totalBox = {
-  fontSize: 26,
-  fontWeight: 700,
-  marginTop: 20,
-  textAlign: 'right'
+  marginTop: 30,
+  padding: 20,
+  background: '#ecfdf5',
+  borderRadius: 10,
+  textAlign: 'right' as const
 }
 
 const acoes = {
@@ -228,21 +237,23 @@ const acoes = {
 const btnAprovar = {
   background: '#16a34a',
   color: '#fff',
-  padding: 14,
+  padding: 16,
   border: 'none',
-  borderRadius: 8,
+  borderRadius: 10,
   cursor: 'pointer',
-  flex: 1
+  flex: 1,
+  fontSize: 16
 }
 
 const btnRecusar = {
   background: '#dc2626',
   color: '#fff',
-  padding: 14,
+  padding: 16,
   border: 'none',
-  borderRadius: 8,
+  borderRadius: 10,
   cursor: 'pointer',
-  flex: 1
+  flex: 1,
+  fontSize: 16
 }
 
 const statusBox = {
@@ -250,5 +261,11 @@ const statusBox = {
   padding: 15,
   background: '#e2e8f0',
   borderRadius: 8,
-  textAlign: 'center'
+  textAlign: 'center' as const
+}
+
+/* ================= HELPERS ================= */
+
+function format(v:number){
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 }

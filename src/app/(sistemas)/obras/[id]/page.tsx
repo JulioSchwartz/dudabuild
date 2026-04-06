@@ -111,9 +111,11 @@ export default function DetalheObra() {
     carregar()
   }
 
-  if (loadingEmpresa) return <Loader />
-  if (!empresaId) return <Loader />
-  if (!obra) return <SkeletonObra />
+  if (loadingEmpresa) return <p>Carregando...</p>
+  if (!empresaId) return <p>Carregando...</p>
+  if (!obra) return <p>Carregando obra...</p>
+
+  /* ================= FINANCEIRO ================= */
 
   const entradas = financeiro.filter(f => f.tipo === 'entrada')
   const saidas = financeiro.filter(f => f.tipo === 'saida')
@@ -125,6 +127,8 @@ export default function DetalheObra() {
   const margem = totalEntradas > 0 ? (lucro / totalEntradas) * 100 : 0
   const roi = totalSaidas > 0 ? lucro / totalSaidas : 0
   const custoPorMetro = obra?.area ? totalSaidas / obra.area : 0
+
+  /* ================= GRÁFICO ================= */
 
   const fluxoMensal: any = {}
 
@@ -141,6 +145,8 @@ export default function DetalheObra() {
 
   const dadosGrafico = Object.values(fluxoMensal)
 
+  /* ================= RESUMO CATEGORIA ================= */
+
   const resumoCategoria: any = {}
   saidas.forEach(s => {
     if (!resumoCategoria[s.descricao]) resumoCategoria[s.descricao] = 0
@@ -148,57 +154,43 @@ export default function DetalheObra() {
   })
 
   return (
-    <div>
+    <div style={{ padding: 24 }}>
 
+      {/* ALERTA */}
       {lucro < 0 && (
-  <div style={{
-    background: '#fee2e2',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-    color: '#991b1b',
-    fontWeight: 600
-  }}>
-    ⚠️ Esta obra está em PREJUÍZO
-  </div>
-)}
+        <div style={{
+          background: '#fee2e2',
+          padding: 12,
+          borderRadius: 8,
+          marginBottom: 10,
+          color: '#991b1b',
+          fontWeight: 600
+        }}>
+          ⚠️ Esta obra está em PREJUÍZO
+        </div>
+      )}
 
-<div style={{
-  background: '#fff',
-  padding: 16,
-  borderRadius: 12,
-  marginBottom: 20,
-  display: 'flex',
-  justifyContent: 'space-between'
-}}>
-  <strong>📊 Resultado</strong>
+      {/* HEADER */}
+      <h1 style={{ fontSize: 26 }}>{obra.nome}</h1>
+      <p style={{ color: '#64748b' }}>{obra.cliente}</p>
 
-  <span style={{
-    color: lucro < 0 ? '#dc2626' : '#16a34a',
-    fontWeight: 700
-  }}>
-    {format(lucro)}
-  </span>
-</div>
-
-      <h1 style={titulo}>{obra.nome}</h1>
-      <p style={subtitulo}>{obra.cliente}</p>
-
-      <p style={valorObra}>
-        💰 {Number(obra.valor || 0).toLocaleString('pt-BR', {
-          style: 'currency',
-          currency: 'BRL',
-        })}
+      {/* VALOR */}
+      <p style={{
+        fontSize: 18,
+        fontWeight: 600,
+        color: '#16a34a'
+      }}>
+        💰 {format(obra.valor || 0)}
       </p>
 
-      <div style={boxAcoes}>
-        <button onClick={() => navigator.clipboard.writeText('link')} style={btnCopiar}>🔗 Copiar link</button>
-        <button style={btnWhats}>📤 WhatsApp</button>
-      </div>
-
-      <button style={btnFotos}>📸 Fotos</button>
-
-      <div style={grid}>
+      {/* RESUMO */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
+        gap: 16,
+        marginTop: 20,
+        marginBottom: 20
+      }}>
         <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
         <Card titulo="Custos" valor={totalSaidas} cor="#ef4444" />
         <Card titulo="Lucro" valor={lucro} cor="#3b82f6" />
@@ -207,73 +199,46 @@ export default function DetalheObra() {
         <Card titulo="Custo/m²" valor={custoPorMetro} cor="#f59e0b" />
       </div>
 
-      <h2 style={sectionTitle}>Fluxo de Caixa</h2>
+      {/* FORM */}
+      <form onSubmit={salvar} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
 
-      <div style={box}>
+        <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+          <option value="entrada">Entrada</option>
+          <option value="saida">Saída</option>
+        </select>
 
-        {/* FORM PROFISSIONAL */}
-        <form onSubmit={salvar} style={formGrid}>
+        <input
+          value={valor}
+          onChange={(e) => setValor(formatarInputMoeda(e.target.value))}
+          placeholder="R$ 0,00"
+        />
 
-          <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-            <option value="entrada">Entrada</option>
-            <option value="saida">Saída</option>
-          </select>
+        <input type="date" value={data} onChange={(e) => setData(e.target.value)} />
 
-          <select value={descricao} onChange={(e) => setDescricao(e.target.value)}>
-            <option value="">Categoria</option>
+        <button>{editando ? 'Atualizar' : 'Adicionar'}</button>
 
-            {tipo === 'entrada' && (
-              <>
-                <option value="valor_cliente">Valor Cliente</option>
-                <option value="parcela_cliente">Parcela Cliente</option>
-                <option value="adicional">Adicional</option>
-              </>
-            )}
+      </form>
 
-            {tipo === 'saida' && (
-              <>
-                <option value="material">Material</option>
-                <option value="mao_obra">Mão de Obra</option>
-                <option value="equipamentos">Equipamentos</option>
-                <option value="aluguel">Aluguel</option>
-                <option value="outros">Outros</option>
-              </>
-            )}
-          </select>
+      {/* LISTA */}
+      {financeiro.map((f) => (
+        <div key={f.id} style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginTop: 10
+        }}>
+          <span>{f.descricao}</span>
+          <span>{format(f.valor)}</span>
+          <span>{new Date(f.created_at).toLocaleDateString('pt-BR')}</span>
 
-          <input
-            value={valor}
-            onChange={(e) => setValor(formatarInputMoeda(e.target.value))}
-            placeholder="R$ 0,00"
-          />
-
-          <input type="date" value={data} onChange={(e) => setData(e.target.value)} />
-
-          <button>{editando ? 'Atualizar' : 'Adicionar'}</button>
-
-        </form>
-
-        {/* LISTA */}
-        {financeiro.map((f) => (
-          <div key={f.id} style={linha}>
-            <span>{f.descricao}</span>
-            <span>{Number(f.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-            <span>{new Date(f.created_at).toLocaleDateString('pt-BR')}</span>
-
-            <div>
-              <button onClick={() => editar(f)}>✏️</button>
-              <button onClick={() => excluirLancamento(f.id)}>❌</button>
-            </div>
+          <div>
+            <button onClick={() => editar(f)}>✏️</button>
+            <button onClick={() => excluirLancamento(f.id)}>❌</button>
           </div>
-        ))}
+        </div>
+      ))}
 
-        {/* RESUMO */}
-        <h3>Resumo por categoria</h3>
-        {Object.entries(resumoCategoria).map(([k, v]: any) => (
-          <div key={k}>{k}: {v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-        ))}
-
-        {/* GRÁFICO */}
+      {/* GRÁFICO */}
+      <div style={{ marginTop: 30 }}>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={dadosGrafico}>
             <XAxis dataKey="mes" />
@@ -284,40 +249,42 @@ export default function DetalheObra() {
             <Line type="monotone" dataKey="saida" stroke="#ef4444" />
           </LineChart>
         </ResponsiveContainer>
-
       </div>
+
+      {/* RESUMO CATEGORIA */}
+      <h3 style={{ marginTop: 20 }}>Resumo por categoria</h3>
+      {Object.entries(resumoCategoria).map(([k, v]: any) => (
+        <div key={k}>
+          {k}: {format(v)}
+        </div>
+      ))}
 
     </div>
   )
 }
 
 /* COMPONENTES */
-function Loader() { return <p>Carregando...</p> }
-function SkeletonObra() { return <p>Carregando obra...</p> }
 
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
-    <div style={{ borderLeft: `5px solid ${cor}`, padding: 10 }}>
+    <div style={{
+      background: '#fff',
+      padding: 16,
+      borderRadius: 10,
+      borderLeft: `5px solid ${cor}`
+    }}>
       <p>{titulo}</p>
-      <h2>
+      <h3>
         {tipo === 'porcentagem'
           ? valor.toFixed(2) + '%'
-          : valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-      </h2>
+          : format(valor)}
+      </h3>
     </div>
   )
 }
 
-/* ESTILOS */
-const formGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 120px', gap: 10 }
-const linha = { display: 'flex', justifyContent: 'space-between', marginTop: 10 }
-const valorObra = { fontSize: 18, fontWeight: 600, color: '#16a34a' }
-const boxAcoes = { display: 'flex', gap: 10 }
-const btnCopiar = { background: '#0ea5e9', color: '#fff', padding: 10 }
-const btnWhats = { background: '#22c55e', color: '#fff', padding: 10 }
-const btnFotos = { background: '#0ea5e9', color: '#fff', padding: 10, marginTop: 10 }
-const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }
-const box = { background: '#fff', padding: 20 }
-const titulo = { color: '#0f172a' }
-const subtitulo = { color: '#64748b' }
-const sectionTitle = { marginTop: 20 }
+/* HELPERS */
+
+function format(v:number){
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+}

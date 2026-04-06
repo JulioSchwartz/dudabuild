@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
-import Layout from '@/components/Layout'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
@@ -98,39 +97,6 @@ export default function Dashboard() {
   if (loadingEmpresa || loading) return <Loader />
 
   return (
-    <Layout>
-
-      <h1 style={titulo}>🚀 Dashboard Executivo</h1>
-
-      {(limiteOrcAtingido || limiteObrasAtingido) && (
-        <div style={alerta}>
-          🚨 Você atingiu limites do plano <strong>{plano}</strong>.
-        </div>
-      )}
-
-      <div style={grid}>
-        <Card titulo="💰 Receita" valor={format(totalEntrada)} cor="#16a34a" />
-        <Card titulo="💸 Custos" valor={format(totalSaida)} cor="#dc2626" />
-        <Card titulo="📊 Lucro" valor={format(lucro)} cor="#2563eb" />
-        <Card titulo="📈 Conversão" valor={`${taxaConversao}%`} cor="#7c3aed" />
-      </div>
-
-      <div style={cardGrande}>
-        <h3>📈 Fluxo Financeiro</h3>
-
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={graficoFluxo}>
-            <XAxis dataKey="mes" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line dataKey="entrada" stroke="#16a34a" />
-            <Line dataKey="saida" stroke="#dc2626" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-    </Layout>
   )
 }
 
