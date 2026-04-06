@@ -24,9 +24,13 @@ export default function TabelaOrcamento({
   readOnly
 }: Props) {
 
-  function totalItem(item: Item) {
-    return (item.material + item.mao_obra + item.equipamentos) * item.quantidade
-  }
+  function totalItem(i:any){
+  return (
+    Number(i.material || 0) +
+    Number(i.mao_obra || 0) +
+    Number(i.equipamentos || 0)
+  ) * Number(i.quantidade || 0)
+}
 
   return (
     <div style={wrapper}>

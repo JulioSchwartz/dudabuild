@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
+import html2pdf from 'html2pdf.js'
 
 export default function EditarOrcamento(){
 
   const { id } = useParams()
+  const router = useRouter()
 
   const [cliente, setCliente] = useState('')
   const [descricao, setDescricao] = useState('')
@@ -62,7 +64,11 @@ export default function EditarOrcamento(){
   }
 
   function totalItem(i:any){
-    return (Number(i.material||0)+Number(i.mao_obra||0)+Number(i.equipamentos||0)) * Number(i.quantidade||0)
+    return (
+      Number(i.material || 0) +
+      Number(i.mao_obra || 0) +
+      Number(i.equipamentos || 0)
+    ) * Number(i.quantidade || 0)
   }
 
   function totalGeral(){
@@ -99,6 +105,28 @@ export default function EditarOrcamento(){
     setLoading(false)
   }
 
+  function gerarPDF(){
+
+    const element = document.createElement('div')
+
+    element.innerHTML = `
+      <div style="font-family:Arial;padding:40px">
+        <h1>DudaBuild Engenharia</h1>
+        <h2>Proposta Comercial</h2>
+        <p><strong>Cliente:</strong> ${cliente}</p>
+        <p>${descricao}</p>
+
+        ${itens.map(i => `
+          <p>${i.descricao} - ${format(totalItem(i))}</p>
+        `).join('')}
+
+        <h2>Total: ${format(totalGeral())}</h2>
+      </div>
+    `
+
+    html2pdf().from(element).save(`Proposta_${cliente}.pdf`)
+  }
+
   function enviarWhatsApp() {
     const link = `${window.location.origin}/orcamentos/${id}`
     const texto = `Olá! Segue seu orçamento:\n${link}`
@@ -108,81 +136,58 @@ export default function EditarOrcamento(){
   return(
     <div style={container}>
 
+      {/* VOLTAR */}
+      <button onClick={()=>router.back()} style={btnVoltar}>
+        ← Voltar
+      </button>
+
       <h1 style={titulo}>✏️ Editar Orçamento</h1>
 
-      {/* CLIENTE */}
       <div style={card}>
-        <input
-          placeholder="Cliente"
-          value={cliente}
-          onChange={e => setCliente(e.target.value)}
-          style={input}
-        />
-
-        <input
-          placeholder="Descrição"
-          value={descricao}
-          onChange={e => setDescricao(e.target.value)}
-          style={input}
-        />
+        <input value={cliente} onChange={e=>setCliente(e.target.value)} style={input}/>
+        <input value={descricao} onChange={e=>setDescricao(e.target.value)} style={input}/>
       </div>
 
-      {/* TABELA */}
       <div style={card}>
-        <TabelaOrcamento
-          itens={itens}
-          atualizarItem={atualizarItem}
-          removerItem={removerItem}
-        />
-
-        <button onClick={adicionarItem} style={btnAdd}>
-          + Adicionar Item
-        </button>
+        <TabelaOrcamento itens={itens} atualizarItem={atualizarItem} removerItem={removerItem}/>
+        <button onClick={adicionarItem} style={btnAdd}>+ Adicionar Item</button>
       </div>
 
-      {/* TOTAL */}
-      <div style={totalBox}>
-        {format(totalGeral())}
-      </div>
+      <div style={total}>{format(totalGeral())}</div>
 
-      {/* AÇÕES */}
       <div style={acoes}>
-
         <button onClick={salvar} style={btnPrim}>
-          {loading ? 'Salvando...' : 'Salvar Alterações'}
+          {loading ? 'Salvando...' : 'Salvar'}
+        </button>
+
+        <button onClick={gerarPDF} style={btnPdf}>
+          Baixar PDF
         </button>
 
         <button onClick={enviarWhatsApp} style={btnWhats}>
-          Enviar WhatsApp
+          WhatsApp
         </button>
-
       </div>
 
     </div>
   )
 }
 
-/* HELPERS */
+/* UI */
 
 function format(v:number){
   return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 }
 
-/* UI */
-
 const container={maxWidth:1100,margin:'0 auto',padding:24}
 
-const titulo={
-  fontSize:26,
-  fontWeight:700
-}
+const titulo={fontSize:26,fontWeight:700}
 
 const card={
   background:'#fff',
   padding:20,
   borderRadius:12,
-  marginTop:20,
-  boxShadow:'0 10px 30px rgba(0,0,0,0.05)'
+  marginTop:20
 }
 
 const input={
@@ -193,41 +198,17 @@ const input={
   border:'1px solid #e2e8f0'
 }
 
-const totalBox={
+const total={
   fontSize:28,
   fontWeight:700,
   marginTop:20,
   color:'#16a34a'
 }
 
-const acoes={
-  display:'flex',
-  gap:10,
-  marginTop:20
-}
+const acoes={display:'flex',gap:10,marginTop:20}
 
-const btnPrim={
-  padding:14,
-  borderRadius:10,
-  border:'none',
-  background:'#2563eb',
-  color:'#fff',
-  fontWeight:600
-}
-
-const btnWhats={
-  padding:14,
-  borderRadius:10,
-  border:'none',
-  background:'#22c55e',
-  color:'#fff',
-  fontWeight:600
-}
-
-const btnAdd={
-  marginTop:15,
-  padding:12,
-  borderRadius:8,
-  border:'1px solid #cbd5e1',
-  cursor:'pointer'
-}
+const btnPrim={background:'#2563eb',color:'#fff',padding:12,borderRadius:8}
+const btnPdf={background:'#0f172a',color:'#fff',padding:12,borderRadius:8}
+const btnWhats={background:'#22c55e',color:'#fff',padding:12,borderRadius:8}
+const btnAdd={marginTop:15,padding:10,borderRadius:8}
+const btnVoltar={marginBottom:10}
