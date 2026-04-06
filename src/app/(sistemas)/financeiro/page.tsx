@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
+import Layout from '@/components/Layout'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend
@@ -38,8 +39,6 @@ export default function FinanceiroBI() {
     setLoading(false)
   }
 
-  /* ================= KPIs ================= */
-
   const entradas = dados.filter(d => d.tipo === 'entrada')
   const saidas = dados.filter(d => d.tipo === 'saida')
 
@@ -51,15 +50,12 @@ export default function FinanceiroBI() {
     ? ((lucro / totalEntrada) * 100).toFixed(1)
     : '0'
 
-  /* ================= AGRUPAMENTO MENSAL ================= */
-
   const porMes: any = {}
 
   dados.forEach(d => {
     if (!d.created_at) return
 
-    const data = new Date(d.created_at)
-    const mes = data.toLocaleDateString('pt-BR', { month: 'short' })
+    const mes = new Date(d.created_at).toLocaleDateString('pt-BR', { month: 'short' })
 
     if (!porMes[mes]) {
       porMes[mes] = { mes, entrada: 0, saida: 0 }
@@ -71,37 +67,20 @@ export default function FinanceiroBI() {
 
   const graficoMensal = Object.values(porMes)
 
-  /* ================= LUCRO POR OBRA ================= */
-
-  function lucroPorObra(obraId: string) {
-    const ent = dados.filter(d => d.obra_id === obraId && d.tipo === 'entrada')
-    const sai = dados.filter(d => d.obra_id === obraId && d.tipo === 'saida')
-    return soma(ent) - soma(sai)
-  }
-
-  const ranking = obras.map(o => ({
-    nome: o.nome,
-    lucro: lucroPorObra(o.id)
-  })).sort((a, b) => b.lucro - a.lucro)
-
-  if (loading) return <Loader />
+  if (loading) return <p>Carregando...</p>
 
   return (
-    <div style={container}>
+    <Layout>
 
       <h1 style={titulo}>💰 Financeiro Geral</h1>
 
-      {/* KPIs */}
       <div style={grid}>
-
         <Card titulo="Receita" valor={format(totalEntrada)} cor="#16a34a" />
         <Card titulo="Custos" valor={format(totalSaida)} cor="#dc2626" />
         <Card titulo="Lucro" valor={format(lucro)} cor="#2563eb" />
         <Card titulo="Margem" valor={`${margem}%`} cor="#7c3aed" />
-
       </div>
 
-      {/* GRÁFICO LINHA */}
       <div style={card}>
         <h3>Evolução Financeira</h3>
 
@@ -117,7 +96,6 @@ export default function FinanceiroBI() {
         </ResponsiveContainer>
       </div>
 
-      {/* GRÁFICO BARRAS */}
       <div style={card}>
         <h3>Fluxo de Caixa</h3>
 
@@ -132,28 +110,11 @@ export default function FinanceiroBI() {
         </ResponsiveContainer>
       </div>
 
-      {/* RANKING */}
-      <div style={card}>
-        <h3>Lucro por Obra</h3>
-
-        {ranking.map((r, i) => (
-          <div key={i} style={linha}>
-            <span>{r.nome}</span>
-
-            <strong style={{
-              color: r.lucro < 0 ? '#dc2626' : '#16a34a'
-            }}>
-              {format(r.lucro)}
-            </strong>
-          </div>
-        ))}
-      </div>
-
-    </div>
+    </Layout>
   )
 }
 
-/* ================= HELPERS ================= */
+/* HELPERS */
 
 function soma(lista: any[]) {
   return lista.reduce((acc, i) => acc + Number(i.valor), 0)
@@ -166,11 +127,7 @@ function format(valor: number) {
   })
 }
 
-/* ================= COMPONENTES ================= */
-
-function Loader() {
-  return <p style={{ padding: 24 }}>Carregando...</p>
-}
+/* COMPONENTES */
 
 function Card({ titulo, valor, cor }: any) {
   return (
@@ -181,13 +138,7 @@ function Card({ titulo, valor, cor }: any) {
   )
 }
 
-/* ================= ESTILO ================= */
-
-const container = {
-  padding: 24,
-  background: '#f1f5f9',
-  minHeight: '100vh'
-}
+/* ESTILO */
 
 const titulo = {
   fontSize: 28,
@@ -214,9 +165,3 @@ const card = {
   borderRadius: 12,
   marginTop: 20
 }
-
-const linha = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginTop: 10
-}}

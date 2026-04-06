@@ -89,27 +89,6 @@ export default function Dashboard() {
 
   const graficoFluxo = Object.values(fluxo)
 
-  /* ================= FUNIL ================= */
-
-  const funil = [
-    { name: 'Orçados', value: orcamentos.length },
-    { name: 'Aprovados', value: aprovados.length },
-    { name: 'Em Obra', value: obrasAndamento.length },
-    { name: 'Finalizados', value: obrasFinalizadas.length }
-  ]
-
-  const statusOrc = [
-    { name: 'Aprovados', value: aprovados.length },
-    { name: 'Recusados', value: recusados.length },
-    { name: 'Pendentes', value: pendentes.length }
-  ]
-
-  const statusObras = [
-    { name: 'Andamento', value: obrasAndamento.length },
-    { name: 'Finalizadas', value: obrasFinalizadas.length },
-    { name: 'Pausadas', value: obrasPausadas.length }
-  ]
-
   const limiteOrc = limites.orcamentos
   const limiteObras = limites.obras
 
@@ -119,42 +98,41 @@ export default function Dashboard() {
   if (loadingEmpresa || loading) return <Loader />
 
   return (
-  <Layout>
+    <Layout>
 
-    <h1 style={titulo}>🚀 Dashboard Executivo</h1>
+      <h1 style={titulo}>🚀 Dashboard Executivo</h1>
 
-    {(limiteOrcAtingido || limiteObrasAtingido) && (
-      <div style={alerta}>
-        🚨 Você atingiu limites do plano <strong>{plano}</strong>.
+      {(limiteOrcAtingido || limiteObrasAtingido) && (
+        <div style={alerta}>
+          🚨 Você atingiu limites do plano <strong>{plano}</strong>.
+        </div>
+      )}
+
+      <div style={grid}>
+        <Card titulo="💰 Receita" valor={format(totalEntrada)} cor="#16a34a" />
+        <Card titulo="💸 Custos" valor={format(totalSaida)} cor="#dc2626" />
+        <Card titulo="📊 Lucro" valor={format(lucro)} cor="#2563eb" />
+        <Card titulo="📈 Conversão" valor={`${taxaConversao}%`} cor="#7c3aed" />
       </div>
-    )}
 
-    <div style={grid}>
+      <div style={cardGrande}>
+        <h3>📈 Fluxo Financeiro</h3>
 
-      <Card titulo="💰 Receita" valor={format(totalEntrada)} cor="#16a34a" />
-      <Card titulo="💸 Custos" valor={format(totalSaida)} cor="#dc2626" />
-      <Card titulo="📊 Lucro" valor={format(lucro)} cor="#2563eb" />
-      <Card titulo="📈 Conversão" valor={`${taxaConversao}%`} cor="#7c3aed" />
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={graficoFluxo}>
+            <XAxis dataKey="mes" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line dataKey="entrada" stroke="#16a34a" />
+            <Line dataKey="saida" stroke="#dc2626" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
 
-    </div>
-
-    <div style={cardGrande}>
-      <h3>📈 Fluxo Financeiro</h3>
-
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={graficoFluxo}>
-          <XAxis dataKey="mes" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Line dataKey="entrada" stroke="#16a34a" />
-          <Line dataKey="saida" stroke="#dc2626" />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-
-  </Layout>
-)
+    </Layout>
+  )
+}
 
 /* COMPONENTES */
 
@@ -174,8 +152,6 @@ function Card({ titulo, valor, cor }: any) {
 /* ESTILO */
 
 const alerta = { background: '#fef3c7', padding: 15, borderRadius: 8, marginBottom: 20 }
-
-const container = { padding: 24, background: '#f1f5f9', minHeight: '100vh' }
 const titulo = { fontSize: 28, fontWeight: 700, marginBottom: 20 }
 
 const grid = {
@@ -183,12 +159,6 @@ const grid = {
   gridTemplateColumns: 'repeat(4, 1fr)',
   gap: 20,
   marginBottom: 20
-}
-
-const grid2 = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 20
 }
 
 const card = {
