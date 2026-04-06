@@ -23,6 +23,7 @@ export default function DetalheObra() {
   const [valor, setValor] = useState('')
   const [data, setData] = useState(new Date().toISOString().substring(0,10))
   const [editando, setEditando] = useState<any>(null)
+  const [loadingSalvar, setLoadingSalvar] = useState(false)
 
   useEffect(() => {
     if (loadingEmpresa) return
@@ -40,19 +41,31 @@ export default function DetalheObra() {
 
   async function carregar() {
 
-    const { data: obraData } = await supabase
+    const { data: obraData, error: erroObra } = await supabase
       .from('obras')
       .select('*')
       .eq('id', Number(id))
       .eq('empresa_id', empresaId)
       .maybeSingle()
 
-    const { data: financeiroData } = await supabase
+    if (erroObra) {
+      console.error(erroObra)
+      alert('Erro ao carregar obra')
+      return
+    }
+
+    const { data: financeiroData, error: erroFin } = await supabase
       .from('financeiro')
       .select('*')
       .eq('obra_id', Number(id))
       .eq('empresa_id', empresaId)
       .order('created_at', { ascending: true })
+
+    if (erroFin) {
+      console.error(erroFin)
+      alert('Erro ao carregar financeiro')
+      return
+    }
 
     setObra(obraData)
     setFinanceiro(financeiroData || [])
@@ -77,6 +90,8 @@ export default function DetalheObra() {
     if (!descricao) return alert('Selecione uma descrição')
     if (!valor) return alert('Valor inválido')
 
+    setLoadingSalvar(true)
+
     const payload = {
       obra_id: Number(id),
       empresa_id: empresaId,
@@ -95,6 +110,7 @@ export default function DetalheObra() {
 
     setDescricao('')
     setValor('')
+    setLoadingSalvar(false)
     carregar()
   }
 
@@ -115,8 +131,6 @@ export default function DetalheObra() {
   if (!empresaId) return <p>Carregando...</p>
   if (!obra) return <p>Carregando obra...</p>
 
-  /* ================= FINANCEIRO ================= */
-
   const entradas = financeiro.filter(f => f.tipo === 'entrada')
   const saidas = financeiro.filter(f => f.tipo === 'saida')
 
@@ -127,8 +141,6 @@ export default function DetalheObra() {
   const margem = totalEntradas > 0 ? (lucro / totalEntradas) * 100 : 0
   const roi = totalSaidas > 0 ? lucro / totalSaidas : 0
   const custoPorMetro = obra?.area ? totalSaidas / obra.area : 0
-
-  /* ================= GRÁFICO ================= */
 
   const fluxoMensal: any = {}
 
@@ -145,8 +157,6 @@ export default function DetalheObra() {
 
   const dadosGrafico = Object.values(fluxoMensal)
 
-  /* ================= RESUMO CATEGORIA ================= */
-
   const resumoCategoria: any = {}
   saidas.forEach(s => {
     if (!resumoCategoria[s.descricao]) resumoCategoria[s.descricao] = 0
@@ -156,41 +166,20 @@ export default function DetalheObra() {
   return (
     <div style={{ padding: 24 }}>
 
-      {/* ALERTA */}
       {lucro < 0 && (
-        <div style={{
-          background: '#fee2e2',
-          padding: 12,
-          borderRadius: 8,
-          marginBottom: 10,
-          color: '#991b1b',
-          fontWeight: 600
-        }}>
-          ⚠️ Esta obra está em PREJUÍZO
+        <div style={alerta}>
+          🚨 Obra em prejuízo — revise custos imediatamente
         </div>
       )}
 
-      {/* HEADER */}
       <h1 style={{ fontSize: 26 }}>{obra.nome}</h1>
       <p style={{ color: '#64748b' }}>{obra.cliente}</p>
 
-      {/* VALOR */}
-      <p style={{
-        fontSize: 18,
-        fontWeight: 600,
-        color: '#16a34a'
-      }}>
+      <p style={valorPrincipal}>
         💰 {format(obra.valor || 0)}
       </p>
 
-      {/* RESUMO */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
-        gap: 16,
-        marginTop: 20,
-        marginBottom: 20
-      }}>
+      <div style={grid}>
         <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
         <Card titulo="Custos" valor={totalSaidas} cor="#ef4444" />
         <Card titulo="Lucro" valor={lucro} cor="#3b82f6" />
@@ -199,8 +188,7 @@ export default function DetalheObra() {
         <Card titulo="Custo/m²" valor={custoPorMetro} cor="#f59e0b" />
       </div>
 
-      {/* FORM */}
-      <form onSubmit={salvar} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <form onSubmit={salvar} style={form}>
 
         <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
           <option value="entrada">Entrada</option>
@@ -215,30 +203,26 @@ export default function DetalheObra() {
 
         <input type="date" value={data} onChange={(e) => setData(e.target.value)} />
 
-        <button>{editando ? 'Atualizar' : 'Adicionar'}</button>
+        <button disabled={loadingSalvar}>
+          {loadingSalvar ? 'Salvando...' : editando ? 'Atualizar' : 'Adicionar'}
+        </button>
 
       </form>
 
-      {/* LISTA */}
       {financeiro.map((f) => (
-        <div key={f.id} style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginTop: 10
-        }}>
+        <div key={f.id} style={linha}>
           <span>{f.descricao}</span>
           <span>{format(f.valor)}</span>
           <span>{new Date(f.created_at).toLocaleDateString('pt-BR')}</span>
 
-          <div>
+          <div style={{ display:'flex', gap:6 }}>
             <button onClick={() => editar(f)}>✏️</button>
             <button onClick={() => excluirLancamento(f.id)}>❌</button>
           </div>
         </div>
       ))}
 
-      {/* GRÁFICO */}
-      <div style={{ marginTop: 30 }}>
+      <div style={graficoBox}>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={dadosGrafico}>
             <XAxis dataKey="mes" />
@@ -251,7 +235,6 @@ export default function DetalheObra() {
         </ResponsiveContainer>
       </div>
 
-      {/* RESUMO CATEGORIA */}
       <h3 style={{ marginTop: 20 }}>Resumo por categoria</h3>
       {Object.entries(resumoCategoria).map(([k, v]: any) => (
         <div key={k}>
@@ -263,28 +246,71 @@ export default function DetalheObra() {
   )
 }
 
-/* COMPONENTES */
-
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
     <div style={{
-      background: '#fff',
-      padding: 16,
-      borderRadius: 10,
-      borderLeft: `5px solid ${cor}`
+      background: cor + '15',
+      padding:18,
+      borderRadius:12,
+      border:`1px solid ${cor}`,
+      boxShadow:'0 4px 12px rgba(0,0,0,0.05)'
     }}>
-      <p>{titulo}</p>
-      <h3>
+      <p style={{ color:'#64748b' }}>{titulo}</p>
+
+      <h2 style={{ color: cor }}>
         {tipo === 'porcentagem'
           ? valor.toFixed(2) + '%'
           : format(valor)}
-      </h3>
+      </h2>
     </div>
   )
 }
 
-/* HELPERS */
-
 function format(v:number){
   return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+}
+
+/* estilos */
+
+const alerta = {
+  background:'#fee2e2',
+  padding:16,
+  borderRadius:10,
+  marginBottom:15,
+  color:'#991b1b',
+  fontWeight:700
+}
+
+const valorPrincipal = {
+  fontSize:18,
+  fontWeight:600,
+  color:'#16a34a'
+}
+
+const grid = {
+  display:'grid',
+  gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',
+  gap:16,
+  marginTop:20,
+  marginBottom:20
+}
+
+const form = {
+  display:'flex',
+  gap:10,
+  flexWrap:'wrap'
+}
+
+const linha = {
+  display:'grid',
+  gridTemplateColumns:'1fr auto auto auto',
+  padding:10,
+  borderBottom:'1px solid #e2e8f0'
+}
+
+const graficoBox = {
+  marginTop:30,
+  background:'#fff',
+  padding:20,
+  borderRadius:12
 }

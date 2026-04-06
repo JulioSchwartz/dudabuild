@@ -55,61 +55,59 @@ export default function SistemaLayout({ children }: any) {
   if (!liberado) return null
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#f1f5f9' }}>
+    <div style={container}>
 
-      {/* SIDEBAR */}
+      {/* 🔥 SIDEBAR PREMIUM */}
       <aside style={sidebar}>
 
-  <div>
-    <img src="/logo.png" style={{ width: 140, marginBottom: 20 }} />
+        <div>
 
-    <MenuItem
-     texto="Dashboard" 
-     rota="/dashboard" 
-     ativo={pathname === '/dashboard'} />
+          <div style={logoBox}>
+            <img src="/logo.png" style={{ width: 120 }} />
+            <p style={logoText}>DudaBuild</p>
+          </div>
 
-    <MenuItem 
-     texto="Obras" 
-     rota="/obras" 
-     ativo={pathname.includes('/obras')} />
-   
- <MenuItem 
-  texto="Financeiro" 
-  rota="/financeiro" 
-  ativo={pathname.includes('/financeiro')} 
-/>
+          <MenuItem texto="🏠 Dashboard" rota="/dashboard" ativo={pathname === '/dashboard'} />
+          <MenuItem texto="🏗️ Obras" rota="/obras" ativo={pathname.includes('/obras')} />
+          <MenuItem texto="💰 Financeiro" rota="/financeiro" ativo={pathname.includes('/financeiro')} />
+          <MenuItem texto="🧾 Orçamentos" rota="/orcamentos" ativo={pathname.includes('/orcamentos')} />
+          <MenuItem texto="📊 Relatórios" rota="/relatorios" ativo={pathname.includes('/relatorios')} />
 
-<MenuItem 
-  texto="Orçamentos" 
-  rota="/orcamentos" 
-  ativo={pathname.includes('/orcamentos')} 
-/>
-  </div>
+        </div>
 
-  <button onClick={sair} style={logout}>
-    Sair
-  </button>
+        <button onClick={sair} style={logout}>
+          Sair
+        </button>
 
-</aside>
+      </aside>
 
-      {/* CONTEÚDO */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {/* 🔥 CONTEÚDO */}
+      <div style={main}>
 
         {/* HEADER */}
         <header style={header}>
-          <span style={{ fontWeight: 600 }}>Sistema de Gestão</span>
-          <span style={{ color: '#64748b' }}>Construtora</span>
+          <div>
+            <strong>Sistema de Gestão</strong>
+            <p style={subHeader}>Construtora</p>
+          </div>
+
+          <div style={userBox}>
+            <span>👤 Usuário</span>
+          </div>
         </header>
 
-        {/* PAGE */}
+        {/* PÁGINA */}
         <main style={content}>
           {children}
         </main>
 
       </div>
+
     </div>
   )
 }
+
+/* ================= COMPONENTE MENU ================= */
 
 function MenuItem({ texto, rota, ativo }: any) {
   const router = useRouter()
@@ -128,11 +126,17 @@ function MenuItem({ texto, rota, ativo }: any) {
   )
 }
 
-/* 🎨 ESTILO PREMIUM */
+/* ================= ESTILO ================= */
+
+const container = {
+  display: 'flex',
+  height: '100vh',
+  background: '#f1f5f9'
+}
 
 const sidebar = {
-  width: 240,
-  background: '#0f172a',
+  width: 260,
+  background: '#020617',
   color: '#fff',
   padding: 20,
   display: 'flex',
@@ -140,27 +144,50 @@ const sidebar = {
   justifyContent: 'space-between'
 }
 
-const logo = {
-  marginBottom: 30,
-  fontSize: 20
+const logoBox = {
+  marginBottom: 30
+}
+
+const logoText = {
+  marginTop: 8,
+  fontSize: 14,
+  color: '#94a3b8'
 }
 
 const menuItem = {
   padding: '12px 14px',
-  borderRadius: 8,
+  borderRadius: 10,
   cursor: 'pointer',
   marginBottom: 8,
-  transition: '0.2s'
+  transition: '0.2s',
+  fontSize: 14
+}
+
+const main = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column'
 }
 
 const header = {
-  height: 60,
+  height: 70,
   background: '#fff',
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '0 20px',
+  padding: '0 24px',
   borderBottom: '1px solid #e2e8f0'
+}
+
+const subHeader = {
+  fontSize: 12,
+  color: '#64748b'
+}
+
+const userBox = {
+  background: '#f1f5f9',
+  padding: '6px 10px',
+  borderRadius: 8
 }
 
 const content = {
@@ -172,7 +199,7 @@ const logout = {
   background: '#ef4444',
   border: 'none',
   color: '#fff',
-  padding: 10,
-  borderRadius: 8,
+  padding: 12,
+  borderRadius: 10,
   cursor: 'pointer'
 }

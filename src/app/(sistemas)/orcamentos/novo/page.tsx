@@ -5,110 +5,65 @@ import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
 import { useEmpresa } from '@/hooks/useEmpresa'
 
-type Item = {
-  categoria: string
-  codigo: string
-  descricao: string
-  unidade: string
-  quantidade: number
-  material: number
-  mao_obra: number
-  equipamentos: number
-}
-
-function formatarMoeda(valor: number) {
-  return valor.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  })
-}
-
 export default function NovoOrcamento() {
-  const empresaId = useEmpresa()
+
+  const { empresaId } = useEmpresa()
 
   const [cliente, setCliente] = useState('')
   const [descricao, setDescricao] = useState('')
   const [orcamentoId, setOrcamentoId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const [itens, setItens] = useState<Item[]>([
-    {
-      categoria: 'Lista de Materiais',
-      codigo: '',
-      descricao: '',
-      unidade: 'm²',
-      quantidade: 1,
-      material: 0,
-      mao_obra: 0,
-      equipamentos: 0
-    }
-  ])
+  const [itens, setItens] = useState<any[]>([{
+    categoria: 'Lista de Materiais',
+    codigo: '',
+    descricao: '',
+    unidade: 'm²',
+    quantidade: 1,
+    material: 0,
+    mao_obra: 0,
+    equipamentos: 0
+  }])
 
-  function atualizarItem(index: number, campo: keyof Item, valor: any) {
-    const novos = [...itens]
-    novos[index][campo] = valor
+  function atualizarItem(index:number,campo:string,valor:any){
+    const novos=[...itens]
+    novos[index][campo]=valor
     setItens(novos)
   }
 
-  function removerItem(index: number) {
-    const novos = [...itens]
-    novos.splice(index, 1)
+  function removerItem(index:number){
+    const novos=[...itens]
+    novos.splice(index,1)
     setItens(novos)
   }
 
-  function adicionarItem() {
-    setItens([
-      ...itens,
-      {
-        categoria: 'Lista de Materiais',
-        codigo: '',
-        descricao: '',
-        unidade: 'm²',
-        quantidade: 1,
-        material: 0,
-        mao_obra: 0,
-        equipamentos: 0
-      }
-    ])
+  function adicionarItem(){
+    setItens([...itens,{
+      categoria:'Lista de Materiais',
+      codigo:'',
+      descricao:'',
+      unidade:'m²',
+      quantidade:1,
+      material:0,
+      mao_obra:0,
+      equipamentos:0
+    }])
   }
 
-  function totalItem(i: Item) {
-    return (i.material + i.mao_obra + i.equipamentos) * i.quantidade
+  function totalItem(i:any){
+    return (Number(i.material||0)+Number(i.mao_obra||0)+Number(i.equipamentos||0))*Number(i.quantidade||0)
   }
 
-  function totalGeral() {
-    return itens.reduce((acc, i) => acc + totalItem(i), 0)
+  function totalGeral(){
+    return itens.reduce((a,i)=>a+totalItem(i),0)
   }
 
-  async function salvar() {
-    if (!cliente) {
-      alert('Informe o cliente')
-      return
-    }
+  async function salvar(){
 
-    if (!empresaId) {
-      alert('Erro de empresa')
-      return
-    }
+    if (!cliente) return alert('Informe o cliente')
+    if (!empresaId) return alert('Erro empresa')
 
     setLoading(true)
-
-    const { data: empresa } = await supabase
-      .from('empresas')
-      .select('*')
-      .eq('id', empresaId)
-      .single()
-
-    const { count } = await supabase
-      .from('orcamentos')
-      .select('*', { count: 'exact', head: true })
-      .eq('empresa_id', empresaId)
-
-    if (empresa?.plano === 'free' && (count || 0) >= 5) {
-      alert('Limite do plano Free atingido. Faça upgrade.')
-      setLoading(false)
-      return
-    }
 
     const { data: orc, error } = await supabase
       .from('orcamentos')
@@ -122,6 +77,7 @@ export default function NovoOrcamento() {
       .single()
 
     if (error || !orc) {
+      console.error(error)
       alert('Erro ao salvar')
       setLoading(false)
       return
@@ -137,98 +93,157 @@ export default function NovoOrcamento() {
       }))
     )
 
-    alert('Orçamento salvo com sucesso!')
+    alert('Orçamento salvo!')
     setLoading(false)
   }
 
   function enviarWhatsApp() {
-    if (!orcamentoId) {
-      alert('Salve primeiro')
-      return
-    }
 
-    const link = `${window.location.origin}/orcamento/${orcamentoId}`
-    const msg = `Olá! Segue seu orçamento:\n${link}`
+    if (!orcamentoId) return alert('Salve primeiro')
+
+    const link = `${window.location.origin}/orcamentos/${orcamentoId}`
+    const msg = `Olá! Segue sua proposta:\n${link}`
 
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`)
   }
 
   function gerarPDF() {
+
+    const dataHoje = new Date().toLocaleDateString('pt-BR')
+
     const html = `
-      <html>
-      <body style="font-family: Arial; padding: 40px">
-        <h1>DudaBuild Engenharia</h1>
-        <h2>Proposta Comercial</h2>
-        <p><b>Cliente:</b> ${cliente}</p>
-        <p><b>Descrição:</b> ${descricao}</p>
-        <hr/>
-        ${itens.map(i => `
-          <p>${i.descricao} - ${i.quantidade}x - R$ ${totalItem(i).toFixed(2)}</p>
-        `).join('')}
-        <hr/>
-        <h2>Total: R$ ${totalGeral().toFixed(2)}</h2>
-      </body>
-      </html>
-    `
+    <html>
+    <head>
+      <style>
+        body {
+          font-family: Arial;
+          padding: 40px;
+          color: #0f172a;
+        }
 
-    const w = window.open('', '', 'width=900,height=700')
-    w?.document.write(html)
-    w?.document.close()
-    w?.print()
-  }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 30px;
+        }
 
-  return (
-    <div style={container}>
+        .logo {
+          font-size: 22px;
+          font-weight: bold;
+        }
 
-      <h1 style={titulo}>Novo Orçamento</h1>
+        .titulo {
+          font-size: 20px;
+          margin-top: 10px;
+          color: #334155;
+        }
 
-      {/* 🔹 DADOS */}
-      <div style={card}>
-        <h3>Dados do Cliente</h3>
+        .cliente {
+          margin: 20px 0;
+          padding: 15px;
+          background: #f1f5f9;
+          border-radius: 8px;
+        }
 
-        <input
-          placeholder="Nome do cliente"
-          value={cliente}
-          onChange={e => setCliente(e.target.value)}
-          style={input}
-        />
+        .item {
+          display: flex;
+          justify-content: space-between;
+          padding: 10px 0;
+          border-bottom: 1px solid #e2e8f0;
+        }
 
-        <input
-          placeholder="Descrição do serviço"
-          value={descricao}
-          onChange={e => setDescricao(e.target.value)}
-          style={input}
-        />
+        .total {
+          margin-top: 30px;
+          padding: 20px;
+          background: #16a34a;
+          color: white;
+          border-radius: 10px;
+          text-align: center;
+        }
+
+        .rodape {
+          margin-top: 40px;
+          font-size: 12px;
+          color: #64748b;
+          text-align: center;
+        }
+      </style>
+    </head>
+
+    <body>
+
+      <div class="header">
+        <div>
+          <div class="logo">DudaBuild Engenharia</div>
+          <div class="titulo">Proposta Comercial</div>
+        </div>
+
+        <div>${dataHoje}</div>
       </div>
 
-      {/* 🔹 ITENS */}
-      <div style={card}>
-        <h3>Itens do Orçamento</h3>
+      <div class="cliente">
+        <p><strong>Cliente:</strong> ${cliente}</p>
+        <p>${descricao}</p>
+      </div>
 
+      ${itens.map(i => `
+        <div class="item">
+          <span>${i.descricao}</span>
+          <span>${format(totalItem(i))}</span>
+        </div>
+      `).join('')}
+
+      <div class="total">
+        <h2>Total: ${format(totalGeral())}</h2>
+      </div>
+
+      <div class="rodape">
+        Proposta válida por 7 dias • DudaBuild Engenharia
+      </div>
+
+    </body>
+    </html>
+    `
+
+    const win = window.open('', '', 'width=900,height=700')
+    win?.document.write(html)
+    win?.document.close()
+    win?.print()
+  }
+
+  return(
+    <div style={container}>
+
+      <h1 style={titulo}>Nova Proposta Comercial</h1>
+
+      <div style={card}>
+        <input placeholder="Cliente" value={cliente} onChange={e=>setCliente(e.target.value)} style={input}/>
+        <input placeholder="Descrição" value={descricao} onChange={e=>setDescricao(e.target.value)} style={input}/>
+      </div>
+
+      <div style={card}>
         <TabelaOrcamento
           itens={itens}
           atualizarItem={atualizarItem}
           removerItem={removerItem}
         />
 
-        <button onClick={adicionarItem} style={btnSecundario}>
-          + Adicionar Item
+        <button onClick={adicionarItem} style={btnSec}>
+          + Item
         </button>
       </div>
 
-      {/* 🔹 TOTAL */}
       <div style={totalBox}>
-        Total: {formatarMoeda(totalGeral())}
+        {format(totalGeral())}
       </div>
 
-      {/* 🔹 AÇÕES */}
       <div style={acoes}>
-        <button onClick={salvar} style={btn}>
+        <button onClick={salvar} style={btnPrim}>
           {loading ? 'Salvando...' : 'Salvar'}
         </button>
 
-        <button onClick={gerarPDF} style={btnSecundario}>
-          PDF
+        <button onClick={gerarPDF} style={btnSec}>
+          Gerar PDF
         </button>
 
         <button onClick={enviarWhatsApp} style={btnWhats}>
@@ -240,62 +255,64 @@ export default function NovoOrcamento() {
   )
 }
 
-/* 🎨 UI */
+/* HELPERS */
 
-const container = { maxWidth: 1100, margin: '0 auto', padding: 24 }
-
-const titulo = {
-  fontSize: 28,
-  fontWeight: 700,
-  marginBottom: 20
+function format(v:number){
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 }
 
-const card = {
-  background: '#fff',
-  padding: 20,
-  borderRadius: 10,
-  marginBottom: 20,
-  boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
+/* UI */
+
+const container={maxWidth:1100,margin:'0 auto',padding:24}
+
+const titulo={fontSize:28,fontWeight:700}
+
+const card={
+  background:'#fff',
+  padding:20,
+  borderRadius:10,
+  marginTop:20
 }
 
-const input = {
-  width: '100%',
-  marginTop: 10,
-  padding: 12,
-  borderRadius: 8,
-  border: '1px solid #e2e8f0'
+const input={
+  width:'100%',
+  marginTop:10,
+  padding:12,
+  borderRadius:8,
+  border:'1px solid #e2e8f0'
 }
 
-const totalBox = {
-  fontSize: 24,
-  fontWeight: 700,
-  marginTop: 20
+const totalBox={
+  fontSize:26,
+  fontWeight:700,
+  marginTop:20,
+  color:'#16a34a'
 }
 
-const acoes = {
-  display: 'flex',
-  gap: 10,
-  marginTop: 20
+const acoes={
+  display:'flex',
+  gap:10,
+  marginTop:20
 }
 
-const btn = {
-  padding: 12,
-  borderRadius: 8,
-  border: 'none',
-  background: '#2563eb',
-  color: '#fff'
+const btnPrim={
+  padding:12,
+  borderRadius:8,
+  border:'none',
+  background:'#2563eb',
+  color:'#fff'
 }
 
-const btnSecundario = {
-  padding: 12,
-  borderRadius: 8,
-  border: '1px solid #cbd5e1'
+const btnSec={
+  padding:12,
+  borderRadius:8,
+  border:'1px solid #cbd5e1'
 }
 
-const btnWhats = {
-  padding: 12,
-  borderRadius: 8,
-  border: 'none',
-  background: '#22c55e',
-  color: '#fff'
+const btnWhats={
+  padding:12,
+  borderRadius:8,
+  border:'none',
+  background:'#22c55e',
+  color:'#fff'
 }

@@ -6,168 +6,131 @@ import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function NovaObra() {
-  const { empresaId, loading } = useEmpresa()
+
+  const { empresaId } = useEmpresa()
   const router = useRouter()
 
   const [nome, setNome] = useState('')
   const [cliente, setCliente] = useState('')
   const [valor, setValor] = useState('')
-  const [salvando, setSalvando] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  async function salvar(e: any) {
+  async function salvar(e:any) {
     e.preventDefault()
 
-    if (!empresaId) {
-      alert('Erro de empresa')
-      return
-    }
+    if (!empresaId) return alert('Erro empresa')
 
     if (!nome || !cliente || !valor) {
       alert('Preencha todos os campos')
       return
     }
 
-    try {
-      setSalvando(true)
-
-      // 🔒 BUSCAR EMPRESA
-      const { data: empresa, error: erroEmpresa } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('id', empresaId)
-        .single()
-
-      if (erroEmpresa) {
-        console.error('Erro empresa:', erroEmpresa)
-        alert('Erro ao buscar empresa')
-        return
-      }
-
-      // 🔒 CONTAR OBRAS
-      const { count, error: erroCount } = await supabase
-        .from('obras')
-        .select('*', { count: 'exact', head: true })
-        .eq('empresa_id', empresaId)
-
-      if (erroCount) {
-        console.error('Erro count:', erroCount)
-        alert('Erro ao contar obras')
-        return
-      }
-
-      if (empresa?.plano === 'free' && (count || 0) >= 3) {
-        alert('Limite de obras atingido no plano Free')
-        return
-      }
-
-      // ✅ INSERT
-      const { error: erroInsert } = await supabase
-        .from('obras')
-        .insert([
-     {
-        nome,
-        cliente: cliente, // ✅ correto
-        valor: Number(valor), // ✅ correto
-        
-     }
-     ])
-
-      if (erroInsert) {
-        console.error('Erro insert:', erroInsert)
-        alert('Erro ao salvar obra')
-        return
-      }
-
-      router.push('/obras')
-
-    } catch (err) {
-      console.error(err)
-      alert('Erro inesperado')
-    } finally {
-      setSalvando(false)
+    if (Number(valor) <= 0) {
+      alert('Valor inválido')
+      return
     }
+
+    setLoading(true)
+
+    const { error } = await supabase.from('obras').insert({
+      nome,
+      cliente,
+      valor: Number(valor),
+      empresa_id: empresaId
+    })
+
+    if (error) {
+      console.error(error)
+      alert('Erro ao salvar')
+      setLoading(false)
+      return
+    }
+
+    router.push('/obras')
   }
 
-  // 🔥 LOADING CORRETO
-  if (loading) return <Loader />
-  if (!empresaId) return <p>Erro ao carregar empresa</p>
-
   return (
-    <div style={{ padding: 24 }}>
-      <h1>Nova Obra</h1>
+    <div style={container}>
 
-      <form onSubmit={salvar} style={{ marginTop: 20 }}>
-        <input
-          placeholder="Nome da Obra"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          style={input}
-        />
+      <div style={card}>
 
-        <input
-          placeholder="Cliente"
-          value={cliente}
-          onChange={(e) => setCliente(e.target.value)}
-          style={input}
-        />
+        <h1 style={titulo}>🏗️ Nova Obra</h1>
 
-        <input
-          placeholder="Valor da Obra"
-          type="number"
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          style={input}
-        />
+        <form onSubmit={salvar} style={form}>
 
-        <button style={botao} disabled={salvando}>
-          {salvando ? 'Salvando...' : 'Salvar'}
-        </button>
-      </form>
+          <input
+            value={nome}
+            onChange={e=>setNome(e.target.value)}
+            placeholder="Nome da obra"
+            style={input}
+          />
+
+          <input
+            value={cliente}
+            onChange={e=>setCliente(e.target.value)}
+            placeholder="Nome do cliente"
+            style={input}
+          />
+
+          <input
+            value={valor}
+            onChange={e=>setValor(e.target.value)}
+            placeholder="Valor do contrato"
+            style={input}
+          />
+
+          <button style={botao} disabled={loading}>
+            {loading ? 'Salvando...' : 'Salvar Obra'}
+          </button>
+
+        </form>
+
+      </div>
+
     </div>
   )
 }
 
-/* 🔥 LOADER */
-function Loader() {
-  return (
-    <div style={loaderContainer}>
-      <div style={spinner}></div>
-      <p>Carregando...</p>
-    </div>
-  )
+/* UI */
+
+const container = {
+  background:'#f1f5f9',
+  minHeight:'100vh',
+  display:'flex',
+  justifyContent:'center',
+  alignItems:'center'
 }
 
-/* 🎨 ESTILO */
-
-const loaderContainer = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: '60vh',
+const card = {
+  background:'#fff',
+  padding:30,
+  borderRadius:12,
+  width:400,
+  boxShadow:'0 10px 30px rgba(0,0,0,0.05)'
 }
 
-const spinner = {
-  width: 40,
-  height: 40,
-  border: '4px solid #e2e8f0',
-  borderTop: '4px solid #2563eb',
-  borderRadius: '50%',
-  animation: 'spin 1s linear infinite',
+const titulo = {
+  marginBottom:20
+}
+
+const form = {
+  display:'flex',
+  flexDirection:'column' as const,
+  gap:12
 }
 
 const input = {
-  display: 'block',
-  marginBottom: 10,
-  padding: 10,
-  width: 300
+  padding:12,
+  borderRadius:8,
+  border:'1px solid #e2e8f0'
 }
 
 const botao = {
-  background: 'green',
-  color: '#fff',
-  padding: 10,
-  border: 'none',
-  borderRadius: 6,
-  cursor: 'pointer'
+  background:'#2563eb',
+  color:'#fff',
+  padding:12,
+  borderRadius:8,
+  border:'none',
+  fontWeight:600,
+  cursor:'pointer'
 }

@@ -15,7 +15,7 @@ type Orcamento = {
 }
 
 export default function OrcamentosPage() {
-  
+
   const { empresaId, limites, loading: loadingEmpresa } = useEmpresa()
   const [lista, setLista] = useState<Orcamento[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,18 +27,19 @@ export default function OrcamentosPage() {
   }, [empresaId])
 
   async function carregar() {
-    
-    if (!empresaId) return
 
     const { data, error } = await supabase
       .from('orcamentos')
       .select('*')
       .eq('empresa_id', empresaId)
 
-    if (!error && data) {
-      setLista(data)
+    if (error) {
+      console.error(error)
+      alert('Erro ao carregar orçamentos')
+      return
     }
 
+    setLista(data || [])
     setLoading(false)
   }
 
@@ -52,42 +53,28 @@ export default function OrcamentosPage() {
   const limite = limites.orcamentos
   const atingiuLimite = limite !== Infinity && lista.length >= limite
 
-  // 🔥 LOADER GLOBAL
-  if (loadingEmpresa) return <Loader />
-
-  // 🔥 LOADING
-  if (loading) return <Loader />
+  if (loadingEmpresa || loading) return <Loader />
 
   return (
     <div style={container}>
 
-      {/* 🚨 ALERTA DE LIMITE */}
       {atingiuLimite && (
         <div style={alerta}>
-          🚨 Você atingiu o limite do plano.
-          <button
-            style={btnUpgrade}
-            onClick={() => router.push('/bloqueado')}
-          >
+          🚨 Limite do plano atingido
+          <button style={btnUpgrade} onClick={()=>router.push('/bloqueado')}>
             Fazer upgrade
           </button>
         </div>
       )}
 
       <div style={header}>
-        <h1>
-          Orçamentos ({lista.length}/{limite === Infinity ? '∞' : limite})
-        </h1>
+        <h1>📑 Orçamentos</h1>
 
         <button
-          style={{
-            ...btnNovo,
-            opacity: atingiuLimite ? 0.5 : 1
-          }}
+          style={btnNovo}
           onClick={() => {
             if (atingiuLimite) {
-              alert('Limite atingido. Faça upgrade.')
-              router.push('/bloqueado')
+              alert('Limite atingido')
               return
             }
             router.push('/orcamentos/novo')
@@ -97,160 +84,63 @@ export default function OrcamentosPage() {
         </button>
       </div>
 
-      <table style={tabela}>
+      {/* 🔥 CARDS PREMIUM */}
+      <div style={grid}>
 
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Valor</th>
-            <th>Status</th>
-            <th>Data</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
+        {lista.map(o => (
+          <div key={o.id} style={card}>
 
-        <tbody>
-          {lista.map(o => (
-            <tr key={o.id} style={linha}>
+            <div>
+              <h3>{o.cliente_nome}</h3>
 
-              <td>{o.cliente_nome}</td>
+              <p style={valor}>
+                {formatarMoeda(o.valor_total)}
+              </p>
 
-              <td>{formatarMoeda(o.valor_total)}</td>
+              <span style={badge(o.status)}>
+                {o.status || 'pendente'}
+              </span>
 
-              <td>
-                <span style={status(o.status)}>
-                  {o.status || 'pendente'}
-                </span>
-              </td>
+              <p style={data}>
+                {new Date(o.created_at).toLocaleDateString('pt-BR')}
+              </p>
+            </div>
 
-              <td>
-                {new Date(o.created_at).toLocaleDateString()}
-              </td>
+            <div style={acoes}>
 
-              <td style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => copiarLink(o.id)} style={btnSec}>
+                🔗 Link
+              </button>
 
-              <button onClick={() => {
-  const link = `${window.location.origin}/orcamentos/${o.id}`
+              <button onClick={() => router.push(`/orcamentos/${o.id}`)} style={btnPrim}>
+                Ver
+              </button>
+
+              <button onClick={() => router.push(`/orcamentos/editar/${o.id}`)} style={btnSec}>
+                Editar
+              </button>
+
+              <button onClick={() => enviarCliente(o.id, o.telefone || '')} style={btnWhats}>
+                WhatsApp
+              </button>
+
+            </div>
+
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  )
+}
+
+/* ================= FUNÇÕES ================= */
+
+function copiarLink(id:string){
+  const link = `${window.location.origin}/orcamentos/${id}`
   navigator.clipboard.writeText(link)
-}}>
-  🔗 Link
-</button>
-
-                <button
-                  style={btn}
-                  onClick={() => router.push(`/orcamentos/editar/${o.id}`)}
-                >
-                  Editar
-                </button>
-
-                <button
-                  style={btn}
-                  onClick={() => router.push(`/orcamentos/${o.id}`)}
-                >
-                  Ver
-                </button>
-
-                <button onClick={() => enviarCliente(o.id, o.telefone || '')}>
-                  WhatsApp
-                </button>
-              </td>
-
-            </tr>
-          ))}
-        </tbody>
-
-      </table>
-
-    </div>
-  )
-}
-
-/* 🔥 LOADER */
-function Loader() {
-  return (
-    <div style={loaderContainer}>
-      <div style={spinner}></div>
-      <p>Carregando...</p>
-    </div>
-  )
-}
-
-/* 🎨 ESTILO */
-
-const alerta = {
-  background: '#fef3c7',
-  padding: 15,
-  borderRadius: 8,
-  marginBottom: 20,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center'
-}
-
-const btnUpgrade = {
-  background: '#f59e0b',
-  color: '#fff',
-  padding: '6px 12px',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer'
-}
-
-const loaderContainer = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: '60vh',
-}
-
-const spinner = {
-  width: 40,
-  height: 40,
-  border: '4px solid #e2e8f0',
-  borderTop: '4px solid #2563eb',
-  borderRadius: '50%',
-  animation: 'spin 1s linear infinite',
-}
-
-const container = { padding: 24 }
-
-const header = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center'
-}
-
-const tabela = {
-  width: '100%',
-  marginTop: 20,
-  borderCollapse: 'collapse'
-}
-
-const linha = {
-  borderBottom: '1px solid #e2e8f0'
-}
-
-const btnNovo = {
-  background: '#2563eb',
-  color: '#fff',
-  padding: '10px 14px',
-  borderRadius: 8,
-  border: 'none',
-  cursor: 'pointer'
-}
-
-const btn = {
-  padding: '6px 10px',
-  borderRadius: 6,
-  border: '1px solid #cbd5e1',
-  cursor: 'pointer'
-}
-
-function status(s?: string) {
-  if (s === 'aprovado') return { color: '#16a34a', fontWeight: 600 }
-  if (s === 'recusado') return { color: '#dc2626', fontWeight: 600 }
-  return { color: '#f59e0b', fontWeight: 600 }
+  alert('Link copiado!')
 }
 
 function enviarCliente(id: string, telefone: string) {
@@ -263,4 +153,106 @@ function enviarCliente(id: string, telefone: string) {
     : `https://wa.me/?text=${encodeURIComponent(texto)}`
 
   window.open(url)
+}
+
+/* ================= UI ================= */
+
+function Loader(){
+  return <p style={{ padding:40 }}>Carregando...</p>
+}
+
+const container = { padding:24 }
+
+const header = {
+  display:'flex',
+  justifyContent:'space-between',
+  marginBottom:20
+}
+
+const grid = {
+  display:'grid',
+  gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',
+  gap:16
+}
+
+const card = {
+  background:'#fff',
+  padding:20,
+  borderRadius:12,
+  boxShadow:'0 4px 12px rgba(0,0,0,0.05)',
+  display:'flex',
+  flexDirection:'column',
+  justifyContent:'space-between'
+}
+
+const valor = {
+  fontSize:18,
+  fontWeight:700,
+  marginTop:6
+}
+
+const data = {
+  fontSize:12,
+  color:'#64748b',
+  marginTop:6
+}
+
+const acoes = {
+  marginTop:10,
+  display:'flex',
+  flexWrap:'wrap',
+  gap:8
+}
+
+const btnNovo = {
+  background:'#2563eb',
+  color:'#fff',
+  padding:'10px 14px',
+  borderRadius:8,
+  border:'none'
+}
+
+const btnPrim = {
+  background:'#2563eb',
+  color:'#fff',
+  padding:'8px 12px',
+  borderRadius:6,
+  border:'none'
+}
+
+const btnSec = {
+  background:'#e2e8f0',
+  padding:'8px 12px',
+  borderRadius:6,
+  border:'none'
+}
+
+const btnWhats = {
+  background:'#22c55e',
+  color:'#fff',
+  padding:'8px 12px',
+  borderRadius:6,
+  border:'none'
+}
+
+const alerta = {
+  background:'#fef3c7',
+  padding:12,
+  borderRadius:8,
+  marginBottom:20
+}
+
+const btnUpgrade = {
+  marginLeft:10,
+  background:'#f59e0b',
+  color:'#fff',
+  padding:'6px 10px',
+  border:'none',
+  borderRadius:6
+}
+
+function badge(status?:string){
+  if(status==='aprovado') return { color:'#16a34a', fontWeight:600 }
+  if(status==='recusado') return { color:'#dc2626', fontWeight:600 }
+  return { color:'#f59e0b', fontWeight:600 }
 }

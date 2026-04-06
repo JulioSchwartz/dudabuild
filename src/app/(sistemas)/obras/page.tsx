@@ -10,247 +10,170 @@ export default function Obras() {
 
   const { empresaId, limites, loading: loadingEmpresa } = useEmpresa()
   const router = useRouter()
+
   const [obras, setObras] = useState<any[]>([])
+  const [financeiro, setFinanceiro] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const empresa = localStorage.getItem('empresa_id')
-
-    if (!empresa) {
-      router.push('/login')
-      return
-    }
-
-    if (empresaId) {
-      buscar()
-    }
+    if (!empresaId) return
+    carregar()
   }, [empresaId])
 
-  async function buscar() {
+  async function carregar() {
 
-    if (!empresaId) return
-
-    const { data, error } = await supabase
+    const { data: obrasData } = await supabase
       .from('obras')
       .select('*')
       .eq('empresa_id', empresaId)
 
-    if (!error && data) {
-      setObras(data)
-    }
+    const { data: finData } = await supabase
+      .from('financeiro')
+      .select('*')
+      .eq('empresa_id', empresaId)
 
+    setObras(obrasData || [])
+    setFinanceiro(finData || [])
     setLoading(false)
   }
 
-  async function excluir(id: number) {
-    const confirmar = confirm('Deseja excluir esta obra?')
-    if (!confirmar) return
+  function calcularLucro(obraId:number){
 
-    await supabase.from('financeiro').delete().eq('obra_id', id)
-    await supabase.from('obras').delete().eq('id', id)
+    const itens = financeiro.filter(f => f.obra_id === obraId)
 
-    buscar()
+    const entrada = itens
+      .filter(i=>i.tipo==='entrada')
+      .reduce((a,b)=>a+Number(b.valor),0)
+
+    const saida = itens
+      .filter(i=>i.tipo==='saida')
+      .reduce((a,b)=>a+Number(b.valor),0)
+
+    return entrada - saida
   }
 
-  const limite = limites.obras
-  const atingiuLimite = limite !== Infinity && obras.length >= limite
-
-  // 🔥 LOADER GLOBAL
-  if (loadingEmpresa) return <Loader />
-
-  // 🔥 LOADING
-  if (loading) return <Loader />
+  if (loadingEmpresa || loading) return <p>Carregando...</p>
 
   return (
-    <div style={{ padding: 24 }}>
-
-      {/* 🚨 ALERTA DE LIMITE */}
-      {atingiuLimite && (
-        <div style={alerta}>
-          🚨 Você atingiu o limite do plano.
-          <button
-            style={btnUpgrade}
-            onClick={() => router.push('/bloqueado')}
-          >
-            Fazer upgrade
-          </button>
-        </div>
-      )}
+    <div style={{ padding:24 }}>
 
       <div style={header}>
-        <h1 style={titulo}>
-          Obras ({obras.length}/{limite === Infinity ? '∞' : limite})
-        </h1>
+        <h1>🏗️ Obras</h1>
 
-        <button
-          style={{
-            ...btnNova,
-            opacity: atingiuLimite ? 0.5 : 1
-          }}
-          onClick={() => {
-            if (atingiuLimite) {
-              alert('Limite atingido. Faça upgrade.')
-              router.push('/bloqueado')
-              return
-            }
-            router.push('/obras/nova')
-          }}
-        >
+        <button style={btnNova} onClick={()=>router.push('/obras/nova')}>
           + Nova Obra
         </button>
       </div>
 
       <div style={grid}>
-        {obras.map((obra) => (
-          <div key={obra.id} style={card}>
-            <h3 style={nome}>{obra.nome}</h3>
-            <p style={cliente}>{obra.cliente}</p>
+        {obras.map((obra)=>{
 
-<p style={valorObra}>
-  💰 {Number(obra.valor || 0).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })}
-</p>
+          const lucro = calcularLucro(obra.id)
 
-            <div style={botoes}>
-              <Link href={`/obras/${obra.id}`}>
-                <button style={btnVer}>Ver</button>
-              </Link>
+          return (
+            <div key={obra.id} style={card(lucro)}>
 
-              <button
-                onClick={() => excluir(obra.id)}
-                style={btnExcluir}
-              >
-                Excluir
-              </button>
+              <h3>{obra.nome}</h3>
+              <p style={{ color:'#64748b' }}>{obra.cliente}</p>
+
+              <p style={valor}>
+                💰 {format(obra.valor || 0)}
+              </p>
+
+              <p style={{
+                color: lucro >= 0 ? '#16a34a' : '#dc2626',
+                fontWeight:600
+              }}>
+                {lucro >= 0 ? 'Lucro' : 'Prejuízo'}: {format(lucro)}
+              </p>
+
+              <div style={botoes}>
+                <Link href={`/obras/${obra.id}`}>
+                  <button style={btnVer}>Ver</button>
+                </Link>
+
+                <button onClick={()=>excluir(obra.id)} style={btnExcluir}>
+                  Excluir
+                </button>
+              </div>
+
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
+
     </div>
   )
+
+  async function excluir(id:number){
+    if (!confirm('Excluir obra?')) return
+
+    await supabase.from('financeiro').delete().eq('obra_id', id)
+    await supabase.from('obras').delete().eq('id', id)
+
+    carregar()
+  }
 }
 
-/* 🔥 LOADER */
-function Loader() {
-  return (
-    <div style={loaderContainer}>
-      <div style={spinner}></div>
-      <p>Carregando...</p>
-    </div>
-  )
+/* HELPERS */
+
+function format(v:number){
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 }
 
-/* 🎨 ESTILO */
-
-const alerta = {
-  background: '#fef3c7',
-  padding: 15,
-  borderRadius: 8,
-  marginBottom: 20,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center'
-}
-
-const btnUpgrade = {
-  background: '#f59e0b',
-  color: '#fff',
-  padding: '6px 12px',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer'
-}
-
-const loaderContainer = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: '60vh',
-}
-
-const spinner = {
-  width: 40,
-  height: 40,
-  border: '4px solid #e2e8f0',
-  borderTop: '4px solid #2563eb',
-  borderRadius: '50%',
-  animation: 'spin 1s linear infinite',
-}
+/* UI */
 
 const header = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '20px',
-}
-
-const titulo = {
-  color: '#0f172a',
+  display:'flex',
+  justifyContent:'space-between',
+  marginBottom:20
 }
 
 const grid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-  gap: '20px',
+  display:'grid',
+  gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',
+  gap:16
 }
 
-const card = {
-  background: '#ffffff',
-  padding: '20px',
-  borderRadius: '12px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-  border: '1px solid #e2e8f0',
-}
+const card = (lucro:number)=>({
+  background: lucro >= 0 ? '#ecfdf5' : '#fee2e2',
+  padding:20,
+  borderRadius:12,
+  border:`1px solid ${lucro >= 0 ? '#16a34a' : '#dc2626'}`,
+  boxShadow:'0 4px 12px rgba(0,0,0,0.05)'
+})
 
-const nome = {
-  color: '#0f172a',
-  marginBottom: '5px',
-}
-
-const cliente = {
-  color: '#64748b',
-}
-
-const valorObra = {
-  fontSize: '16px',
-  fontWeight: '600',
-  color: '#16a34a',
-  marginTop: '4px',
+const valor = {
+  fontWeight:600,
+  marginTop:6
 }
 
 const botoes = {
-  marginTop: '10px',
-  display: 'flex',
-  gap: '10px',
+  marginTop:10,
+  display:'flex',
+  gap:10
 }
 
 const btnNova = {
-  background: '#2563eb',
-  color: '#fff',
-  padding: '10px 14px',
-  border: 'none',
-  borderRadius: '8px',
-  fontWeight: '500',
-  cursor: 'pointer'
+  background:'#2563eb',
+  color:'#fff',
+  padding:'10px 14px',
+  borderRadius:8,
+  border:'none'
 }
 
 const btnVer = {
-  background: '#22c55e',
-  color: '#fff',
-  border: 'none',
-  padding: '8px 12px',
-  borderRadius: '6px',
-  cursor: 'pointer',
+  background:'#22c55e',
+  color:'#fff',
+  border:'none',
+  padding:'8px 12px',
+  borderRadius:6
 }
 
 const btnExcluir = {
-  background: '#ef4444',
-  color: '#fff',
-  border: 'none',
-  padding: '8px 12px',
-  borderRadius: '6px',
-  cursor: 'pointer',
+  background:'#ef4444',
+  color:'#fff',
+  border:'none',
+  padding:'8px 12px',
+  borderRadius:6
 }

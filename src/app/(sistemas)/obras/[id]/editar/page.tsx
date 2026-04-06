@@ -6,25 +6,35 @@ import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function EditarObra() {
-  const empresaId = useEmpresa()
+
+  const { empresaId } = useEmpresa()
   const { id } = useParams()
   const router = useRouter()
 
   const [nome, setNome] = useState('')
   const [cliente, setCliente] = useState('')
   const [valor, setValor] = useState('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    if (!empresaId || !id) return
     buscar()
-  }, [])
+  }, [empresaId, id])
 
   async function buscar() {
-    const { data } = await supabase
-  .from('obras')
-  .select('*')
-  .eq('id', id)
-  .eq('empresa_id', empresaId)
-  .single()
+
+    const { data, error } = await supabase
+      .from('obras')
+      .select('*')
+      .eq('id', Number(id))
+      .eq('empresa_id', empresaId)
+      .single()
+
+    if (error) {
+      console.error(error)
+      alert('Erro ao carregar obra')
+      return
+    }
 
     if (data) {
       setNome(data.nome)
@@ -41,49 +51,115 @@ export default function EditarObra() {
       return
     }
 
-    await supabase
+    if (Number(valor) <= 0) {
+      alert('Valor inválido')
+      return
+    }
+
+    setLoading(true)
+
+    const { error } = await supabase
       .from('obras')
       .update({
         nome,
         cliente,
         valor: Number(valor),
       })
-      .eq('id', id)
+      .eq('id', Number(id))
+
+    if (error) {
+      console.error(error)
+      alert('Erro ao salvar')
+      setLoading(false)
+      return
+    }
 
     router.push('/obras')
   }
 
   return (
-    <div>
-      <h1>Editar Obra</h1>
+    <div style={container}>
 
-      <form onSubmit={salvar} style={{ marginTop: '20px' }}>
-        <input value={nome} onChange={(e) => setNome(e.target.value)} style={input} />
-        <input value={cliente} onChange={(e) => setCliente(e.target.value)} style={input} />
-        <input
-          value={valor}
-          type="number"
-          onChange={(e) => setValor(e.target.value)}
-          style={input}
-        />
+      <div style={card}>
 
-        <button style={botao}>Salvar Alterações</button>
-      </form>
+        <h1 style={titulo}>✏️ Editar Obra</h1>
+
+        <form onSubmit={salvar} style={form}>
+
+          <input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            style={input}
+            placeholder="Nome da obra"
+          />
+
+          <input
+            value={cliente}
+            onChange={(e) => setCliente(e.target.value)}
+            style={input}
+            placeholder="Cliente"
+          />
+
+          <input
+            value={valor}
+            type="number"
+            onChange={(e) => setValor(e.target.value)}
+            style={input}
+            placeholder="Valor"
+          />
+
+          <button style={botao} disabled={loading}>
+            {loading ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+
+        </form>
+
+      </div>
+
     </div>
   )
 }
 
+/* UI */
+
+const container = {
+  background:'#f1f5f9',
+  minHeight:'100vh',
+  display:'flex',
+  justifyContent:'center',
+  alignItems:'center'
+}
+
+const card = {
+  background:'#fff',
+  padding:30,
+  borderRadius:12,
+  width:400,
+  boxShadow:'0 10px 30px rgba(0,0,0,0.05)'
+}
+
+const titulo = {
+  marginBottom:20
+}
+
+const form = {
+  display:'flex',
+  flexDirection:'column',
+  gap:12
+}
+
 const input = {
-  display: 'block',
-  marginBottom: '10px',
-  padding: '10px',
-  width: '300px',
+  padding:12,
+  borderRadius:8,
+  border:'1px solid #e2e8f0'
 }
 
 const botao = {
-  background: 'orange',
-  color: '#fff',
-  padding: '10px',
-  border: 'none',
-  borderRadius: '6px',
+  background:'#2563eb',
+  color:'#fff',
+  padding:12,
+  borderRadius:8,
+  border:'none',
+  fontWeight:600,
+  cursor:'pointer'
 }

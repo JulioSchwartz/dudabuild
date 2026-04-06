@@ -14,8 +14,9 @@ export default function OrcamentoCliente() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!id) return
     carregar()
-  }, [])
+  }, [id])
 
   async function carregar() {
 
@@ -36,7 +37,7 @@ export default function OrcamentoCliente() {
   }
 
   function totalItem(i: any) {
-    return (i.material + i.mao_obra + i.equipamentos) * i.quantidade
+    return (Number(i.material || 0) + Number(i.mao_obra || 0) + Number(i.equipamentos || 0)) * Number(i.quantidade || 0)
   }
 
   function totalGeral() {
@@ -56,14 +57,14 @@ export default function OrcamentoCliente() {
         .from('obras')
         .insert({
           nome: `Obra - ${orcamento.cliente_nome}`,
-          cliente_nome: orcamento.cliente_nome,
-          valor_total: totalGeral()
+          cliente: orcamento.cliente_nome,
+          valor: totalGeral(),
+          empresa_id: orcamento.empresa_id
         })
         .select()
         .single()
 
       if (obra) {
-
         await supabase
           .from('orcamentos')
           .update({ obra_id: obra.id })
@@ -71,6 +72,7 @@ export default function OrcamentoCliente() {
 
         await lancarMovimento({
           obra_id: obra.id,
+          empresa_id: orcamento.empresa_id,
           tipo: 'entrada',
           descricao: 'Contrato aprovado',
           valor: totalGeral()
@@ -81,7 +83,7 @@ export default function OrcamentoCliente() {
     setOrcamento({ ...orcamento, status })
   }
 
-  if (loading) return <p style={{ padding: 40 }}>Carregando proposta...</p>
+  if (loading) return <p style={{ padding: 40 }}>Carregando...</p>
 
   return (
     <div style={container}>
@@ -95,74 +97,46 @@ export default function OrcamentoCliente() {
         </div>
 
         {/* CLIENTE */}
-        <div style={bloco}>
+        <div style={clienteBox}>
           <p><strong>Cliente:</strong> {orcamento?.cliente_nome}</p>
-          <p><strong>Descrição:</strong> {orcamento?.descricao}</p>
+          <p>{orcamento?.descricao}</p>
         </div>
 
-        {/* TABELA PREMIUM */}
+        {/* ITENS */}
         <div style={bloco}>
-          <h2 style={subtitulo}>Detalhamento</h2>
-
-          <table style={tabela}>
-            <thead>
-              <tr>
-                <th>Descrição</th>
-                <th>Qtd</th>
-                <th>Material</th>
-                <th>M.O</th>
-                <th>Equip</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {itens.map((i, index) => (
-                <tr key={index}>
-                  <td>{i.descricao}</td>
-                  <td>{i.quantidade}</td>
-                  <td>{format(i.material)}</td>
-                  <td>{format(i.mao_obra)}</td>
-                  <td>{format(i.equipamentos)}</td>
-                  <td style={{ fontWeight: 600 }}>
-                    {format(totalItem(i))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {itens.map((i, index) => (
+            <div key={index} style={item}>
+              <span>{i.descricao}</span>
+              <span>{format(totalItem(i))}</span>
+            </div>
+          ))}
         </div>
 
         {/* TOTAL DESTACADO */}
         <div style={totalBox}>
-          <span>Valor do Investimento</span>
-          <h2>{format(totalGeral())}</h2>
+          <span>Investimento Total</span>
+          <h1>{format(totalGeral())}</h1>
         </div>
 
-        {/* BOTÕES */}
-        {!orcamento.status && (
-          <div style={acoes}>
-
-            <button
-              style={btnAprovar}
-              onClick={() => atualizarStatus('aprovado')}
-            >
-              ✅ Aprovar Proposta
-            </button>
-
-            <button
-              style={btnRecusar}
-              onClick={() => atualizarStatus('recusado')}
-            >
-              ❌ Recusar
-            </button>
-
+        {/* STATUS */}
+        {orcamento.status && (
+          <div style={statusBadge(orcamento.status)}>
+            {orcamento.status.toUpperCase()}
           </div>
         )}
 
-        {orcamento.status && (
-          <div style={statusBox}>
-            Status: <strong>{orcamento.status}</strong>
+        {/* AÇÕES */}
+        {!orcamento.status && (
+          <div style={acoes}>
+
+            <button style={btnAprovar} onClick={() => atualizarStatus('aprovado')}>
+              ✅ Aprovar
+            </button>
+
+            <button style={btnRecusar} onClick={() => atualizarStatus('recusado')}>
+              ❌ Recusar
+            </button>
+
           </div>
         )}
 
@@ -172,100 +146,112 @@ export default function OrcamentoCliente() {
   )
 }
 
-/* ================= UI ================= */
+/* UI */
 
 const container = {
-  background: '#f1f5f9',
-  minHeight: '100vh',
-  display: 'flex',
-  justifyContent: 'center',
-  padding: 20
+  background:'#f1f5f9',
+  minHeight:'100vh',
+  display:'flex',
+  justifyContent:'center',
+  padding:20
 }
 
 const card = {
-  background: '#fff',
-  padding: 40,
-  borderRadius: 12,
-  width: 900,
-  boxShadow: '0 20px 50px rgba(0,0,0,0.05)'
+  background:'#fff',
+  padding:40,
+  borderRadius:12,
+  width:800,
+  boxShadow:'0 20px 50px rgba(0,0,0,0.05)'
 }
 
 const header = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginBottom: 20
+  display:'flex',
+  justifyContent:'space-between',
+  marginBottom:20
 }
 
 const titulo = {
-  fontSize: 28,
-  fontWeight: 700
+  fontSize:28,
+  fontWeight:700
 }
 
 const empresa = {
-  color: '#64748b'
+  color:'#64748b'
+}
+
+const clienteBox = {
+  background:'#f8fafc',
+  padding:15,
+  borderRadius:10
 }
 
 const bloco = {
-  marginTop: 20
+  marginTop:20
 }
 
-const subtitulo = {
-  fontSize: 18,
-  fontWeight: 600
-}
-
-const tabela = {
-  width: '100%',
-  marginTop: 10,
-  borderCollapse: 'collapse'
+const item = {
+  display:'flex',
+  justifyContent:'space-between',
+  padding:10,
+  borderBottom:'1px solid #e2e8f0'
 }
 
 const totalBox = {
-  marginTop: 30,
-  padding: 20,
-  background: '#ecfdf5',
-  borderRadius: 10,
-  textAlign: 'right' as const
+  marginTop:30,
+  padding:25,
+  background:'#16a34a',
+  color:'#fff',
+  borderRadius:12,
+  textAlign:'center' as const
 }
 
 const acoes = {
-  display: 'flex',
-  gap: 10,
-  marginTop: 30
+  display:'flex',
+  gap:10,
+  marginTop:30
 }
 
 const btnAprovar = {
-  background: '#16a34a',
-  color: '#fff',
-  padding: 16,
-  border: 'none',
-  borderRadius: 10,
-  cursor: 'pointer',
-  flex: 1,
-  fontSize: 16
+  background:'#16a34a',
+  color:'#fff',
+  padding:16,
+  borderRadius:10,
+  flex:1,
+  border:'none'
 }
 
 const btnRecusar = {
-  background: '#dc2626',
-  color: '#fff',
-  padding: 16,
-  border: 'none',
-  borderRadius: 10,
-  cursor: 'pointer',
-  flex: 1,
-  fontSize: 16
+  background:'#dc2626',
+  color:'#fff',
+  padding:16,
+  borderRadius:10,
+  flex:1,
+  border:'none'
 }
 
-const statusBox = {
-  marginTop: 30,
-  padding: 15,
-  background: '#e2e8f0',
-  borderRadius: 8,
-  textAlign: 'center' as const
+function statusBadge(status:string){
+  if(status==='aprovado'){
+    return {
+      background:'#dcfce7',
+      color:'#166534',
+      padding:10,
+      borderRadius:8,
+      marginTop:20,
+      textAlign:'center' as const,
+      fontWeight:700
+    }
+  }
+  return {
+    background:'#fee2e2',
+    color:'#991b1b',
+    padding:10,
+    borderRadius:8,
+    marginTop:20,
+    textAlign:'center' as const,
+    fontWeight:700
+  }
 }
-
-/* ================= HELPERS ================= */
 
 function format(v:number){
-  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+  return Number(v || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 }

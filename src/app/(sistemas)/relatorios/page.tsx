@@ -8,11 +8,13 @@ import {
   ResponsiveContainer, Legend
 } from 'recharts'
 
-export default function Financeiro() {
+export default function Relatorios() {
 
   const { empresaId } = useEmpresa()
 
   const [dados, setDados] = useState<any[]>([])
+  const [inicio, setInicio] = useState('')
+  const [fim, setFim] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,14 +24,19 @@ export default function Financeiro() {
 
   async function carregar() {
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('financeiro')
       .select('*')
       .eq('empresa_id', empresaId)
 
+    if (inicio) query = query.gte('created_at', inicio)
+    if (fim) query = query.lte('created_at', fim)
+
+    const { data, error } = await query
+
     if (error) {
       console.error(error)
-      alert('Erro ao carregar financeiro')
+      alert('Erro ao carregar relatórios')
       return
     }
 
@@ -37,28 +44,21 @@ export default function Financeiro() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p style={{ padding: 24 }}>Carregando financeiro...</p>
-  }
-
   /* ================= DADOS ================= */
 
-  const entradas = dados.filter(d => d.tipo === 'entrada')
-  const saidas = dados.filter(d => d.tipo === 'saida')
+  const entradas = dados.filter(d=>d.tipo==='entrada')
+  const saidas = dados.filter(d=>d.tipo==='saida')
 
   const receita = soma(entradas)
   const custo = soma(saidas)
   const lucro = receita - custo
-
   const margem = receita > 0 ? (lucro / receita) * 100 : 0
 
   /* ================= GRÁFICO ================= */
 
-  const porMes: any = {}
+  const porMes:any = {}
 
   dados.forEach(d => {
-    if (!d.created_at) return
-
     const mes = new Date(d.created_at)
       .toLocaleDateString('pt-BR',{month:'short'})
 
@@ -70,18 +70,31 @@ export default function Financeiro() {
 
   const grafico = Object.values(porMes)
 
+  if (loading) return <p style={{ padding: 24 }}>Carregando...</p>
+
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding:24 }}>
 
-      <h1 style={titulo}>💰 Financeiro</h1>
+      <h1 style={titulo}>📊 Relatórios</h1>
 
+      {/* FILTRO */}
+      <div style={filtro}>
+        <input type="date" value={inicio} onChange={(e)=>setInicio(e.target.value)} />
+        <input type="date" value={fim} onChange={(e)=>setFim(e.target.value)} />
+
+        <button onClick={carregar}>
+          Filtrar
+        </button>
+      </div>
+
+      {/* ALERTAS */}
       {lucro < 0 && (
         <div style={alertaErro}>
           ⚠️ Prejuízo no período
         </div>
       )}
 
-      {/* CARDS PREMIUM */}
+      {/* CARDS */}
       <div style={grid}>
         <Card titulo="Receita" valor={receita} cor="#16a34a"/>
         <Card titulo="Custos" valor={custo} cor="#dc2626"/>
@@ -91,7 +104,7 @@ export default function Financeiro() {
 
       {/* GRÁFICO */}
       <div style={graficoBox}>
-        <h3>📊 Evolução Financeira</h3>
+        <h3>Evolução</h3>
 
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={grafico}>
@@ -105,57 +118,62 @@ export default function Financeiro() {
         </ResponsiveContainer>
       </div>
 
+      {/* EXPORTAÇÃO */}
+      <button style={btnExport}>
+        📄 Exportar (em breve)
+      </button>
+
     </div>
   )
 }
 
-/* ================= HELPERS ================= */
+/* HELPERS */
 
 function soma(lista:any[]){
-  return lista.reduce((acc,i)=>acc+Number(i.valor),0)
+  return lista.reduce((a,b)=>a+Number(b.valor),0)
 }
 
 function format(v:number){
   return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 }
 
-/* ================= COMPONENTES ================= */
+/* COMPONENTES */
 
-function Card({ titulo, valor, cor, tipo }: any) {
-  return (
+function Card({ titulo, valor, cor, tipo }: any){
+  return(
     <div style={{
       background: cor + '15',
       padding:20,
       borderRadius:12,
-      border:`1px solid ${cor}`,
-      boxShadow:'0 4px 12px rgba(0,0,0,0.05)'
+      border:`1px solid ${cor}`
     }}>
-      <p style={{ color:'#64748b' }}>{titulo}</p>
-
-      <h2 style={{
-        color: cor,
-        fontSize: 22,
-        fontWeight: 700
-      }}>
+      <p>{titulo}</p>
+      <h2 style={{ color: cor }}>
         {tipo === 'porcentagem'
-          ? valor.toFixed(2) + '%'
+          ? valor.toFixed(2)+'%'
           : format(valor)}
       </h2>
     </div>
   )
 }
 
-/* ================= ESTILO ================= */
+/* ESTILO */
 
 const titulo = {
-  fontSize: 26,
-  fontWeight: 700,
-  marginBottom: 20
+  fontSize:26,
+  fontWeight:700,
+  marginBottom:20
+}
+
+const filtro = {
+  display:'flex',
+  gap:10,
+  marginBottom:20
 }
 
 const grid = {
   display:'grid',
-  gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',
+  gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',
   gap:16,
   marginBottom:30
 }
@@ -163,15 +181,22 @@ const grid = {
 const graficoBox = {
   background:'#fff',
   padding:20,
-  borderRadius:12,
-  boxShadow:'0 4px 12px rgba(0,0,0,0.05)'
+  borderRadius:12
 }
 
 const alertaErro = {
   background:'#fee2e2',
-  padding:12,
+  padding:10,
   borderRadius:8,
   marginBottom:10,
-  color:'#991b1b',
-  fontWeight:600
+  color:'#991b1b'
+}
+
+const btnExport = {
+  marginTop:20,
+  background:'#2563eb',
+  color:'#fff',
+  padding:12,
+  borderRadius:8,
+  border:'none'
 }

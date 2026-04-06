@@ -1,21 +1,27 @@
 import { supabase } from './supabase'
 
-export const opcoesFinanceiro = [
-  { label: 'Entrada', value: 'entrada' },
-  { label: 'Saída', value: 'saida' }
-]
-
 export async function lancarMovimento({
   obra_id,
+  empresa_id,
   tipo,
   descricao,
   valor
 }: any) {
 
-  await supabase.from('financeiro').insert({
+  if (!obra_id || !empresa_id) {
+    throw new Error('Dados inválidos')
+  }
+
+  const { error } = await supabase.from('financeiro').insert({
     obra_id,
+    empresa_id,
     tipo,
     descricao,
-    valor
+    valor: Number(valor)
   })
+
+  if (error) {
+    console.error(error)
+    throw error
+  }
 }

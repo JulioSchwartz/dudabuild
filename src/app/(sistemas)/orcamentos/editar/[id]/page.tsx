@@ -20,25 +20,27 @@ export default function EditarOrcamento(){
 
   async function carregar(){
 
-    // 🔹 ORÇAMENTO
-    const { data: orc } = await supabase
+    const { data: orc, error } = await supabase
       .from('orcamentos')
       .select('*')
       .eq('id', id)
       .single()
 
-    if (orc) {
-      setCliente(orc.cliente_nome || '')
-      setDescricao(orc.descricao || '')
+    if (error) {
+      console.error(error)
+      alert('Erro ao carregar orçamento')
+      return
     }
 
-    // 🔹 ITENS
-    const { data: itens } = await supabase
+    setCliente(orc?.cliente_nome || '')
+    setDescricao(orc?.descricao || '')
+
+    const { data: itensData } = await supabase
       .from('orcamento_itens')
       .select('*')
       .eq('orcamento_id', id)
 
-    setItens(itens || [])
+    setItens(itensData || [])
   }
 
   function atualizarItem(index:number,campo:string,valor:any){
@@ -54,7 +56,7 @@ export default function EditarOrcamento(){
   }
 
   function totalItem(i:any){
-    return (i.material+i.mao_obra+i.equipamentos)*i.quantidade
+    return (Number(i.material||0)+Number(i.mao_obra||0)+Number(i.equipamentos||0)) * Number(i.quantidade||0)
   }
 
   function totalGeral(){
@@ -65,8 +67,7 @@ export default function EditarOrcamento(){
 
     setLoading(true)
 
-    // 🔹 ATUALIZA ORÇAMENTO
-    await supabase
+    const { error } = await supabase
       .from('orcamentos')
       .update({
         cliente_nome: cliente,
@@ -75,13 +76,18 @@ export default function EditarOrcamento(){
       })
       .eq('id', id)
 
-    // 🔹 DELETA ITENS ANTIGOS
+    if (error) {
+      console.error(error)
+      alert('Erro ao salvar')
+      setLoading(false)
+      return
+    }
+
     await supabase
       .from('orcamento_itens')
       .delete()
       .eq('orcamento_id', id)
 
-    // 🔹 INSERE NOVOS ITENS
     await supabase.from('orcamento_itens').insert(
       itens.map(i => ({
         ...i,
@@ -96,7 +102,7 @@ export default function EditarOrcamento(){
 
   function enviarWhatsApp() {
 
-    const link = `${window.location.origin}/orcamento/${id}`
+    const link = `${window.location.origin}/orcamentos/${id}`
 
     const texto = `Olá! Segue seu orçamento:\n${link}`
 
@@ -106,7 +112,7 @@ export default function EditarOrcamento(){
   return(
     <div style={container}>
 
-      <h1>Editar Orçamento</h1>
+      <h1 style={titulo}>✏️ Editar Orçamento</h1>
 
       <input
         placeholder="Cliente"
@@ -129,13 +135,15 @@ export default function EditarOrcamento(){
         totalItem={totalItem}
       />
 
-      <div style={total}>R$ {totalGeral().toFixed(2)}</div>
+      <div style={total}>
+        {format(totalGeral())}
+      </div>
 
-      <button onClick={salvar} style={btn}>
+      <button onClick={salvar} style={btnPrim}>
         {loading ? 'Salvando...' : 'Salvar'}
       </button>
 
-      <button onClick={enviarWhatsApp} style={btn}>
+      <button onClick={enviarWhatsApp} style={btnWhats}>
         WhatsApp
       </button>
 
@@ -143,21 +151,50 @@ export default function EditarOrcamento(){
   )
 }
 
+/* HELPERS */
+
+function format(v:number){
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+}
+
+/* UI */
+
 const container={maxWidth:1100,margin:'0 auto',padding:24}
-const total={fontSize:24,fontWeight:700,marginTop:20}
+
+const titulo={
+  fontSize:24,
+  fontWeight:700
+}
+
+const total={
+  fontSize:26,
+  fontWeight:700,
+  marginTop:20,
+  color:'#16a34a'
+}
 
 const input={
   width:'100%',
   marginTop:10,
   padding:12,
-  borderRadius:8
+  borderRadius:8,
+  border:'1px solid #e2e8f0'
 }
 
-const btn={
+const btnPrim={
   marginTop:10,
   padding:12,
   borderRadius:8,
   border:'none',
   background:'#2563eb',
+  color:'#fff'
+}
+
+const btnWhats={
+  marginTop:10,
+  padding:12,
+  borderRadius:8,
+  border:'none',
+  background:'#22c55e',
   color:'#fff'
 }
