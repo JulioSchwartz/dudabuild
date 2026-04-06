@@ -58,7 +58,7 @@ export default function DetalheObra() {
       .from('financeiro')
       .select('*')
       .eq('obra_id', Number(id))
-      .or(`empresa_id.eq.${empresaId},empresa_id.is.null`)
+      .eq('empresa_id', empresaId)
       .order('created_at', { ascending: true })
 
     setObra(obraData)
@@ -92,7 +92,7 @@ export default function DetalheObra() {
     await supabase.from('financeiro').insert([
       {
         obra_id: Number(id),
-        empresa_id: empresaId, // 🔥 CORREÇÃO IMPORTANTE
+        empresa_id: empresaId,
         tipo,
         descricao,
         valor: Number(valor),
@@ -181,11 +181,10 @@ export default function DetalheObra() {
 
       <h2 style={sectionTitle}>Fluxo de Caixa</h2>
 
-      {/* 🔥 FORMULÁRIO RESTAURADO */}
       <div style={box}>
 
+        {/* FORMULÁRIO */}
         <form onSubmit={adicionar} style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-
           <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
             <option value="entrada">Entrada</option>
             <option value="saida">Saída</option>
@@ -221,24 +220,23 @@ export default function DetalheObra() {
           />
 
           <button type="submit">Adicionar</button>
-
         </form>
 
+        {/* LISTA */}
         {financeiro.map((f) => (
           <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
             <span>{f.tipo} - {f.descricao}</span>
-
             <strong>
               {Number(f.valor).toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
               })}
             </strong>
-
             <button onClick={() => excluirLancamento(f.id)}>❌</button>
           </div>
         ))}
 
+        {/* GRÁFICO */}
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={dadosGrafico}>
             <XAxis dataKey="mes" />
@@ -256,22 +254,38 @@ export default function DetalheObra() {
   )
 }
 
+/* COMPONENTES */
+
+function Loader() {
+  return <p style={{ padding: 20 }}>Carregando...</p>
+}
+
+function SkeletonObra() {
+  return <p style={{ padding: 20 }}>Carregando obra...</p>
+}
+
+function Card({ titulo, valor, cor, tipo }: any) {
+  return (
+    <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
+      <p>{titulo}</p>
+      <h2>
+        {tipo === 'porcentagem'
+          ? valor.toFixed(2) + '%'
+          : valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+      </h2>
+    </div>
+  )
+}
+
 /* ESTILOS */
 const valorObra = { fontSize: 18, fontWeight: 600, color: '#16a34a' }
-const loaderContainer = { display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'60vh' }
-const spinner = { width:40,height:40,border:'4px solid #e2e8f0',borderTop:'4px solid #2563eb',borderRadius:'50%',animation:'spin 1s linear infinite' }
-const skeletonTitle = { width:'40%',height:24,background:'#e2e8f0',borderRadius:6 }
-const skeletonSub = { width:'30%',height:16,background:'#e2e8f0',borderRadius:6,marginTop:10 }
-const skeletonCard = { height:80,background:'#e2e8f0',borderRadius:10,marginTop:10 }
-
-const boxAcoes = { display:'flex',gap:10 }
-const btnCopiar = { background:'#0ea5e9',color:'#fff',padding:10,border:'none',borderRadius:8 }
-const btnWhats = { background:'#22c55e',color:'#fff',padding:10,border:'none',borderRadius:8 }
-const btnFotos = { background:'#0ea5e9',color:'#fff',padding:10,border:'none',borderRadius:8,marginTop:10 }
-
-const grid = { display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))',gap:20 }
-const card = { background:'#fff',padding:20,borderRadius:12 }
-const box = { background:'#fff',padding:20,borderRadius:12 }
-const titulo = { color:'#0f172a' }
-const subtitulo = { color:'#64748b' }
-const sectionTitle = { marginTop:20 }
+const boxAcoes = { display: 'flex', gap: 10 }
+const btnCopiar = { background: '#0ea5e9', color: '#fff', padding: 10, border: 'none', borderRadius: 8 }
+const btnWhats = { background: '#22c55e', color: '#fff', padding: 10, border: 'none', borderRadius: 8 }
+const btnFotos = { background: '#0ea5e9', color: '#fff', padding: 10, border: 'none', borderRadius: 8, marginTop: 10 }
+const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }
+const card = { background: '#fff', padding: 20, borderRadius: 12 }
+const box = { background: '#fff', padding: 20, borderRadius: 12 }
+const titulo = { color: '#0f172a' }
+const subtitulo = { color: '#64748b' }
+const sectionTitle = { marginTop: 20 }
