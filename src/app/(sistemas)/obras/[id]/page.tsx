@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { opcoesFinanceiro } from '@/lib/financeiro'
 import { useEmpresa } from '@/hooks/useEmpresa'
 import {
   LineChart,
@@ -29,20 +28,20 @@ export default function DetalheObra() {
   const [valor, setValor] = useState('')
 
   useEffect(() => {
-  if (loadingEmpresa) return
+    if (loadingEmpresa) return
 
-  const empresa = localStorage.getItem('empresa_id')
+    const empresa = localStorage.getItem('empresa_id')
 
-  if (!empresa) {
-    router.push('/login')
-    return
-  }
+    if (!empresa) {
+      router.push('/login')
+      return
+    }
 
-  if (!id || !empresaId) return
+    if (!id || !empresaId) return
 
-  carregar()
+    carregar()
 
-}, [id, empresaId, loadingEmpresa])
+  }, [id, empresaId, loadingEmpresa])
 
   async function carregar() {
 
@@ -55,13 +54,12 @@ export default function DetalheObra() {
       .eq('empresa_id', empresaId)
       .maybeSingle()
 
- 
-const { data: financeiroData } = await supabase
-  .from('financeiro')
-  .select('*')
-  .eq('obra_id', Number(id))
-  .or(`empresa_id.eq.${empresaId},empresa_id.is.null`)
-  .order('created_at', { ascending: true })
+    const { data: financeiroData } = await supabase
+      .from('financeiro')
+      .select('*')
+      .eq('obra_id', Number(id))
+      .or(`empresa_id.eq.${empresaId},empresa_id.is.null`)
+      .order('created_at', { ascending: true })
 
     setObra(obraData)
     setFinanceiro(financeiroData || [])
@@ -92,14 +90,15 @@ const { data: financeiroData } = await supabase
     if (!valor || Number(valor) <= 0) return alert('Valor inválido')
 
     await supabase.from('financeiro').insert([
-  {
-    obra_id: Number(id), // 🔥 corrigido
-    tipo,
-    descricao,
-    valor: Number(valor),
-    created_at: new Date().toISOString(),
-  },
-])
+      {
+        obra_id: Number(id),
+        empresa_id: empresaId, // 🔥 CORREÇÃO IMPORTANTE
+        tipo,
+        descricao,
+        valor: Number(valor),
+        created_at: new Date().toISOString(),
+      },
+    ])
 
     setDescricao('')
     setValor('')
@@ -120,24 +119,11 @@ const { data: financeiroData } = await supabase
   const entradas = lista.filter((f) => f.tipo === 'entrada')
   const saidas = lista.filter((f) => f.tipo === 'saida')
 
-  const categoriasEntrada: any = {}
-  entradas.forEach((e) => {
-    if (!categoriasEntrada[e.descricao]) categoriasEntrada[e.descricao] = 0
-    categoriasEntrada[e.descricao] += Number(e.valor)
-  })
-
-  const categorias: any = {}
-  saidas.forEach((s) => {
-    if (!categorias[s.descricao]) categorias[s.descricao] = 0
-    categorias[s.descricao] += Number(s.valor)
-  })
-
   const totalEntradas = entradas.reduce((acc, e) => acc + Number(e.valor), 0)
   const totalSaidas = saidas.reduce((acc, s) => acc + Number(s.valor), 0)
 
   const lucro = totalEntradas - totalSaidas
   const margem = totalEntradas > 0 ? (lucro / totalEntradas) * 100 : 0
-
   const roi = totalSaidas > 0 ? lucro / totalSaidas : 0
   const custoPorMetro = obra?.area ? totalSaidas / obra.area : 0
 
@@ -164,6 +150,7 @@ const { data: financeiroData } = await supabase
 
   return (
     <div>
+
       <h1 style={titulo}>{obra.nome}</h1>
       <p style={subtitulo}>{obra.cliente}</p>
 
@@ -194,7 +181,64 @@ const { data: financeiroData } = await supabase
 
       <h2 style={sectionTitle}>Fluxo de Caixa</h2>
 
+      {/* 🔥 FORMULÁRIO RESTAURADO */}
       <div style={box}>
+
+        <form onSubmit={adicionar} style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+
+          <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+            <option value="entrada">Entrada</option>
+            <option value="saida">Saída</option>
+          </select>
+
+          <select value={descricao} onChange={(e) => setDescricao(e.target.value)}>
+            <option value="">Selecione</option>
+
+            {tipo === 'entrada' && (
+              <>
+                <option value="valor_cliente">Valor Cliente</option>
+                <option value="parcela_cliente">Parcela Cliente</option>
+                <option value="adicional">Adicional</option>
+              </>
+            )}
+
+            {tipo === 'saida' && (
+              <>
+                <option value="material">Material</option>
+                <option value="mao_obra">Mão de Obra</option>
+                <option value="equipamentos">Equipamentos</option>
+                <option value="aluguel">Aluguel</option>
+                <option value="outros">Outros</option>
+              </>
+            )}
+          </select>
+
+          <input
+            type="number"
+            placeholder="Valor"
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+          />
+
+          <button type="submit">Adicionar</button>
+
+        </form>
+
+        {financeiro.map((f) => (
+          <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+            <span>{f.tipo} - {f.descricao}</span>
+
+            <strong>
+              {Number(f.valor).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+            </strong>
+
+            <button onClick={() => excluirLancamento(f.id)}>❌</button>
+          </div>
+        ))}
+
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={dadosGrafico}>
             <XAxis dataKey="mes" />
@@ -205,42 +249,9 @@ const { data: financeiroData } = await supabase
             <Line type="monotone" dataKey="saida" stroke="#ef4444" />
           </LineChart>
         </ResponsiveContainer>
+
       </div>
-    </div>
-  )
-}
 
-/* LOADER */
-function Loader() {
-  return (
-    <div style={loaderContainer}>
-      <div style={spinner}></div>
-      <p>Carregando...</p>
-    </div>
-  )
-}
-
-/* SKELETON */
-function SkeletonObra() {
-  return (
-    <div style={{ padding: 24 }}>
-      <div style={skeletonTitle}></div>
-      <div style={skeletonSub}></div>
-      {[1,2,3].map(i => <div key={i} style={skeletonCard}></div>)}
-    </div>
-  )
-}
-
-/* COMPONENT CARD */
-function Card({ titulo, valor, cor, tipo }: any) {
-  return (
-    <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
-      <p>{titulo}</p>
-      <h2>
-        {tipo === 'porcentagem'
-          ? valor.toFixed(2) + '%'
-          : valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-      </h2>
     </div>
   )
 }

@@ -19,13 +19,13 @@ export default function Login() {
     setErro('')
     setLoading(true)
 
-    // 🔥 LOGIN REAL
+    // 🔐 LOGIN
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password: senha,
     })
 
-    if (error) {
+    if (error || !data.user) {
       setErro('Email ou senha inválidos')
       setLoading(false)
       return
@@ -33,12 +33,29 @@ export default function Login() {
 
     const user = data.user
 
-    // 🔥 BUSCA EMPRESA DO USUÁRIO
-    const { data: usuario } = await supabase
+    // ✅ GARANTE USUÁRIO NA TABELA (SEM DUPLICAR)
+    await supabase
+      .from('usuarios')
+      .upsert(
+        {
+          email: user.email,
+          user_id: user.id,
+        },
+        { onConflict: 'user_id' }
+      )
+
+    // 🔍 BUSCA USUÁRIO
+    const { data: usuario, error: erroUsuario } = await supabase
       .from('usuarios')
       .select('empresa_id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
+
+    if (erroUsuario) {
+      setErro('Erro ao carregar usuário')
+      setLoading(false)
+      return
+    }
 
     if (!usuario?.empresa_id) {
       setErro('Usuário sem empresa vinculada')
@@ -46,9 +63,10 @@ export default function Login() {
       return
     }
 
-    // 🔥 SALVA (temporário - depois removemos)
+    // 💾 SALVA EMPRESA
     localStorage.setItem('empresa_id', usuario.empresa_id)
 
+    // 🚀 REDIRECIONA
     router.push('/dashboard')
   }
 
@@ -87,12 +105,12 @@ export default function Login() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
 
-	  <p style={linkCadastro}>
-	    Não tem conta?{' '}
-	    <span onClick={() => router.push('/cadastro')} style={link}>
-	      Criar agora
-	    </span>
-	  </p>
+          <p style={linkCadastro}>
+            Não tem conta?{' '}
+            <span onClick={() => router.push('/cadastro')} style={link}>
+              Criar agora
+            </span>
+          </p>
         </form>
       </div>
     </div>
