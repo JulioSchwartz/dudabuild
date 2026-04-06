@@ -4,17 +4,15 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Legend
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, Legend
 } from 'recharts'
 
-export default function FinanceiroBI() {
+export default function Financeiro() {
 
   const { empresaId } = useEmpresa()
 
   const [dados, setDados] = useState<any[]>([])
-  const [obras, setObras] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!empresaId) return
@@ -22,20 +20,12 @@ export default function FinanceiroBI() {
   }, [empresaId])
 
   async function carregar() {
-
-    const { data: f } = await supabase
+    const { data } = await supabase
       .from('financeiro')
       .select('*')
       .eq('empresa_id', empresaId)
 
-    const { data: o } = await supabase
-      .from('obras')
-      .select('*')
-      .eq('empresa_id', empresaId)
-
-    setDados(f || [])
-    setObras(o || [])
-    setLoading(false)
+    setDados(data || [])
   }
 
   const entradas = dados.filter(d => d.tipo === 'entrada')
@@ -45,81 +35,60 @@ export default function FinanceiroBI() {
   const totalSaida = soma(saidas)
   const lucro = totalEntrada - totalSaida
 
-  const margem = totalEntrada
-    ? ((lucro / totalEntrada) * 100).toFixed(1)
-    : '0'
-
   const porMes: any = {}
 
   dados.forEach(d => {
     if (!d.created_at) return
 
-    const mes = new Date(d.created_at).toLocaleDateString('pt-BR', { month: 'short' })
+    const mes = new Date(d.created_at).toLocaleDateString('pt-BR',{month:'short'})
 
-    if (!porMes[mes]) {
-      porMes[mes] = { mes, entrada: 0, saida: 0 }
-    }
+    if (!porMes[mes]) porMes[mes] = { mes, entrada:0, saida:0 }
 
     if (d.tipo === 'entrada') porMes[mes].entrada += d.valor
-    if (d.tipo === 'saida') porMes[mes].saida += d.valor
+    else porMes[mes].saida += d.valor
   })
 
-  const graficoMensal = Object.values(porMes)
-
-  if (loading) return <p>Carregando...</p>
+  const grafico = Object.values(porMes)
 
   return (
-  )
-}
+    <div style={{ padding: 24 }}>
 
-/* HELPERS */
+      <h1>Financeiro</h1>
 
-function soma(lista: any[]) {
-  return lista.reduce((acc, i) => acc + Number(i.valor), 0)
-}
+      <div style={{ display:'flex', gap:20 }}>
+        <Card titulo="Receita" valor={totalEntrada} />
+        <Card titulo="Custos" valor={totalSaida} />
+        <Card titulo="Lucro" valor={lucro} />
+      </div>
 
-function format(valor: number) {
-  return valor?.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  })
-}
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={grafico}>
+          <XAxis dataKey="mes" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line dataKey="entrada" stroke="#16a34a" />
+          <Line dataKey="saida" stroke="#dc2626" />
+        </LineChart>
+      </ResponsiveContainer>
 
-/* COMPONENTES */
-
-function Card({ titulo, valor, cor }: any) {
-  return (
-    <div style={{ ...cardBox, borderLeft: `6px solid ${cor}` }}>
-      <h4>{titulo}</h4>
-      <h2>{valor}</h2>
     </div>
   )
 }
 
-/* ESTILO */
-
-const titulo = {
-  fontSize: 28,
-  fontWeight: 700,
-  marginBottom: 20
+function soma(lista:any[]){
+  return lista.reduce((acc,i)=>acc+Number(i.valor),0)
 }
 
-const grid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(4, 1fr)',
-  gap: 20,
-  marginBottom: 20
+function Card({ titulo, valor }: any) {
+  return (
+    <div style={{ background:'#fff', padding:20 }}>
+      <p>{titulo}</p>
+      <strong>{format(valor)}</strong>
+    </div>
+  )
 }
 
-const cardBox = {
-  background: '#fff',
-  padding: 20,
-  borderRadius: 12
-}
-
-const card = {
-  background: '#fff',
-  padding: 20,
-  borderRadius: 12,
-  marginTop: 20
+function format(v:number){
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 }
