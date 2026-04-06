@@ -5,13 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, Legend
 } from 'recharts'
 
 export default function DetalheObra() {
@@ -26,26 +21,24 @@ export default function DetalheObra() {
   const [tipo, setTipo] = useState('entrada')
   const [descricao, setDescricao] = useState('')
   const [valor, setValor] = useState('')
+  const [data, setData] = useState(new Date().toISOString().substring(0,10))
+  const [editando, setEditando] = useState<any>(null)
 
   useEffect(() => {
     if (loadingEmpresa) return
 
     const empresa = localStorage.getItem('empresa_id')
-
     if (!empresa) {
       router.push('/login')
       return
     }
 
     if (!id || !empresaId) return
-
     carregar()
 
   }, [id, empresaId, loadingEmpresa])
 
   async function carregar() {
-
-    if (!empresaId) return
 
     const { data: obraData } = await supabase
       .from('obras')
@@ -65,44 +58,52 @@ export default function DetalheObra() {
     setFinanceiro(financeiroData || [])
   }
 
-  function copiarLink() {
-    if (!obra?.token) return alert('Token não encontrado')
-
-    const link = `${window.location.origin}/cliente/obra/${obra.token}`
-    navigator.clipboard.writeText(link)
-    alert('Link copiado!')
+  function formatarInputMoeda(value: string) {
+    const numeric = value.replace(/\D/g, '')
+    const number = Number(numeric) / 100
+    return number.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    })
   }
 
-  function enviarWhatsApp() {
-    if (!obra?.token) return alert('Token não encontrado')
-
-    const link = `${window.location.origin}/cliente/obra/${obra.token}`
-
-    window.open(
-      `https://wa.me/?text=Acompanhe sua obra aqui: ${link}`
-    )
+  function moedaParaNumero(value: string) {
+    return Number(value.replace(/\D/g, '')) / 100
   }
 
-  async function adicionar(e: any) {
+  async function salvar(e: any) {
     e.preventDefault()
 
     if (!descricao) return alert('Selecione uma descrição')
-    if (!valor || Number(valor) <= 0) return alert('Valor inválido')
+    if (!valor) return alert('Valor inválido')
 
-    await supabase.from('financeiro').insert([
-      {
-        obra_id: Number(id),
-        empresa_id: empresaId,
-        tipo,
-        descricao,
-        valor: Number(valor),
-        created_at: new Date().toISOString(),
-      },
-    ])
+    const payload = {
+      obra_id: Number(id),
+      empresa_id: empresaId,
+      tipo,
+      descricao,
+      valor: moedaParaNumero(valor),
+      created_at: new Date(data).toISOString(),
+    }
+
+    if (editando) {
+      await supabase.from('financeiro').update(payload).eq('id', editando.id)
+      setEditando(null)
+    } else {
+      await supabase.from('financeiro').insert([payload])
+    }
 
     setDescricao('')
     setValor('')
     carregar()
+  }
+
+  function editar(item: any) {
+    setEditando(item)
+    setTipo(item.tipo)
+    setDescricao(item.descricao)
+    setValor(formatarInputMoeda(item.valor.toString()))
+    setData(item.created_at.substring(0,10))
   }
 
   async function excluirLancamento(idLancamento: number) {
@@ -114,10 +115,8 @@ export default function DetalheObra() {
   if (!empresaId) return <Loader />
   if (!obra) return <SkeletonObra />
 
-  const lista = financeiro || []
-
-  const entradas = lista.filter((f) => f.tipo === 'entrada')
-  const saidas = lista.filter((f) => f.tipo === 'saida')
+  const entradas = financeiro.filter(f => f.tipo === 'entrada')
+  const saidas = financeiro.filter(f => f.tipo === 'saida')
 
   const totalEntradas = entradas.reduce((acc, e) => acc + Number(e.valor), 0)
   const totalSaidas = saidas.reduce((acc, s) => acc + Number(s.valor), 0)
@@ -129,24 +128,24 @@ export default function DetalheObra() {
 
   const fluxoMensal: any = {}
 
-  lista.forEach((item) => {
-    if (!item.created_at) return
-
-    const data = new Date(item.created_at)
-    const mes = data.toLocaleDateString('pt-BR', { month: 'short' })
+  financeiro.forEach((item) => {
+    const mes = new Date(item.created_at).toLocaleDateString('pt-BR', { month: 'short' })
 
     if (!fluxoMensal[mes]) {
       fluxoMensal[mes] = { mes, entrada: 0, saida: 0 }
     }
 
-    if (item.tipo === 'entrada') {
-      fluxoMensal[mes].entrada += Number(item.valor)
-    } else {
-      fluxoMensal[mes].saida += Number(item.valor)
-    }
+    if (item.tipo === 'entrada') fluxoMensal[mes].entrada += Number(item.valor)
+    else fluxoMensal[mes].saida += Number(item.valor)
   })
 
-  const dadosGrafico = Object.values(fluxoMensal || {})
+  const dadosGrafico = Object.values(fluxoMensal)
+
+  const resumoCategoria: any = {}
+  saidas.forEach(s => {
+    if (!resumoCategoria[s.descricao]) resumoCategoria[s.descricao] = 0
+    resumoCategoria[s.descricao] += s.valor
+  })
 
   return (
     <div>
@@ -162,13 +161,11 @@ export default function DetalheObra() {
       </p>
 
       <div style={boxAcoes}>
-        <button onClick={copiarLink} style={btnCopiar}>🔗 Copiar link</button>
-        <button onClick={enviarWhatsApp} style={btnWhats}>📤 WhatsApp</button>
+        <button onClick={() => navigator.clipboard.writeText('link')} style={btnCopiar}>🔗 Copiar link</button>
+        <button style={btnWhats}>📤 WhatsApp</button>
       </div>
 
-      <button style={btnFotos} onClick={() => router.push(`/obras/${id}/fotos`)}>
-        📸 Fotos
-      </button>
+      <button style={btnFotos}>📸 Fotos</button>
 
       <div style={grid}>
         <Card titulo="Receita" valor={totalEntradas} cor="#22c55e" />
@@ -183,15 +180,16 @@ export default function DetalheObra() {
 
       <div style={box}>
 
-        {/* FORMULÁRIO */}
-        <form onSubmit={adicionar} style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        {/* FORM PROFISSIONAL */}
+        <form onSubmit={salvar} style={formGrid}>
+
           <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
             <option value="entrada">Entrada</option>
             <option value="saida">Saída</option>
           </select>
 
           <select value={descricao} onChange={(e) => setDescricao(e.target.value)}>
-            <option value="">Selecione</option>
+            <option value="">Categoria</option>
 
             {tipo === 'entrada' && (
               <>
@@ -213,27 +211,35 @@ export default function DetalheObra() {
           </select>
 
           <input
-            type="number"
-            placeholder="Valor"
             value={valor}
-            onChange={(e) => setValor(e.target.value)}
+            onChange={(e) => setValor(formatarInputMoeda(e.target.value))}
+            placeholder="R$ 0,00"
           />
 
-          <button type="submit">Adicionar</button>
+          <input type="date" value={data} onChange={(e) => setData(e.target.value)} />
+
+          <button>{editando ? 'Atualizar' : 'Adicionar'}</button>
+
         </form>
 
         {/* LISTA */}
         {financeiro.map((f) => (
-          <div key={f.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-            <span>{f.tipo} - {f.descricao}</span>
-            <strong>
-              {Number(f.valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </strong>
-            <button onClick={() => excluirLancamento(f.id)}>❌</button>
+          <div key={f.id} style={linha}>
+            <span>{f.descricao}</span>
+            <span>{Number(f.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+            <span>{new Date(f.created_at).toLocaleDateString('pt-BR')}</span>
+
+            <div>
+              <button onClick={() => editar(f)}>✏️</button>
+              <button onClick={() => excluirLancamento(f.id)}>❌</button>
+            </div>
           </div>
+        ))}
+
+        {/* RESUMO */}
+        <h3>Resumo por categoria</h3>
+        {Object.entries(resumoCategoria).map(([k, v]: any) => (
+          <div key={k}>{k}: {v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
         ))}
 
         {/* GRÁFICO */}
@@ -255,18 +261,12 @@ export default function DetalheObra() {
 }
 
 /* COMPONENTES */
-
-function Loader() {
-  return <p style={{ padding: 20 }}>Carregando...</p>
-}
-
-function SkeletonObra() {
-  return <p style={{ padding: 20 }}>Carregando obra...</p>
-}
+function Loader() { return <p>Carregando...</p> }
+function SkeletonObra() { return <p>Carregando obra...</p> }
 
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
-    <div style={{ ...card, borderLeft: `6px solid ${cor}` }}>
+    <div style={{ borderLeft: `5px solid ${cor}`, padding: 10 }}>
       <p>{titulo}</p>
       <h2>
         {tipo === 'porcentagem'
@@ -278,14 +278,15 @@ function Card({ titulo, valor, cor, tipo }: any) {
 }
 
 /* ESTILOS */
+const formGrid = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 120px', gap: 10 }
+const linha = { display: 'flex', justifyContent: 'space-between', marginTop: 10 }
 const valorObra = { fontSize: 18, fontWeight: 600, color: '#16a34a' }
 const boxAcoes = { display: 'flex', gap: 10 }
-const btnCopiar = { background: '#0ea5e9', color: '#fff', padding: 10, border: 'none', borderRadius: 8 }
-const btnWhats = { background: '#22c55e', color: '#fff', padding: 10, border: 'none', borderRadius: 8 }
-const btnFotos = { background: '#0ea5e9', color: '#fff', padding: 10, border: 'none', borderRadius: 8, marginTop: 10 }
+const btnCopiar = { background: '#0ea5e9', color: '#fff', padding: 10 }
+const btnWhats = { background: '#22c55e', color: '#fff', padding: 10 }
+const btnFotos = { background: '#0ea5e9', color: '#fff', padding: 10, marginTop: 10 }
 const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }
-const card = { background: '#fff', padding: 20, borderRadius: 12 }
-const box = { background: '#fff', padding: 20, borderRadius: 12 }
+const box = { background: '#fff', padding: 20 }
 const titulo = { color: '#0f172a' }
 const subtitulo = { color: '#64748b' }
 const sectionTitle = { marginTop: 20 }
