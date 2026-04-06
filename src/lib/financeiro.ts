@@ -1,3 +1,5 @@
+import { supabase } from './supabase'
+
 export function calcularResumo(lista:any[]) {
 
   const entradas = lista.filter(i=>i.tipo==='entrada')
@@ -24,6 +26,8 @@ export function fluxoMensal(lista:any[]) {
   const mapa:any = {}
 
   lista.forEach(item=>{
+    if (!item.created_at) return
+
     const mes = new Date(item.created_at)
       .toLocaleDateString('pt-BR',{month:'short'})
 
@@ -38,4 +42,33 @@ export function fluxoMensal(lista:any[]) {
 
 function soma(lista:any[]){
   return lista.reduce((acc,i)=>acc+Number(i.valor),0)
+}
+
+export async function lancarMovimento({
+  obra_id,
+  empresa_id,
+  tipo,
+  descricao,
+  valor
+}: any) {
+
+  if (!obra_id || !empresa_id) {
+    throw new Error('Dados inválidos')
+  }
+
+  const { error } = await supabase
+    .from('financeiro')
+    .insert({
+      obra_id,
+      empresa_id,
+      tipo,
+      descricao,
+      valor: Number(valor),
+      created_at: new Date().toISOString()
+    })
+
+  if (error) {
+    console.error(error)
+    throw error
+  }
 }
