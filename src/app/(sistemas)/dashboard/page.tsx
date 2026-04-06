@@ -40,6 +40,8 @@ export default function Dashboard() {
 
   if (loading) return <p style={{ padding: 24 }}>Carregando...</p>
 
+  /* ================= BASE ================= */
+
   const entradas = dados.filter(d=>d.tipo==='entrada')
   const saidas = dados.filter(d=>d.tipo==='saida')
 
@@ -49,6 +51,38 @@ export default function Dashboard() {
 
   const margem = receita > 0 ? (lucro / receita) * 100 : 0
   const ticketMedio = entradas.length > 0 ? receita / entradas.length : 0
+
+  /* ================= POR OBRA ================= */
+
+  const porObra:any = {}
+
+  dados.forEach(d => {
+
+    if (!porObra[d.obra_id]) {
+      porObra[d.obra_id] = {
+        receita: 0,
+        custo: 0,
+        lucro: 0
+      }
+    }
+
+    if (d.tipo === 'entrada') {
+      porObra[d.obra_id].receita += d.valor
+    } else {
+      porObra[d.obra_id].custo += d.valor
+    }
+
+    porObra[d.obra_id].lucro =
+      porObra[d.obra_id].receita - porObra[d.obra_id].custo
+  })
+
+  const listaObras = Object.entries(porObra)
+
+  const ranking = [...listaObras].sort((a:any,b:any)=>
+    b[1].lucro - a[1].lucro
+  )
+
+  /* ================= GRAFICO ================= */
 
   const fluxo: any = {}
 
@@ -69,7 +103,7 @@ export default function Dashboard() {
   return (
     <div>
 
-      {/* 🔥 NAVBAR */}
+      {/* NAVBAR */}
       <div style={navbar}>
         <h2>DudaBuild</h2>
 
@@ -98,6 +132,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* CARDS */}
         <div style={grid}>
           <Card titulo="Receita" valor={receita} cor="#16a34a"/>
           <Card titulo="Custos" valor={custo} cor="#dc2626"/>
@@ -107,6 +142,7 @@ export default function Dashboard() {
           <Card titulo="Movimentações" valor={dados.length} cor="#f59e0b" tipo="numero"/>
         </div>
 
+        {/* GRAFICO */}
         <div style={graficoBox}>
           <h3>📊 Fluxo Financeiro</h3>
 
@@ -120,6 +156,33 @@ export default function Dashboard() {
               <Line dataKey="saida" stroke="#dc2626" />
             </LineChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* RESULTADO POR OBRA */}
+        <div style={{marginTop:30}}>
+          <h3>🏗️ Resultado por Obra</h3>
+
+          {listaObras.map(([id, d]:any)=>(
+            <div key={id} style={linha}>
+              <span>Obra {id}</span>
+              <span>{format(d.receita)}</span>
+              <span>{format(d.custo)}</span>
+              <span style={{color:d.lucro>=0?'#16a34a':'#dc2626'}}>
+                {format(d.lucro)}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* RANKING */}
+        <div style={{marginTop:30}}>
+          <h3>🏆 Obras mais lucrativas</h3>
+
+          {ranking.map(([id, d]:any, i:number)=>(
+            <div key={id}>
+              #{i+1} — Obra {id} → {format(d.lucro)}
+            </div>
+          ))}
         </div>
 
       </div>
@@ -196,6 +259,13 @@ const graficoBox = {
   padding:20,
   borderRadius:12,
   boxShadow:'0 4px 12px rgba(0,0,0,0.05)'
+}
+
+const linha = {
+  display:'grid',
+  gridTemplateColumns:'1fr 1fr 1fr 1fr',
+  padding:10,
+  borderBottom:'1px solid #e2e8f0'
 }
 
 const alertaErro = {
