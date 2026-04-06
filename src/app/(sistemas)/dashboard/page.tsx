@@ -5,14 +5,16 @@ import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts'
 
 export default function Dashboard() {
 
   const { empresaId, limites, plano, loading: loadingEmpresa } = useEmpresa()
+
   const [orcamentos, setOrcamentos] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
+  const [financeiro, setFinanceiro] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,26 +24,26 @@ export default function Dashboard() {
 
   async function carregar() {
 
-    if (!empresaId) return
-
-    const { data: o } = await supabase
-      .from('orcamentos')
-      .select('*')
-      .eq('empresa_id', empresaId)
-
-    const { data: ob } = await supabase
-      .from('obras')
-      .select('*')
-      .eq('empresa_id', empresaId)
+    const { data: o } = await supabase.from('orcamentos').select('*').eq('empresa_id', empresaId)
+    const { data: ob } = await supabase.from('obras').select('*').eq('empresa_id', empresaId)
+    const { data: fin } = await supabase.from('financeiro').select('*').eq('empresa_id', empresaId)
 
     setOrcamentos(o || [])
     setObras(ob || [])
+    setFinanceiro(fin || [])
     setLoading(false)
   }
 
-  /* =========================
-     📊 ORÇAMENTOS
-  ========================= */
+  /* ================= FINANCEIRO ================= */
+
+  const entradas = financeiro.filter(f => f.tipo === 'entrada')
+  const saidas = financeiro.filter(f => f.tipo === 'saida')
+
+  const totalEntrada = entradas.reduce((a,b)=>a+b.valor,0)
+  const totalSaida = saidas.reduce((a,b)=>a+b.valor,0)
+  const lucro = totalEntrada - totalSaida
+
+  /* ================= ORÇAMENTOS ================= */
 
   const aprovados = orcamentos.filter(o => o.status === 'aprovado')
   const recusados = orcamentos.filter(o => o.status === 'recusado')
@@ -57,9 +59,7 @@ export default function Dashboard() {
     ? (aprovados.reduce((acc, o) => acc + o.valor_total, 0) / aprovados.length).toFixed(2)
     : '0'
 
-  /* =========================
-     🏗️ OBRAS
-  ========================= */
+  /* ================= OBRAS ================= */
 
   const obrasAndamento = obras.filter(o => o.status === 'andamento')
   const obrasFinalizadas = obras.filter(o => o.status === 'finalizada')
@@ -71,9 +71,24 @@ export default function Dashboard() {
     ? (obras.reduce((acc, o) => acc + (o.progresso || 0), 0) / obras.length).toFixed(1)
     : '0'
 
-  /* =========================
-     📊 FUNIL
-  ========================= */
+  /* ================= GRÁFICO FINANCEIRO ================= */
+
+  const fluxo: any = {}
+
+  financeiro.forEach(f=>{
+    if (!f.created_at) return
+
+    const mes = new Date(f.created_at).toLocaleDateString('pt-BR',{month:'short'})
+
+    if(!fluxo[mes]) fluxo[mes] = {mes, entrada:0, saida:0}
+
+    if(f.tipo==='entrada') fluxo[mes].entrada += f.valor
+    else fluxo[mes].saida += f.valor
+  })
+
+  const graficoFluxo = Object.values(fluxo)
+
+  /* ================= FUNIL ================= */
 
   const funil = [
     { name: 'Orçados', value: orcamentos.length },
@@ -100,48 +115,56 @@ export default function Dashboard() {
   const limiteOrcAtingido = limiteOrc !== Infinity && orcamentos.length >= limiteOrc
   const limiteObrasAtingido = limiteObras !== Infinity && obras.length >= limiteObras
 
-  // 🔥 LOADER
-  if (loadingEmpresa) return <Loader />
-  if (loading) return <Loader />
+  if (loadingEmpresa || loading) return <Loader />
 
   return (
     <div style={container}>
 
-      <h1 style={titulo}>📊 Dashboard Geral</h1>
+      <h1 style={titulo}>🚀 Dashboard Executivo</h1>
 
-      {/* 🚨 ALERTA INTELIGENTE */}
+      {/* ALERTA */}
       {(limiteOrcAtingido || limiteObrasAtingido) && (
         <div style={alerta}>
           🚨 Você atingiu limites do plano <strong>{plano}</strong>.
-          <button
-            style={btnUpgrade}
-            onClick={() => window.location.href = '/bloqueado'}
-          >
-            Fazer upgrade
-          </button>
         </div>
       )}
 
-      {/* 📊 KPI */}
+      {/* KPI PRINCIPAL */}
       <div style={grid}>
 
-        <Card titulo="💰 Total Orçado" valor={format(totalOrcado)} cor="#2563eb" />
-        <Card titulo="💵 Total em Obras" valor={format(totalObras)} cor="#16a34a" />
+        <Card titulo="💰 Receita" valor={format(totalEntrada)} cor="#16a34a" />
+        <Card titulo="💸 Custos" valor={format(totalSaida)} cor="#dc2626" />
+        <Card titulo="📊 Lucro" valor={format(lucro)} cor="#2563eb" />
         <Card titulo="📈 Conversão" valor={`${taxaConversao}%`} cor="#7c3aed" />
-        <Card titulo="💎 Ticket Médio" valor={`R$ ${ticketMedio}`} cor="#0ea5e9" />
 
-        <Card titulo={`🏗️ Obras (${obras.length}/${limiteObras === Infinity ? '∞' : limiteObras})`} valor={obrasAndamento.length} cor="#f59e0b" />
-        <Card titulo="✅ Finalizadas" valor={obrasFinalizadas.length} cor="#16a34a" />
-        <Card titulo="⏸️ Pausadas" valor={obrasPausadas.length} cor="#dc2626" />
-        <Card titulo="⚙️ Progresso Médio" valor={`${progressoMedio}%`} cor="#6366f1" />
+        <Card titulo="💰 Total Orçado" valor={format(totalOrcado)} cor="#0ea5e9" />
+        <Card titulo="💵 Total em Obras" valor={format(totalObras)} cor="#22c55e" />
+        <Card titulo="💎 Ticket Médio" valor={`R$ ${ticketMedio}`} cor="#6366f1" />
+        <Card titulo="⚙️ Progresso Médio" valor={`${progressoMedio}%`} cor="#f59e0b" />
 
       </div>
 
-      {/* 📊 GRÁFICOS */}
+      {/* GRÁFICO FINANCEIRO */}
+      <div style={cardGrande}>
+        <h3>📈 Fluxo Financeiro</h3>
+
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={graficoFluxo}>
+            <XAxis dataKey="mes" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line dataKey="entrada" stroke="#16a34a" />
+            <Line dataKey="saida" stroke="#dc2626" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* GRÁFICOS */}
       <div style={grid2}>
 
         <div style={cardGrande}>
-          <h3>📊 Funil Completo</h3>
+          <h3>📊 Funil</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={funil}>
               <XAxis dataKey="name" />
@@ -153,7 +176,7 @@ export default function Dashboard() {
         </div>
 
         <div style={cardGrande}>
-          <h3>📄 Status dos Orçamentos</h3>
+          <h3>📄 Status Orçamentos</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie data={statusOrc} dataKey="value" outerRadius={80}>
@@ -167,7 +190,7 @@ export default function Dashboard() {
         </div>
 
         <div style={cardGrande}>
-          <h3>🏗️ Status das Obras</h3>
+          <h3>🏗️ Status Obras</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie data={statusObras} dataKey="value" outerRadius={80}>
@@ -180,44 +203,17 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div style={cardGrande}>
-          <h3>💰 Maiores Orçamentos</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart
-              data={orcamentos
-                .sort((a, b) => b.valor_total - a.valor_total)
-                .slice(0, 5)
-                .map(o => ({
-                  nome: o.cliente_nome,
-                  valor: o.valor_total
-                }))
-              }
-            >
-              <XAxis dataKey="nome" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="valor" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
       </div>
 
     </div>
   )
 }
 
-/* LOADER */
-function Loader() {
-  return (
-    <div style={loaderContainer}>
-      <div style={spinner}></div>
-      <p>Carregando...</p>
-    </div>
-  )
-}
-
 /* COMPONENTES */
+
+function Loader() {
+  return <p style={{ padding: 20 }}>Carregando...</p>
+}
 
 function Card({ titulo, valor, cor }: any) {
   return (
@@ -230,53 +226,10 @@ function Card({ titulo, valor, cor }: any) {
 
 /* ESTILO */
 
-const alerta = {
-  background: '#fef3c7',
-  padding: 15,
-  borderRadius: 8,
-  marginBottom: 20,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center'
-}
+const alerta = { background: '#fef3c7', padding: 15, borderRadius: 8, marginBottom: 20 }
 
-const btnUpgrade = {
-  background: '#f59e0b',
-  color: '#fff',
-  padding: '6px 12px',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer'
-}
-
-const loaderContainer = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: '60vh'
-}
-
-const spinner = {
-  width: 40,
-  height: 40,
-  border: '4px solid #e2e8f0',
-  borderTop: '4px solid #2563eb',
-  borderRadius: '50%',
-  animation: 'spin 1s linear infinite'
-}
-
-const container = {
-  padding: 24,
-  background: '#f1f5f9',
-  minHeight: '100vh'
-}
-
-const titulo = {
-  fontSize: 28,
-  fontWeight: 700,
-  marginBottom: 20
-}
+const container = { padding: 24, background: '#f1f5f9', minHeight: '100vh' }
+const titulo = { fontSize: 28, fontWeight: 700, marginBottom: 20 }
 
 const grid = {
   display: 'grid',
@@ -294,19 +247,15 @@ const grid2 = {
 const card = {
   background: '#fff',
   padding: 20,
-  borderRadius: 10,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+  borderRadius: 12
 }
 
 const cardGrande = {
   background: '#fff',
   padding: 20,
-  borderRadius: 10
+  borderRadius: 12
 }
 
-function format(valor: number) {
-  return valor?.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  })
+function format(v:number){
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 }

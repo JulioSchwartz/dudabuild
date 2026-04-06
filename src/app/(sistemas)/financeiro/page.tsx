@@ -5,65 +5,61 @@ import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  BarChart, Bar
+  BarChart, Bar, Legend
 } from 'recharts'
 
 export default function FinanceiroBI() {
 
-  const empresaId = useEmpresa()
+  const { empresaId } = useEmpresa()
+
   const [dados, setDados] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!empresaId) return
     carregar()
-  }, [])
+  }, [empresaId])
 
- 
   async function carregar() {
 
     const { data: f } = await supabase
-	.from('financeiro')
-	.select('*')
-    	.eq('empresa_id', empresaId)
+      .from('financeiro')
+      .select('*')
+      .eq('empresa_id', empresaId)
 
-const { data: o } = await supabase
-	.from('obras')
-	.select('*')
-	.eq('empresa_id', empresaId)
-
+    const { data: o } = await supabase
+      .from('obras')
+      .select('*')
+      .eq('empresa_id', empresaId)
 
     setDados(f || [])
     setObras(o || [])
     setLoading(false)
   }
 
-  /* =========================
-     💰 KPIs
-  ========================= */
+  /* ================= KPIs ================= */
 
   const entradas = dados.filter(d => d.tipo === 'entrada')
   const saidas = dados.filter(d => d.tipo === 'saida')
 
   const totalEntrada = soma(entradas)
   const totalSaida = soma(saidas)
-
   const lucro = totalEntrada - totalSaida
 
   const margem = totalEntrada
     ? ((lucro / totalEntrada) * 100).toFixed(1)
     : '0'
 
-  /* =========================
-     📈 AGRUPAMENTO MENSAL
-  ========================= */
+  /* ================= AGRUPAMENTO MENSAL ================= */
 
   const porMes: any = {}
 
   dados.forEach(d => {
-    const data = new Date(d.data)
+    if (!d.created_at) return
 
-    const mes = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`
+    const data = new Date(d.created_at)
+    const mes = data.toLocaleDateString('pt-BR', { month: 'short' })
 
     if (!porMes[mes]) {
       porMes[mes] = { mes, entrada: 0, saida: 0 }
@@ -75,14 +71,11 @@ const { data: o } = await supabase
 
   const graficoMensal = Object.values(porMes)
 
-  /* =========================
-     🏗️ LUCRO POR OBRA
-  ========================= */
+  /* ================= LUCRO POR OBRA ================= */
 
   function lucroPorObra(obraId: string) {
     const ent = dados.filter(d => d.obra_id === obraId && d.tipo === 'entrada')
     const sai = dados.filter(d => d.obra_id === obraId && d.tipo === 'saida')
-
     return soma(ent) - soma(sai)
   }
 
@@ -91,12 +84,12 @@ const { data: o } = await supabase
     lucro: lucroPorObra(o.id)
   })).sort((a, b) => b.lucro - a.lucro)
 
-  if (loading) return <p style={{ padding: 24 }}>Carregando...</p>
+  if (loading) return <Loader />
 
   return (
     <div style={container}>
 
-      <h1 style={titulo}>💰 BI Financeiro</h1>
+      <h1 style={titulo}>💰 Financeiro Geral</h1>
 
       {/* KPIs */}
       <div style={grid}>
@@ -108,22 +101,23 @@ const { data: o } = await supabase
 
       </div>
 
-      {/* 📈 EVOLUÇÃO */}
+      {/* GRÁFICO LINHA */}
       <div style={card}>
-        <h3>Evolução Mensal</h3>
+        <h3>Evolução Financeira</h3>
 
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={graficoMensal}>
             <XAxis dataKey="mes" />
             <YAxis />
             <Tooltip />
-            <Line dataKey="entrada" />
-            <Line dataKey="saida" />
+            <Legend />
+            <Line dataKey="entrada" stroke="#16a34a" />
+            <Line dataKey="saida" stroke="#dc2626" />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      {/* 💸 FLUXO */}
+      {/* GRÁFICO BARRAS */}
       <div style={card}>
         <h3>Fluxo de Caixa</h3>
 
@@ -132,13 +126,13 @@ const { data: o } = await supabase
             <XAxis dataKey="mes" />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="entrada" />
-            <Bar dataKey="saida" />
+            <Bar dataKey="entrada" fill="#16a34a" />
+            <Bar dataKey="saida" fill="#dc2626" />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* 🏗️ RANKING */}
+      {/* RANKING */}
       <div style={card}>
         <h3>Lucro por Obra</h3>
 
@@ -147,13 +141,12 @@ const { data: o } = await supabase
             <span>{r.nome}</span>
 
             <strong style={{
-              color: r.lucro < 0 ? 'red' : 'green'
+              color: r.lucro < 0 ? '#dc2626' : '#16a34a'
             }}>
               {format(r.lucro)}
             </strong>
           </div>
         ))}
-
       </div>
 
     </div>
@@ -163,7 +156,7 @@ const { data: o } = await supabase
 /* ================= HELPERS ================= */
 
 function soma(lista: any[]) {
-  return lista.reduce((acc, i) => acc + i.valor, 0)
+  return lista.reduce((acc, i) => acc + Number(i.valor), 0)
 }
 
 function format(valor: number) {
@@ -173,7 +166,11 @@ function format(valor: number) {
   })
 }
 
-/* ================= UI ================= */
+/* ================= COMPONENTES ================= */
+
+function Loader() {
+  return <p style={{ padding: 24 }}>Carregando...</p>
+}
 
 function Card({ titulo, valor, cor }: any) {
   return (
@@ -183,6 +180,8 @@ function Card({ titulo, valor, cor }: any) {
     </div>
   )
 }
+
+/* ================= ESTILO ================= */
 
 const container = {
   padding: 24,
@@ -206,13 +205,13 @@ const grid = {
 const cardBox = {
   background: '#fff',
   padding: 20,
-  borderRadius: 10
+  borderRadius: 12
 }
 
 const card = {
   background: '#fff',
   padding: 20,
-  borderRadius: 10,
+  borderRadius: 12,
   marginTop: 20
 }
 
@@ -220,4 +219,4 @@ const linha = {
   display: 'flex',
   justifyContent: 'space-between',
   marginTop: 10
-}
+}}
