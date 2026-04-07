@@ -1,9 +1,23 @@
 import { supabase } from './supabase'
 
-export function calcularResumo(lista:any[]) {
+/* =========================
+   TIPOS PROFISSIONAIS
+========================= */
 
-  const entradas = lista.filter(i=>i.tipo==='entrada')
-  const saidas = lista.filter(i=>i.tipo==='saida')
+type Movimento = {
+  tipo: 'entrada' | 'saida'
+  valor: number | string
+  created_at?: string
+}
+
+/* =========================
+   RESUMO FINANCEIRO
+========================= */
+
+export function calcularResumo(lista: Movimento[]) {
+
+  const entradas = lista.filter(i => i.tipo === 'entrada')
+  const saidas = lista.filter(i => i.tipo === 'saida')
 
   const receita = soma(entradas)
   const custo = soma(saidas)
@@ -21,27 +35,53 @@ export function calcularResumo(lista:any[]) {
   }
 }
 
-export function fluxoMensal(lista:any[]) {
+/* =========================
+   FLUXO MENSAL
+========================= */
 
-  const mapa:any = {}
+export function fluxoMensal(lista: Movimento[]) {
 
-  lista.forEach(item=>{
+  const mapa: Record<string, any> = {}
+
+  lista.forEach(item => {
+
     if (!item.created_at) return
 
     const mes = new Date(item.created_at)
-      .toLocaleDateString('pt-BR',{month:'short'})
+      .toLocaleDateString('pt-BR', { month: 'short' })
 
-    if(!mapa[mes]) mapa[mes] = {mes,entrada:0,saida:0}
+    if (!mapa[mes]) {
+      mapa[mes] = { mes, entrada: 0, saida: 0 }
+    }
 
-    if(item.tipo==='entrada') mapa[mes].entrada += item.valor
-    else mapa[mes].saida += item.valor
+    if (item.tipo === 'entrada') {
+      mapa[mes].entrada += Number(item.valor)
+    } else {
+      mapa[mes].saida += Number(item.valor)
+    }
   })
 
   return Object.values(mapa)
 }
 
-function soma(lista:any[]){
-  return lista.reduce((acc,i)=>acc+Number(i.valor),0)
+/* =========================
+   SOMA
+========================= */
+
+function soma(lista: Movimento[]) {
+  return lista.reduce((acc, i) => acc + Number(i.valor || 0), 0)
+}
+
+/* =========================
+   LANÇAR MOVIMENTO (CORRIGIDO)
+========================= */
+
+type Lancamento = {
+  obra_id: number
+  empresa_id: number
+  tipo: 'entrada' | 'saida'
+  descricao?: string
+  valor: number | string
 }
 
 export async function lancarMovimento({
@@ -50,25 +90,38 @@ export async function lancarMovimento({
   tipo,
   descricao,
   valor
-}: any) {
+}: Lancamento) {
 
-  if (!obra_id || !empresa_id) {
-    throw new Error('Dados inválidos')
+  // 🔥 VALIDAÇÃO PROFISSIONAL
+  if (!obra_id || isNaN(Number(obra_id))) {
+    throw new Error('obra_id inválido')
+  }
+
+  if (!empresa_id || isNaN(Number(empresa_id))) {
+    throw new Error('empresa_id inválido')
+  }
+
+  if (!tipo) {
+    throw new Error('tipo obrigatório')
+  }
+
+  if (!valor) {
+    throw new Error('valor obrigatório')
   }
 
   const { error } = await supabase
     .from('financeiro')
     .insert({
-      obra_id,
-      empresa_id,
+      obra_id: Number(obra_id),       // 🔥 garante bigint correto
+      empresa_id: Number(empresa_id), // 🔥 garante bigint correto
       tipo,
-      descricao,
+      descricao: descricao || '',
       valor: Number(valor),
       created_at: new Date().toISOString()
     })
 
   if (error) {
-    console.error(error)
+    console.error('Erro ao lançar movimento:', error)
     throw error
   }
 }

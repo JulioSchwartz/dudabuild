@@ -22,19 +22,23 @@ export default function Financeiro() {
 
   async function carregar() {
 
-    const { data, error } = await supabase
-      .from('financeiro')
-      .select('*')
-      .eq('empresa_id', empresaId)
+    try {
 
-    if (error) {
-      console.error(error)
+      const { data, error } = await supabase
+        .from('financeiro')
+        .select('*')
+        .eq('empresa_id', Number(empresaId)) // 🔥 CORREÇÃO
+
+      if (error) throw error
+
+      setDados(data || [])
+
+    } catch (err) {
+      console.error('Erro financeiro:', err)
       alert('Erro ao carregar financeiro')
-      return
+    } finally {
+      setLoading(false) // 🔥 NUNCA MAIS TRAVA
     }
-
-    setDados(data || [])
-    setLoading(false)
   }
 
   if (loading) {
@@ -57,15 +61,18 @@ export default function Financeiro() {
   const porMes: any = {}
 
   dados.forEach(d => {
+
     if (!d.created_at) return
+
+    const valor = Number(d.valor || 0) // 🔥 CORREÇÃO
 
     const mes = new Date(d.created_at)
       .toLocaleDateString('pt-BR',{month:'short'})
 
     if (!porMes[mes]) porMes[mes] = { mes, entrada:0, saida:0 }
 
-    if (d.tipo === 'entrada') porMes[mes].entrada += d.valor
-    else porMes[mes].saida += d.valor
+    if (d.tipo === 'entrada') porMes[mes].entrada += valor
+    else porMes[mes].saida += valor
   })
 
   const grafico = Object.values(porMes)
@@ -81,7 +88,6 @@ export default function Financeiro() {
         </div>
       )}
 
-      {/* CARDS PREMIUM */}
       <div style={grid}>
         <Card titulo="Receita" valor={receita} cor="#16a34a"/>
         <Card titulo="Custos" valor={custo} cor="#dc2626"/>
@@ -89,7 +95,6 @@ export default function Financeiro() {
         <Card titulo="Margem" valor={margem} cor="#a855f7" tipo="porcentagem"/>
       </div>
 
-      {/* GRÁFICO */}
       <div style={graficoBox}>
         <h3>📊 Evolução Financeira</h3>
 
@@ -112,11 +117,14 @@ export default function Financeiro() {
 /* ================= HELPERS ================= */
 
 function soma(lista:any[]){
-  return lista.reduce((acc,i)=>acc+Number(i.valor),0)
+  return lista.reduce((acc,i)=>acc+Number(i.valor || 0),0)
 }
 
 function format(v:number){
-  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+  return Number(v || 0).toLocaleString('pt-BR',{
+    style:'currency',
+    currency:'BRL'
+  })
 }
 
 /* ================= COMPONENTES ================= */
@@ -138,7 +146,7 @@ function Card({ titulo, valor, cor, tipo }: any) {
         fontWeight: 700
       }}>
         {tipo === 'porcentagem'
-          ? valor.toFixed(2) + '%'
+          ? Number(valor).toFixed(2) + '%'
           : format(valor)}
       </h2>
     </div>

@@ -33,8 +33,8 @@ export default function Login() {
 
     const user = data.user
 
-    // ✅ GARANTE USUÁRIO NA TABELA (SEM DUPLICAR)
-    await supabase
+    // ✅ GARANTE USUÁRIO NA TABELA
+    const { error: upsertError } = await supabase
       .from('usuarios')
       .upsert(
         {
@@ -44,7 +44,13 @@ export default function Login() {
         { onConflict: 'user_id' }
       )
 
-    // 🔍 BUSCA USUÁRIO
+    if (upsertError) {
+      setErro('Erro ao sincronizar usuário')
+      setLoading(false)
+      return
+    }
+
+    // 🔍 VERIFICA SE TEM EMPRESA
     const { data: usuario, error: erroUsuario } = await supabase
       .from('usuarios')
       .select('empresa_id')
@@ -57,16 +63,39 @@ export default function Login() {
       return
     }
 
+    // 🚨 SE NÃO TEM EMPRESA → CRIAR AUTOMATICAMENTE
     if (!usuario?.empresa_id) {
-      setErro('Usuário sem empresa vinculada')
-      setLoading(false)
-      return
+      const { data: novaEmpresa, error: erroEmpresa } = await supabase
+        .from('empresas')
+        .insert({
+          nome: user.email,
+          plano: 'free'
+        })
+        .select()
+        .single()
+
+      if (erroEmpresa || !novaEmpresa) {
+        setErro('Erro ao criar empresa')
+        setLoading(false)
+        return
+      }
+
+      // 🔗 VINCULA USUÁRIO À EMPRESA
+      const { error: vinculoError } = await supabase
+        .from('usuarios')
+        .update({
+          empresa_id: novaEmpresa.id
+        })
+        .eq('user_id', user.id)
+
+      if (vinculoError) {
+        setErro('Erro ao vincular empresa')
+        setLoading(false)
+        return
+      }
     }
 
-    // 💾 SALVA EMPRESA
-    localStorage.setItem('empresa_id', usuario.empresa_id)
-
-    // 🚀 REDIRECIONA
+    // 🚀 REDIRECIONA (SEM LOCALSTORAGE!)
     router.push('/dashboard')
   }
 
@@ -115,87 +144,4 @@ export default function Login() {
       </div>
     </div>
   )
-}
-
-/* 🎨 ESTILO */
-
-const container = {
-  height: '100vh',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-}
-
-const card = {
-  background: '#ffffff',
-  padding: '40px',
-  borderRadius: '16px',
-  width: '340px',
-  boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
-  textAlign: 'center' as const,
-}
-
-const titulo = {
-  marginBottom: '5px',
-  color: '#0f172a',
-  fontSize: '24px',
-  fontWeight: '700',
-}
-
-const subtitulo = {
-  marginBottom: '20px',
-  color: '#64748b',
-  fontSize: '14px',
-}
-
-const input = {
-  display: 'block',
-  width: '100%',
-  marginBottom: '12px',
-  padding: '12px',
-  borderRadius: '8px',
-  border: '1px solid #e2e8f0',
-}
-
-const senhaBox = {
-  position: 'relative' as const,
-  marginBottom: '12px',
-}
-
-const toggleSenha = {
-  position: 'absolute' as const,
-  right: '10px',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  cursor: 'pointer',
-}
-
-const erroStyle = {
-  color: '#ef4444',
-  fontSize: '13px',
-  marginBottom: '10px',
-}
-
-const botao = {
-  width: '100%',
-  background: '#2563eb',
-  color: '#fff',
-  padding: '12px',
-  border: 'none',
-  borderRadius: '8px',
-  fontWeight: 'bold',
-  cursor: 'pointer',
-}
-
-const linkCadastro = {
-  marginTop: '15px',
-  fontSize: '13px',
-  color: '#64748b',
-}
-
-const link = {
-  color: '#2563eb',
-  fontWeight: 'bold',
-  cursor: 'pointer',
 }

@@ -29,7 +29,7 @@ export default function OrcamentoPublico() {
     const { data: orc } = await supabase
       .from('orcamentos')
       .select('*')
-      .eq('id', Number(id))
+      .eq('id', id)
       .eq('token', token)
       .maybeSingle()
 
@@ -41,7 +41,7 @@ export default function OrcamentoPublico() {
     const { data: itensData } = await supabase
       .from('orcamento_itens')
       .select('*')
-      .eq('orcamento_id', Number(id))
+      .eq('orcamento_id', id)
 
     setOrcamento(orc)
     setItens(itensData || [])
@@ -111,7 +111,7 @@ export default function OrcamentoPublico() {
       .update({
         status: 'recusado'
       })
-      .eq('id', Number(id))
+      .eq('id', id)
       .eq('token', token)
 
     setFinalizado(true)

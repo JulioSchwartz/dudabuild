@@ -25,7 +25,7 @@ export default function EditarOrcamento(){
     const { data: orc, error } = await supabase
   .from('orcamentos')
   .select('*')
-  .eq('id', Number(id))
+  .eq('id', id)
   .maybeSingle()
 
 if (error) {
@@ -38,7 +38,7 @@ if (error) {
     const { data: itensData } = await supabase
       .from('orcamento_itens')
       .select('*')
-      .eq('orcamento_id', Number(id))
+      .eq('orcamento_id', id)
 
     setItens(itensData || [])
   }
@@ -90,21 +90,21 @@ if (error) {
         descricao,
         valor_total: totalGeral()
       })
-      .eq('id', Number(id))
-.maybeSingle()
+      .eq('id', id)
+      .maybeSingle()
 
     await supabase
       .from('orcamento_itens')
       .delete()
-      .eq('orcamento_id', Number(id))
+      .eq('orcamento_id', id)
 
     await supabase.from('orcamento_itens').insert(
-      itens.map(i => ({
-        ...i,
-        orcamento_id: Number(id),
-        valor_total: totalItem(i)
-      }))
-    )
+  itens.map(i => ({
+    ...i,
+    orcamento_id: id,
+    valor_total: totalItem(i)
+  }))
+)
 
     alert('Atualizado com sucesso!')
     setLoading(false)
@@ -133,7 +133,7 @@ if (error) {
   }
 
   function enviarWhatsApp() {
-  const link = `${window.location.origin}/orcamento-publico/${id}?token=${token}`
+  const link = `${window.location.origin}/orcamento-publico/${id}`
   const texto = `Olá! Segue sua proposta:\n${link}`
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`)
 }

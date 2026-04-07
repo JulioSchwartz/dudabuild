@@ -23,27 +23,31 @@ export default function Dashboard() {
 
   async function carregar() {
 
-    const { data, error } = await supabase
-      .from('financeiro')
-      .select('*')
-      .eq('empresa_id', empresaId)
+    try {
 
-    if (error) {
-      console.error(error)
+      const { data, error } = await supabase
+        .from('financeiro')
+        .select('*')
+        .eq('empresa_id', Number(empresaId)) // 🔥 CORREÇÃO
+
+      if (error) throw error
+
+      setDados(data || [])
+
+    } catch (err) {
+      console.error('Erro dashboard:', err)
       alert('Erro ao carregar dashboard')
-      return
+    } finally {
+      setLoading(false) // 🔥 NUNCA MAIS TRAVA
     }
-
-    setDados(data || [])
-    setLoading(false)
   }
 
   if (loading) return <p style={{ padding: 24 }}>Carregando...</p>
 
   /* ================= BASE ================= */
 
-  const entradas = dados.filter(d=>d.tipo==='entrada')
-  const saidas = dados.filter(d=>d.tipo==='saida')
+  const entradas = dados.filter(d => d.tipo === 'entrada')
+  const saidas = dados.filter(d => d.tipo === 'saida')
 
   const receita = soma(entradas)
   const custo = soma(saidas)
@@ -54,9 +58,11 @@ export default function Dashboard() {
 
   /* ================= POR OBRA ================= */
 
-  const porObra:any = {}
+  const porObra: any = {}
 
   dados.forEach(d => {
+
+    const valor = Number(d.valor || 0) // 🔥 CORREÇÃO
 
     if (!porObra[d.obra_id]) {
       porObra[d.obra_id] = {
@@ -67,9 +73,9 @@ export default function Dashboard() {
     }
 
     if (d.tipo === 'entrada') {
-      porObra[d.obra_id].receita += d.valor
+      porObra[d.obra_id].receita += valor
     } else {
-      porObra[d.obra_id].custo += d.valor
+      porObra[d.obra_id].custo += valor
     }
 
     porObra[d.obra_id].lucro =
@@ -78,7 +84,7 @@ export default function Dashboard() {
 
   const listaObras = Object.entries(porObra)
 
-  const ranking = [...listaObras].sort((a:any,b:any)=>
+  const ranking = [...listaObras].sort((a: any, b: any) =>
     b[1].lucro - a[1].lucro
   )
 
@@ -87,15 +93,18 @@ export default function Dashboard() {
   const fluxo: any = {}
 
   dados.forEach(d => {
+
     if (!d.created_at) return
 
+    const valor = Number(d.valor || 0) // 🔥 CORREÇÃO
+
     const mes = new Date(d.created_at)
-      .toLocaleDateString('pt-BR',{month:'short'})
+      .toLocaleDateString('pt-BR', { month: 'short' })
 
-    if (!fluxo[mes]) fluxo[mes] = { mes, entrada:0, saida:0 }
+    if (!fluxo[mes]) fluxo[mes] = { mes, entrada: 0, saida: 0 }
 
-    if (d.tipo === 'entrada') fluxo[mes].entrada += d.valor
-    else fluxo[mes].saida += d.valor
+    if (d.tipo === 'entrada') fluxo[mes].entrada += valor
+    else fluxo[mes].saida += valor
   })
 
   const grafico = Object.values(fluxo)
@@ -103,7 +112,6 @@ export default function Dashboard() {
   return (
     <div>
 
-      {/* NAVBAR */}
       <div style={navbar}>
         <h2>DudaBuild</h2>
 
@@ -116,7 +124,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ padding:24 }}>
+      <div style={{ padding: 24 }}>
 
         <h1 style={titulo}>🚀 Dashboard Executivo</h1>
 
@@ -132,17 +140,15 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* CARDS */}
         <div style={grid}>
-          <Card titulo="Receita" valor={receita} cor="#16a34a"/>
-          <Card titulo="Custos" valor={custo} cor="#dc2626"/>
-          <Card titulo="Lucro" valor={lucro} cor="#2563eb"/>
-          <Card titulo="Margem" valor={margem} cor="#a855f7" tipo="porcentagem"/>
-          <Card titulo="Ticket Médio" valor={ticketMedio} cor="#0ea5e9"/>
-          <Card titulo="Movimentações" valor={dados.length} cor="#f59e0b" tipo="numero"/>
+          <Card titulo="Receita" valor={receita} cor="#16a34a" />
+          <Card titulo="Custos" valor={custo} cor="#dc2626" />
+          <Card titulo="Lucro" valor={lucro} cor="#2563eb" />
+          <Card titulo="Margem" valor={margem} cor="#a855f7" tipo="porcentagem" />
+          <Card titulo="Ticket Médio" valor={ticketMedio} cor="#0ea5e9" />
+          <Card titulo="Movimentações" valor={dados.length} cor="#f59e0b" tipo="numero" />
         </div>
 
-        {/* GRAFICO */}
         <div style={graficoBox}>
           <h3>📊 Fluxo Financeiro</h3>
 
@@ -158,29 +164,27 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* RESULTADO POR OBRA */}
-        <div style={{marginTop:30}}>
+        <div style={{ marginTop: 30 }}>
           <h3>🏗️ Resultado por Obra</h3>
 
-          {listaObras.map(([id, d]:any)=>(
+          {listaObras.map(([id, d]: any) => (
             <div key={id} style={linha}>
               <span>Obra {id}</span>
               <span>{format(d.receita)}</span>
               <span>{format(d.custo)}</span>
-              <span style={{color:d.lucro>=0?'#16a34a':'#dc2626'}}>
+              <span style={{ color: d.lucro >= 0 ? '#16a34a' : '#dc2626' }}>
                 {format(d.lucro)}
               </span>
             </div>
           ))}
         </div>
 
-        {/* RANKING */}
-        <div style={{marginTop:30}}>
+        <div style={{ marginTop: 30 }}>
           <h3>🏆 Obras mais lucrativas</h3>
 
-          {ranking.map(([id, d]:any, i:number)=>(
+          {ranking.map(([id, d]: any, i: number) => (
             <div key={id}>
-              #{i+1} — Obra {id} → {format(d.lucro)}
+              #{i + 1} — Obra {id} → {format(d.lucro)}
             </div>
           ))}
         </div>
@@ -193,33 +197,36 @@ export default function Dashboard() {
 
 /* HELPERS */
 
-function soma(lista:any[]){
-  return lista.reduce((a,b)=>a+Number(b.valor),0)
+function soma(lista: any[]) {
+  return lista.reduce((a, b) => a + Number(b.valor || 0), 0)
 }
 
-function format(v:number){
-  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+function format(v: number) {
+  return Number(v || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  })
 }
 
 /* COMPONENTES */
 
-function Card({ titulo, valor, cor, tipo }: any){
-  return(
+function Card({ titulo, valor, cor, tipo }: any) {
+  return (
     <div style={{
       background: cor + '15',
-      padding:20,
-      borderRadius:12,
-      border:`1px solid ${cor}`,
-      boxShadow:'0 4px 12px rgba(0,0,0,0.05)'
+      padding: 20,
+      borderRadius: 12,
+      border: `1px solid ${cor}`,
+      boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
     }}>
-      <p style={{ color:'#64748b' }}>{titulo}</p>
+      <p style={{ color: '#64748b' }}>{titulo}</p>
 
       <h2 style={{ color: cor }}>
         {tipo === 'porcentagem'
-          ? valor.toFixed(2) + '%'
+          ? Number(valor).toFixed(2) + '%'
           : tipo === 'numero'
-          ? valor
-          : format(valor)}
+            ? valor
+            : format(valor)}
       </h2>
     </div>
   )
@@ -228,17 +235,17 @@ function Card({ titulo, valor, cor, tipo }: any){
 /* ESTILO */
 
 const navbar = {
-  display:'flex',
-  justifyContent:'space-between',
-  alignItems:'center',
-  padding:'12px 24px',
-  background:'#fff',
-  borderBottom:'1px solid #e2e8f0'
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '12px 24px',
+  background: '#fff',
+  borderBottom: '1px solid #e2e8f0'
 }
 
 const menu = {
-  display:'flex',
-  gap:16
+  display: 'flex',
+  gap: 16
 }
 
 const titulo = {
@@ -248,38 +255,38 @@ const titulo = {
 }
 
 const grid = {
-  display:'grid',
-  gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',
-  gap:16,
-  marginBottom:30
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))',
+  gap: 16,
+  marginBottom: 30
 }
 
 const graficoBox = {
-  background:'#fff',
-  padding:20,
-  borderRadius:12,
-  boxShadow:'0 4px 12px rgba(0,0,0,0.05)'
+  background: '#fff',
+  padding: 20,
+  borderRadius: 12,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
 }
 
 const linha = {
-  display:'grid',
-  gridTemplateColumns:'1fr 1fr 1fr 1fr',
-  padding:10,
-  borderBottom:'1px solid #e2e8f0'
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 1fr 1fr',
+  padding: 10,
+  borderBottom: '1px solid #e2e8f0'
 }
 
 const alertaErro = {
-  background:'#fee2e2',
-  padding:12,
-  borderRadius:8,
-  marginBottom:10,
-  color:'#991b1b'
+  background: '#fee2e2',
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 10,
+  color: '#991b1b'
 }
 
 const alertaAviso = {
-  background:'#fef3c7',
-  padding:12,
-  borderRadius:8,
-  marginBottom:10,
-  color:'#92400e'
+  background: '#fef3c7',
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 10,
+  color: '#92400e'
 }

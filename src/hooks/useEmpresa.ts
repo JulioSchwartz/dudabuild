@@ -18,58 +18,86 @@ export function useEmpresa() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
+
     carregar()
+
+    // 🔥 ESCUTA LOGIN / LOGOUT (ESSENCIAL)
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      if (mounted) carregar()
+    })
+
+    return () => {
+      mounted = false
+      listener.subscription.unsubscribe()
+    }
   }, [])
 
   async function carregar() {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      setLoading(true)
 
-      if (!user) {
-        setLoading(false)
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser()
+
+      // 🔐 SEM USUÁRIO → LIMPA TUDO
+      if (userError || !user) {
+        limparEstado()
         return
       }
 
       // 🔹 BUSCA EMPRESA DO USUÁRIO
-      const { data: usuario } = await supabase
+      const { data: usuario, error: usuarioError } = await supabase
         .from('usuarios')
         .select('empresa_id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (!usuario?.empresa_id) {
-        setLoading(false)
+      if (usuarioError || !usuario?.empresa_id) {
+        limparEstado()
         return
       }
 
       setEmpresaId(usuario.empresa_id)
 
-      // 🔹 BUSCA DADOS DA EMPRESA
-      const { data: empresa } = await supabase
+      // 🔹 BUSCA EMPRESA
+      const { data: empresa, error: empresaError } = await supabase
         .from('empresas')
-        .select('*')
+        .select('plano')
         .eq('id', usuario.empresa_id)
-        .single()
+        .maybeSingle()
 
-      if (!empresa) {
-        setLoading(false)
+      if (empresaError || !empresa) {
+        limparEstado()
         return
       }
 
-      setPlano(empresa.plano || 'free')
+      const planoAtual = empresa.plano || 'free'
+      setPlano(planoAtual)
 
-      // 🔥 LIMITES
-      if (empresa.plano === 'free') {
+      // 🔥 LIMITES BASEADOS NO PLANO
+      if (planoAtual === 'free') {
         setLimites({ orcamentos: 5, obras: 3 })
+      } else if (planoAtual === 'pro') {
+        setLimites({ orcamentos: 50, obras: 20 })
       } else {
         setLimites({ orcamentos: Infinity, obras: Infinity })
       }
 
     } catch (err) {
       console.error('Erro ao carregar empresa:', err)
+      limparEstado()
     } finally {
       setLoading(false)
     }
+  }
+
+  function limparEstado() {
+    setEmpresaId(null)
+    setPlano('free')
+    setLimites({ orcamentos: 5, obras: 3 })
   }
 
   return {

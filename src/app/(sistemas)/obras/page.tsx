@@ -22,19 +22,31 @@ export default function Obras() {
 
   async function carregar() {
 
-    const { data: obrasData } = await supabase
-      .from('obras')
-      .select('*')
-      .eq('empresa_id', empresaId)
+    try {
 
-    const { data: finData } = await supabase
-      .from('financeiro')
-      .select('*')
-      .eq('empresa_id', empresaId)
+      const { data: obrasData, error: errObras } = await supabase
+        .from('obras')
+        .select('*')
+        .eq('empresa_id', Number(empresaId)) // 🔥 CORREÇÃO
 
-    setObras(obrasData || [])
-    setFinanceiro(finData || [])
-    setLoading(false)
+      if (errObras) throw errObras
+
+      const { data: finData, error: errFin } = await supabase
+        .from('financeiro')
+        .select('*')
+        .eq('empresa_id', Number(empresaId)) // 🔥 CORREÇÃO
+
+      if (errFin) throw errFin
+
+      setObras(obrasData || [])
+      setFinanceiro(finData || [])
+
+    } catch (err) {
+      console.error('Erro obras:', err)
+      alert('Erro ao carregar obras')
+    } finally {
+      setLoading(false) // 🔥 evita travamento
+    }
   }
 
   function calcularLucro(obraId:number){
@@ -42,12 +54,12 @@ export default function Obras() {
     const itens = financeiro.filter(f => f.obra_id === obraId)
 
     const entrada = itens
-      .filter(i=>i.tipo==='entrada')
-      .reduce((a,b)=>a+Number(b.valor),0)
+      .filter(i => i.tipo === 'entrada')
+      .reduce((a,b)=>a + Number(b.valor || 0), 0)
 
     const saida = itens
-      .filter(i=>i.tipo==='saida')
-      .reduce((a,b)=>a+Number(b.valor),0)
+      .filter(i => i.tipo === 'saida')
+      .reduce((a,b)=>a + Number(b.valor || 0), 0)
 
     return entrada - saida
   }
@@ -77,7 +89,7 @@ export default function Obras() {
               <p style={{ color:'#64748b' }}>{obra.cliente}</p>
 
               <p style={valor}>
-                💰 {format(obra.valor || 0)}
+                💰 {format(Number(obra.valor || 0))}
               </p>
 
               <p style={{
@@ -106,19 +118,30 @@ export default function Obras() {
   )
 
   async function excluir(id:number){
+
     if (!confirm('Excluir obra?')) return
 
-    await supabase.from('financeiro').delete().eq('obra_id', id)
-    await supabase.from('obras').delete().eq('id', id)
+    try {
 
-    carregar()
+      await supabase.from('financeiro').delete().eq('obra_id', id)
+      await supabase.from('obras').delete().eq('id', id)
+
+      carregar()
+
+    } catch (err) {
+      console.error('Erro ao excluir:', err)
+      alert('Erro ao excluir obra')
+    }
   }
 }
 
 /* HELPERS */
 
 function format(v:number){
-  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+  return Number(v || 0).toLocaleString('pt-BR',{
+    style:'currency',
+    currency:'BRL'
+  })
 }
 
 /* UI */
