@@ -16,10 +16,7 @@ export default function Dashboard() {
   const [dados, setDados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  <button onClick={() => router.push('/planos')}>
-  Upgrade 🚀
-</button>
-
+  
   useEffect(() => {
     if (!empresaId || empresaId === 'NaN') return
     carregar()
@@ -118,6 +115,10 @@ export default function Dashboard() {
 
       <div style={navbar}>
         <h2>DudaBuild</h2>
+
+<button onClick={() => router.push('/planos')}>
+  Upgrade 🚀
+</button>
 
         <div style={menu}>
           <Link href="/dashboard">Dashboard</Link>
