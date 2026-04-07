@@ -10,7 +10,7 @@ type Limites = {
 
 export function useEmpresa() {
   const [empresaId, setEmpresaId] = useState<string | null>(null)
-  const [plano, setPlano] = useState<'free' | 'pro' | 'premium'>('free')
+  const [plano, setPlano] = useState<'basico' | 'pro' | 'premium'>('basico')
   const [limites, setLimites] = useState<Limites>({
     orcamentos: 5,
     obras: 3
@@ -60,7 +60,12 @@ export function useEmpresa() {
         return
       }
 
-      setEmpresaId(usuario.empresa_id)
+      if (!usuario.empresa_id) {
+  limparEstado()
+  return
+}
+
+setEmpresaId(usuario.empresa_id)
 
       // 🔹 BUSCA EMPRESA
       const { data: empresa, error: empresaError } = await supabase
@@ -78,13 +83,13 @@ export function useEmpresa() {
       setPlano(planoAtual)
 
       // 🔥 LIMITES BASEADOS NO PLANO
-      if (planoAtual === 'free') {
-        setLimites({ orcamentos: 5, obras: 3 })
-      } else if (planoAtual === 'pro') {
-        setLimites({ orcamentos: 50, obras: 20 })
-      } else {
-        setLimites({ orcamentos: Infinity, obras: Infinity })
-      }
+      if (planoAtual === 'basico') {
+  setLimites({ orcamentos: 5, obras: 2 })
+} else if (planoAtual === 'pro') {
+  setLimites({ orcamentos: 10, obras: 5 })
+} else if (planoAtual === 'premium') {
+  setLimites({ orcamentos: Infinity, obras: Infinity })
+}
 
     } catch (err) {
       console.error('Erro ao carregar empresa:', err)

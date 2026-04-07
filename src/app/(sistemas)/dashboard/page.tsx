@@ -16,8 +16,12 @@ export default function Dashboard() {
   const [dados, setDados] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  <button onClick={() => router.push('/planos')}>
+  Upgrade 🚀
+</button>
+
   useEffect(() => {
-    if (!empresaId) return
+    if (!empresaId || empresaId === 'NaN') return
     carregar()
   }, [empresaId])
 
@@ -26,9 +30,9 @@ export default function Dashboard() {
     try {
 
       const { data, error } = await supabase
-        .from('financeiro')
-        .select('*')
-        .eq('empresa_id', Number(empresaId)) // 🔥 CORREÇÃO
+  .from('financeiro')
+  .select('*')
+  .eq('empresa_id', empresaId) // ✅ correto
 
       if (error) throw error
 

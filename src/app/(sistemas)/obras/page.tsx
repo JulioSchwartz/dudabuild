@@ -27,14 +27,14 @@ export default function Obras() {
       const { data: obrasData, error: errObras } = await supabase
         .from('obras')
         .select('*')
-        .eq('empresa_id', Number(empresaId)) // 🔥 CORREÇÃO
+        .eq('empresa_id', empresaId)
 
       if (errObras) throw errObras
 
       const { data: finData, error: errFin } = await supabase
         .from('financeiro')
         .select('*')
-        .eq('empresa_id', Number(empresaId)) // 🔥 CORREÇÃO
+        .eq('empresa_id', empresaId)
 
       if (errFin) throw errFin
 

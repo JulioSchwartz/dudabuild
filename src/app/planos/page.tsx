@@ -1,145 +1,127 @@
 'use client'
 
-import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export default function Planos() {
-  const [loading, setLoading] = useState<string | null>(null)
 
   async function assinar(priceId: string) {
-    try {
-      setLoading(priceId)
 
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        body: JSON.stringify({ priceId }),
-      })
+    const session = await supabase.auth.getSession()
 
-      const data = await res.json()
+    const token = session.data.session?.access_token
 
-      if (!data.url) {
-        alert('Erro ao iniciar pagamento')
-        return
-      }
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ priceId })
+    })
 
+    const data = await res.json()
+
+    if (data.url) {
       window.location.href = data.url
-    } catch (err) {
-      console.error(err)
-      alert('Erro ao conectar com pagamento')
-    } finally {
-      setLoading(null)
+    } else {
+      alert('Erro ao iniciar pagamento')
     }
   }
 
   return (
-    <div style={{ padding: 40 }}>
-      <h1 style={{ textAlign: 'center' }}>Escolha seu plano</h1>
+    <div style={container}>
 
-      <div style={{ display: 'flex', gap: 20, marginTop: 30, justifyContent: 'center' }}>
+      <h1 style={titulo}>💰 Escolha seu plano</h1>
+
+      <div style={grid}>
 
         {/* BASICO */}
         <div style={card}>
-          <h2>Básico</h2>
-          <p style={preco}>R$ 49,90/mês</p>
-
-          <ul style={lista}>
-            <li>✔ Até 2 obras</li>
-            <li>✔ Até 5 orçamentos</li>
+          <h2>Free</h2>
+          <p>R$ 49,90</p>
+          <ul>
+            <li>2 obras</li>
+            <li>5 orçamentos</li>
           </ul>
-
-          <button
-            onClick={() => assinar('price_1TJg7cFjaswz9WcmjuSi3KLQ')}
-            style={botao}
-            disabled={loading !== null}
-          >
-            {loading === 'price_1TJg7cFjaswz9WcmjuSi3KLQ'
-              ? 'Carregando...'
-              : 'Assinar Básico'}
-          </button>
         </div>
 
-        {/* PRO (DESTAQUE) */}
+        {/* PRO */}
         <div style={cardDestaque}>
           <h2>PRO 🚀</h2>
-          <p style={preco}>R$ 99,90/mês</p>
-
-          <ul style={lista}>
-            <li>✔ Até 5 obras</li>
-            <li>✔ Até 10 orçamentos</li>
+          <p>R$ 99,90/mês</p>
+          <ul>
+            <li>5 obras</li>
+            <li>10 orçamentos</li>
           </ul>
 
           <button
-            onClick={() => assinar('price_1TJg8HFjaswz9WcmLtUD1Wzk')}
             style={botao}
-            disabled={loading !== null}
+            onClick={() => assinar('price_xxxxx')} // 🔥 SEU PRICE ID
           >
-            {loading === 'price_1TJg8HFjaswz9WcmLtUD1Wzk'
-              ? 'Carregando...'
-              : 'Assinar Pro'}
+            Assinar
           </button>
         </div>
 
         {/* PREMIUM */}
         <div style={card}>
-          <h2>Premium 💎</h2>
-          <p style={preco}>R$ 159,90/mês</p>
-
-          <ul style={lista}>
-            <li>✔ Obras ilimitadas</li>
-            <li>✔ Orçamentos ilimitados</li>
+          <h2>Premium 👑</h2>
+          <p>R$ 159,90/mês</p>
+          <ul>
+            <li>Obras ilimitadas</li>
+            <li>Orçamentos ilimitados</li>
           </ul>
 
           <button
-            onClick={() => assinar('price_1TJg99Fjaswz9WcmOhX7PsvZ')}
             style={botao}
-            disabled={loading !== null}
+            onClick={() => assinar('price_yyyyy')} // 🔥 OUTRO PRICE
           >
-            {loading === 'price_1TJg99Fjaswz9WcmOhX7PsvZ'
-              ? 'Carregando...'
-              : 'Assinar Premium'}
+            Assinar
           </button>
         </div>
 
       </div>
+
     </div>
   )
 }
 
-/* 🎨 ESTILO */
+/* ESTILO */
+
+const container = {
+  padding: 40,
+  textAlign: 'center' as const
+}
+
+const titulo = {
+  fontSize: 28,
+  marginBottom: 30
+}
+
+const grid = {
+  display: 'flex',
+  gap: 20,
+  justifyContent: 'center',
+  flexWrap: 'wrap' as const
+}
 
 const card = {
-  border: '1px solid #e2e8f0',
+  border: '1px solid #ddd',
   padding: 20,
   borderRadius: 12,
-  width: 240,
-  textAlign: 'center' as const,
+  width: 250
 }
 
 const cardDestaque = {
   ...card,
-  border: '2px solid #2563eb',
-  transform: 'scale(1.05)',
-}
-
-const preco = {
-  fontSize: 20,
-  fontWeight: 'bold',
-  margin: '10px 0',
-}
-
-const lista = {
-  textAlign: 'left' as const,
-  fontSize: 14,
-  marginBottom: 10,
+  border: '2px solid #2563eb'
 }
 
 const botao = {
-  marginTop: 10,
-  padding: 12,
+  marginTop: 15,
+  padding: '10px 15px',
   background: '#2563eb',
   color: '#fff',
   border: 'none',
   borderRadius: 8,
-  cursor: 'pointer',
-  width: '100%',
-  fontWeight: 'bold',
+  cursor: 'pointer'
 }

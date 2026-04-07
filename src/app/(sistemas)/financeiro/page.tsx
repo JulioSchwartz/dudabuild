@@ -27,7 +27,7 @@ export default function Financeiro() {
       const { data, error } = await supabase
         .from('financeiro')
         .select('*')
-        .eq('empresa_id', Number(empresaId)) // 🔥 CORREÇÃO
+        .eq('empresa_id', empresaId)
 
       if (error) throw error
 
