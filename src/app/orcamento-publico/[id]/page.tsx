@@ -17,7 +17,7 @@ export default function OrcamentoPublico() {
   const [finalizado, setFinalizado] = useState(false)
 
   useEffect(() => {
-    if (!id || !token) return
+    if (!id || !token) {setLoading(false) return }
     carregar()
   }, [id, token])
 
@@ -26,7 +26,7 @@ export default function OrcamentoPublico() {
     const { data: orc } = await supabase
       .from('orcamentos')
       .select('*')
-      .eq('id', id)
+      .eq('id', Number(id))
       .eq('token', token)
       .maybeSingle()
 
@@ -38,7 +38,7 @@ export default function OrcamentoPublico() {
     const { data: itensData } = await supabase
       .from('orcamento_itens')
       .select('*')
-      .eq('orcamento_id', id)
+      .eq('orcamento_id', Number(id))
 
     setOrcamento(orc)
     setItens(itensData || [])
@@ -108,7 +108,8 @@ export default function OrcamentoPublico() {
       .update({
         status: 'recusado'
       })
-      .eq('id', id)
+      .eq('id', Number(id))
+      .eq('token', token)
 
     setFinalizado(true)
   }

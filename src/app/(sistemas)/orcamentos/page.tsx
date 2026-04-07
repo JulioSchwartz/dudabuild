@@ -108,21 +108,39 @@ export default function OrcamentosPage() {
 
             <div style={acoes}>
 
-              <button onClick={() => copiarLink(o.id, (o as any).token)} style={btnSec}>
-                🔗 Link
-              </button>
+             <button
+  <button
+  onClick={() => {
+    if (!o.token) {
+      alert('Erro: orçamento sem token')
+      return
+    }
+    copiarLink(o.id, o.token)
+  }}
+  style={btnSec}
+>
+  🔗 Link
+</button>
 
-              <button onClick={() => router.push(`/orcamentos/${o.id}`)} style={btnPrim}>
-                Ver
-              </button>
+<button
+  onClick={() => router.push(`/orcamentos/${o.id}`)}
+  style={btnPrim}
+>
+  Ver
+</button>
 
-              <button onClick={() => router.push(`/orcamentos/editar/${o.id}`)} style={btnSec}>
-                Editar
-              </button>
+<button
+  onClick={() => router.push(`/orcamentos/editar/${o.id}`)}
+  style={btnSec}
+>
+  Editar
+</button>
 
-              <button onClick={() => enviarCliente(o.id, o.telefone || '')} style={btnWhats}>
-                WhatsApp
-              </button>
+<button
+  onClick={() => enviarCliente(o.id, o.telefone || '', o.token || '')}
+>
+  WhatsApp
+</button>
 
             </div>
 
@@ -143,10 +161,11 @@ function copiarLink(id:string, token:string){
   alert('Link copiado!')
 }
 
-function enviarCliente(id: string, telefone: string) {
+function enviarCliente(id: string, telefone: string, token:string) {
 
-  const link = `${window.location.origin}/orcamentos/${id}`
-  const texto = `Olá! Segue seu orçamento:\n${link}`
+  const link = `${window.location.origin}/orcamento-publico/${id}?token=${token}`
+
+  const texto = `Olá! Segue sua proposta:\n${link}`
 
   const url = telefone
     ? `https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`
@@ -154,7 +173,6 @@ function enviarCliente(id: string, telefone: string) {
 
   window.open(url)
 }
-
 /* ================= UI ================= */
 
 function Loader(){

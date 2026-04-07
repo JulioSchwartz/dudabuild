@@ -25,8 +25,8 @@ export default function EditarOrcamento(){
     const { data: orc } = await supabase
       .from('orcamentos')
       .select('*')
-      .eq('id', id)
-      .single()
+      .eq('id', Number(id))
+.maybeSingle()
 
     setCliente(orc?.cliente_nome || '')
     setDescricao(orc?.descricao || '')
@@ -34,7 +34,7 @@ export default function EditarOrcamento(){
     const { data: itensData } = await supabase
       .from('orcamento_itens')
       .select('*')
-      .eq('orcamento_id', id)
+      .eq('orcamento_id', Number(id))
 
     setItens(itensData || [])
   }
@@ -86,17 +86,18 @@ export default function EditarOrcamento(){
         descricao,
         valor_total: totalGeral()
       })
-      .eq('id', id)
+      .eq('id', Number(id))
+.maybeSingle()
 
     await supabase
       .from('orcamento_itens')
       .delete()
-      .eq('orcamento_id', id)
+      .eq('orcamento_id', Number(id))
 
     await supabase.from('orcamento_itens').insert(
       itens.map(i => ({
         ...i,
-        orcamento_id: id,
+        orcamento_id: Number(id),
         valor_total: totalItem(i)
       }))
     )
