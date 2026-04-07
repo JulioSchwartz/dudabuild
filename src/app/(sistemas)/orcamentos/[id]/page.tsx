@@ -12,7 +12,10 @@ export default function OrcamentoCliente() {
   const [orcamento, setOrcamento] = useState<any>(null)
   const [itens, setItens] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const search = new URLSearchParams(window.location.search)
+  const token = search.get('token')
 
+	
   useEffect(() => {
     if (!id) return
     carregar()
@@ -24,6 +27,7 @@ export default function OrcamentoCliente() {
       .from('orcamentos')
       .select('*')
       .eq('id', id)
+      .eq('token', token)
       .single()
 
     const { data: itensData } = await supabase
@@ -50,6 +54,7 @@ export default function OrcamentoCliente() {
       .from('orcamentos')
       .update({ status })
       .eq('id', id)
+      .eq('token', token)
 
     if (status === 'aprovado' && orcamento) {
 
@@ -69,6 +74,7 @@ export default function OrcamentoCliente() {
           .from('orcamentos')
           .update({ obra_id: obra.id })
           .eq('id', id)
+          .eq('token', token)
 
         await lancarMovimento({
           obra_id: obra.id,

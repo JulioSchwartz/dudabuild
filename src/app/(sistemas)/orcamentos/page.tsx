@@ -108,7 +108,7 @@ export default function OrcamentosPage() {
 
             <div style={acoes}>
 
-              <button onClick={() => copiarLink(o.id)} style={btnSec}>
+              <button onClick={() => copiarLink(o.id, (o as any).token)} style={btnSec}>
                 🔗 Link
               </button>
 
@@ -137,8 +137,8 @@ export default function OrcamentosPage() {
 
 /* ================= FUNÇÕES ================= */
 
-function copiarLink(id:string){
-  const link = `${window.location.origin}/orcamentos/${id}`
+function copiarLink(id:string, token:string){
+  const link = `${window.location.origin}/orcamento-publico/${id}?token=${token}`
   navigator.clipboard.writeText(link)
   alert('Link copiado!')
 }

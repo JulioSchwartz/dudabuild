@@ -55,41 +55,52 @@ export default function NovoOrcamento() {
 
   async function salvar(){
 
-    if (!cliente) return alert('Informe o cliente')
-    if (!empresaId) return alert('Erro empresa')
+  if (!cliente) return alert('Informe o cliente')
+  if (!empresaId) return alert('Erro empresa')
 
-    setLoading(true)
+  setLoading(true)
 
-    const { data: orc, error } = await supabase
-      .from('orcamentos')
-      .insert({
-        empresa_id: empresaId,
-        cliente_nome: cliente,
-        descricao,
-        valor_total: totalGeral()
-      })
-      .select()
-      .single()
+  const token = crypto.randomUUID()
 
-    if (error || !orc) {
-      alert('Erro ao salvar')
-      setLoading(false)
-      return
-    }
+  const { data: orc, error } = await supabase
+    .from('orcamentos')
+    .insert({
+      empresa_id: empresaId,
+      cliente_nome: cliente,
+      descricao,
+      valor_total: totalGeral(),
+      token // 🔥 AQUI
+    })
+    .select()
+    .single()
 
-    setOrcamentoId(orc.id)
-
-    await supabase.from('orcamento_itens').insert(
-      itens.map(i => ({
-        ...i,
-        orcamento_id: orc.id,
-        valor_total: totalItem(i)
-      }))
-    )
-
-    alert('Orçamento salvo!')
+  if (error || !orc) {
+    alert('Erro ao salvar')
     setLoading(false)
+    return
   }
+
+  setOrcamentoId(orc.id)
+
+  await supabase.from('orcamento_itens').insert(
+    itens.map(i => ({
+      ...i,
+      orcamento_id: orc.id,
+      valor_total: totalItem(i)
+    }))
+  )
+
+  // 🔥 LINK PRONTO AUTOMÁTICO
+  const link = `${window.location.origin}/orcamento-publico/${orc.id}?token=${token}`
+
+  console.log('Link:', link)
+
+  alert('Orçamento salvo! Link copiado')
+
+  navigator.clipboard.writeText(link)
+
+  setLoading(false)
+}
 
   function gerarPDF(){
 
