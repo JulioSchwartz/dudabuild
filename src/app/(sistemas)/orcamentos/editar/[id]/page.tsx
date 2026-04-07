@@ -22,12 +22,16 @@ export default function EditarOrcamento(){
 
   async function carregar(){
 
-    const { data: orc } = await supabase
-      .from('orcamentos')
-      .select('*')
-      .eq('id', Number(id))
-.maybeSingle()
+    const { data: orc, error } = await supabase
+  .from('orcamentos')
+  .select('*')
+  .eq('id', Number(id))
+  .maybeSingle()
 
+if (error) {
+  console.error(error)
+  alert('Erro ao carregar orçamento')
+}
     setCliente(orc?.cliente_nome || '')
     setDescricao(orc?.descricao || '')
 
@@ -129,10 +133,10 @@ export default function EditarOrcamento(){
   }
 
   function enviarWhatsApp() {
-    const link = `${window.location.origin}/orcamentos/${id}`
-    const texto = `Olá! Segue seu orçamento:\n${link}`
-    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`)
-  }
+  const link = `${window.location.origin}/orcamento-publico/${id}?token=${token}`
+  const texto = `Olá! Segue sua proposta:\n${link}`
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`)
+}
 
   return(
     <div style={container}>
