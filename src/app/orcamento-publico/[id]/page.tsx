@@ -17,7 +17,10 @@ export default function OrcamentoPublico() {
   const [finalizado, setFinalizado] = useState(false)
 
   useEffect(() => {
-    if (!id || !token) {setLoading(false) return }
+    if (!id || !token) {
+  setLoading(false)
+  return
+}
     carregar()
   }, [id, token])
 

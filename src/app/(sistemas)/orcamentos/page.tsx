@@ -108,41 +108,40 @@ export default function OrcamentosPage() {
 
             <div style={acoes}>
 
-             <button
   <button
-  onClick={() => {
-    if (!o.token) {
-      alert('Erro: orçamento sem token')
-      return
-    }
-    copiarLink(o.id, o.token)
-  }}
-  style={btnSec}
->
-  🔗 Link
-</button>
+    onClick={() => {
+      if (!(o as any).token) {
+        alert('Erro: orçamento sem token')
+        return
+      }
+      copiarLink(o.id, (o as any).token)
+    }}
+    style={btnSec}
+  >
+    🔗 Link
+  </button>
 
-<button
-  onClick={() => router.push(`/orcamentos/${o.id}`)}
-  style={btnPrim}
->
-  Ver
-</button>
+  <button
+    onClick={() => router.push(`/orcamentos/${o.id}`)}
+    style={btnPrim}
+  >
+    Ver
+  </button>
 
-<button
-  onClick={() => router.push(`/orcamentos/editar/${o.id}`)}
-  style={btnSec}
->
-  Editar
-</button>
+  <button
+    onClick={() => router.push(`/orcamentos/editar/${o.id}`)}
+    style={btnSec}
+  >
+    Editar
+  </button>
 
-<button
-  onClick={() => enviarCliente(o.id, o.telefone || '', o.token || '')}
->
-  WhatsApp
-</button>
+  <button
+    onClick={() => enviarCliente(o.id, o.telefone || '', (o as any).token)}
+  >
+    WhatsApp
+  </button>
 
-            </div>
+</div>
 
           </div>
         ))}
