@@ -99,6 +99,79 @@ export default function Login() {
     router.push('/dashboard')
   }
 
+const container = {
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  height: '100vh',
+  background: '#0f172a',
+}
+
+const card = {
+  background: '#1e293b',
+  padding: '30px',
+  borderRadius: '12px',
+  width: '100%',
+  maxWidth: '400px',
+  color: '#fff',
+}
+
+const titulo = {
+  fontSize: '24px',
+  marginBottom: '10px',
+}
+
+const subtitulo = {
+  marginBottom: '20px',
+  color: '#cbd5f5',
+}
+
+const input = {
+  width: '100%',
+  padding: '10px',
+  marginBottom: '15px',
+  borderRadius: '8px',
+  border: 'none',
+}
+
+const senhaBox = {
+  position: 'relative' as const,
+  marginBottom: '15px',
+}
+
+const toggleSenha = {
+  position: 'absolute' as const,
+  right: '10px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  cursor: 'pointer',
+}
+
+const botao = {
+  width: '100%',
+  padding: '12px',
+  borderRadius: '8px',
+  border: 'none',
+  background: '#22c55e',
+  color: '#fff',
+  cursor: 'pointer',
+}
+
+const erroStyle = {
+  color: 'red',
+  marginBottom: '10px',
+}
+
+const linkCadastro = {
+  marginTop: '15px',
+  fontSize: '14px',
+}
+
+const link = {
+  color: '#38bdf8',
+  cursor: 'pointer',
+}
+
   return (
     <div style={container}>
       <div style={card}>
