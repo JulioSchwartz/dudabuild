@@ -31,29 +31,64 @@ export default function Login() {
         password: senha,
       })
  
-      if (error || !data.user) {
+      if (error || !data.user || !data.session) {
         setErro('Email ou senha inválidos')
         return
       }
  
+      // 2️⃣ Garante que a sessão está ativa ANTES de qualquer query
+      await supabase.auth.setSession({
+        access_token:  data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
+ 
       const user = data.user
  
-      // 2️⃣ Verifica se o usuário já tem empresa vinculada
-      //    NÃO faz upsert aqui para não sobrescrever empresa_id existente
-      const { data: usuario } = await supabase
+      // 3️⃣ Verifica se já tem empresa vinculada
+      const { data: usuario, error: errUsuario } = await supabase
         .from('usuarios')
         .select('empresa_id')
         .eq('user_id', user.id)
         .maybeSingle()
  
-      // 3️⃣ Se não tem empresa, cria uma (caso de usuário criado via Auth diretamente)
-      if (!usuario?.empresa_id) {
+      if (errUsuario) {
+        console.error('Erro ao buscar usuário:', errUsuario)
+        setErro('Erro ao carregar dados. Tente novamente.')
+        return
+      }
+ 
+      // 4️⃣ Só cria empresa se realmente não tiver nenhuma
+      if (usuario && !usuario.empresa_id) {
         const { data: novaEmpresa, error: erroEmpresa } = await supabase
           .from('empresas')
           .insert({
-            nome:   user.email,
+            nome:   email,
             plano:  'basico',
-            status: 'incomplete', // aguarda pagamento
+            status: 'incomplete',
+          })
+          .select()
+          .single()
+ 
+        if (erroEmpresa || !novaEmpresa) {
+          console.error('Erro ao criar empresa:', erroEmpresa)
+          setErro('Erro ao configurar empresa. Contate o suporte.')
+          return
+        }
+ 
+        await supabase
+          .from('usuarios')
+          .update({ empresa_id: novaEmpresa.id })
+          .eq('user_id', user.id)
+      }
+ 
+      // 5️⃣ Se não tem registro em usuarios ainda, cria (usuário novo direto do Auth)
+      if (!usuario) {
+        const { data: novaEmpresa, error: erroEmpresa } = await supabase
+          .from('empresas')
+          .insert({
+            nome:   email,
+            plano:  'basico',
+            status: 'incomplete',
           })
           .select()
           .single()
@@ -63,20 +98,15 @@ export default function Login() {
           return
         }
  
-        // Vincula ou cria registro de usuário
-        await supabase
-          .from('usuarios')
-          .upsert(
-            {
-              email:      user.email,
-              user_id:    user.id,
-              empresa_id: novaEmpresa.id,
-            },
-            { onConflict: 'user_id' }
-          )
+        await supabase.from('usuarios').insert({
+          email,
+          user_id:    user.id,
+          empresa_id: novaEmpresa.id,
+          is_admin:   false,
+        })
       }
  
-      // 4️⃣ Redireciona
+      // 6️⃣ Redireciona
       router.push('/dashboard')
  
     } catch (err) {
