@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -11,25 +12,32 @@ import {
 
 export default function Dashboard() {
 
-  const { empresaId } = useEmpresa()
+  const { empresaId, bloqueado, loading } = useEmpresa()
+  const router = useRouter()
 
   const [dados, setDados] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loadingData, setLoadingData] = useState(true)
 
-  
+  // 🔒 BLOQUEIO
   useEffect(() => {
-    if (!empresaId || empresaId === 'NaN') return
+    if (!loading && bloqueado) {
+      router.push('/bloqueado')
+    }
+  }, [loading, bloqueado])
+
+  // 📊 CARREGAR DADOS
+  useEffect(() => {
+    if (!empresaId) return
     carregar()
   }, [empresaId])
 
   async function carregar() {
-
     try {
 
       const { data, error } = await supabase
-  .from('financeiro')
-  .select('*')
-  .eq('empresa_id', empresaId) // ✅ correto
+        .from('financeiro')
+        .select('*')
+        .eq('empresa_id', empresaId)
 
       if (error) throw error
 
@@ -39,11 +47,13 @@ export default function Dashboard() {
       console.error('Erro dashboard:', err)
       alert('Erro ao carregar dashboard')
     } finally {
-      setLoading(false) // 🔥 NUNCA MAIS TRAVA
+      setLoadingData(false)
     }
   }
 
-  if (loading) return <p style={{ padding: 24 }}>Carregando...</p>
+  if (loading || loadingData) {
+    return <p style={{ padding: 24 }}>Carregando...</p>
+  }
 
   /* ================= BASE ================= */
 
@@ -62,15 +72,10 @@ export default function Dashboard() {
   const porObra: any = {}
 
   dados.forEach(d => {
-
-    const valor = Number(d.valor || 0) // 🔥 CORREÇÃO
+    const valor = Number(d.valor || 0)
 
     if (!porObra[d.obra_id]) {
-      porObra[d.obra_id] = {
-        receita: 0,
-        custo: 0,
-        lucro: 0
-      }
+      porObra[d.obra_id] = { receita: 0, custo: 0, lucro: 0 }
     }
 
     if (d.tipo === 'entrada') {
@@ -94,10 +99,9 @@ export default function Dashboard() {
   const fluxo: any = {}
 
   dados.forEach(d => {
-
     if (!d.created_at) return
 
-    const valor = Number(d.valor || 0) // 🔥 CORREÇÃO
+    const valor = Number(d.valor || 0)
 
     const mes = new Date(d.created_at)
       .toLocaleDateString('pt-BR', { month: 'short' })
@@ -116,9 +120,9 @@ export default function Dashboard() {
       <div style={navbar}>
         <h2>DudaBuild</h2>
 
-<button onClick={() => router.push('/planos')}>
-  Upgrade 🚀
-</button>
+        <button onClick={() => router.push('/planos')}>
+          Upgrade 🚀
+        </button>
 
         <div style={menu}>
           <Link href="/dashboard">Dashboard</Link>
@@ -180,16 +184,6 @@ export default function Dashboard() {
               <span style={{ color: d.lucro >= 0 ? '#16a34a' : '#dc2626' }}>
                 {format(d.lucro)}
               </span>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ marginTop: 30 }}>
-          <h3>🏆 Obras mais lucrativas</h3>
-
-          {ranking.map(([id, d]: any, i: number) => (
-            <div key={id}>
-              #{i + 1} — Obra {id} → {format(d.lucro)}
             </div>
           ))}
         </div>

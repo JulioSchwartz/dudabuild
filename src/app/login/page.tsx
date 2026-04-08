@@ -36,13 +36,10 @@ export default function Login() {
     // ✅ GARANTE USUÁRIO NA TABELA
     const { error: upsertError } = await supabase
       .from('usuarios')
-      .upsert(
-        {
-          email: user.email,
-          user_id: user.id,
-        },
-        { onConflict: 'user_id' }
-      )
+      .upsert({
+  email: user.email,
+  user_id: user.id,
+})
 
     if (upsertError) {
       setErro('Erro ao sincronizar usuário')
@@ -69,7 +66,7 @@ export default function Login() {
         .from('empresas')
         .insert({
           nome: user.email,
-          plano: 'free'
+          plano: 'basico'
         })
         .select()
         .single()

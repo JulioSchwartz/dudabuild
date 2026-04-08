@@ -1,5 +1,7 @@
 'use client'
 
+
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
@@ -10,12 +12,18 @@ import {
 
 export default function Financeiro() {
 
-  const { empresaId } = useEmpresa()
-
+  const { empresaId, bloqueado, loading } = useEmpresa()
+  const router = useRouter()
   const [dados, setDados] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loadingData, setLoadingData] = useState(true)
 
-  useEffect(() => {
+useEffect(() => {
+  if (!loading && bloqueado) {
+    router.push('/bloqueado')
+  }
+}, [loading, bloqueado])  
+
+useEffect(() => {
     if (!empresaId) return
     carregar()
   }, [empresaId])
@@ -37,11 +45,11 @@ export default function Financeiro() {
       console.error('Erro financeiro:', err)
       alert('Erro ao carregar financeiro')
     } finally {
-      setLoading(false) // 🔥 NUNCA MAIS TRAVA
+      setLoadingData(false) // 🔥 NUNCA MAIS TRAVA
     }
   }
 
-  if (loading) {
+  if (loading || loadingData) {
     return <p style={{ padding: 24 }}>Carregando financeiro...</p>
   }
 

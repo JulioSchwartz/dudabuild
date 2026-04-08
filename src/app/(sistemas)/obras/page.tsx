@@ -8,12 +8,19 @@ import { useEmpresa } from '@/hooks/useEmpresa'
 
 export default function Obras() {
 
-  const { empresaId, limites, loading: loadingEmpresa } = useEmpresa()
-  const router = useRouter()
+  const { empresaId, limites, loading: loadingEmpresa, bloqueado } = useEmpresa()
+const router = useRouter()
 
-  const [obras, setObras] = useState<any[]>([])
-  const [financeiro, setFinanceiro] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+const [obras, setObras] = useState<any[]>([])
+const [financeiro, setFinanceiro] = useState<any[]>([])
+const [loadingData, setLoadingData] = useState(true)
+
+
+  useEffect(() => {
+  if (!loadingEmpresa && bloqueado) {
+    router.push('/bloqueado')
+  }
+}, [loadingEmpresa, bloqueado])
 
   useEffect(() => {
     if (!empresaId) return
@@ -45,7 +52,7 @@ export default function Obras() {
       console.error('Erro obras:', err)
       alert('Erro ao carregar obras')
     } finally {
-      setLoading(false) // 🔥 evita travamento
+      setLoadingData(false) // 🔥 evita travamento
     }
   }
 
@@ -64,7 +71,7 @@ export default function Obras() {
     return entrada - saida
   }
 
-  if (loadingEmpresa || loading) return <p>Carregando...</p>
+  if (loadingEmpresa || loadingData) return <p>Carregando...</p>
 
   return (
     <div style={{ padding:24 }}>

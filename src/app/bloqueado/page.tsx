@@ -1,42 +1,43 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+
 export default function Bloqueado() {
-
-  function pagarPlano() {
-
-    const valor = 49
-
-    const texto = `Pagamento plano DudaBuild - R$ ${valor}`
-
-    const url = `https://wa.me/5511999999999?text=${encodeURIComponent(texto)}`
-
-    window.open(url)
-  }
+  const router = useRouter()
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100vh'
-    }}>
+    <div style={container}>
+      <div style={card}>
+        <h1>🚫 Acesso bloqueado</h1>
+        <p>Seu plano está inativo ou pagamento pendente.</p>
 
-      <h1>Plano expirado</h1>
-
-      <p>Para continuar usando, realize o pagamento.</p>
-
-      <button onClick={pagarPlano} style={{
-        background: '#16a34a',
-        color: '#fff',
-        padding: 15,
-        borderRadius: 8,
-        border: 'none',
-        cursor: 'pointer'
-      }}>
-        Pagar via WhatsApp / Pix
-      </button>
-
+        <button onClick={() => router.push('/planos')} style={botao}>
+          Regularizar pagamento
+        </button>
+      </div>
     </div>
   )
+}
+
+const container = {
+  height: '100vh',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  background: '#0f172a'
+}
+
+const card = {
+  background: '#fff',
+  padding: 30,
+  borderRadius: 12,
+  textAlign: 'center' as const
+}
+
+const botao = {
+  marginTop: 20,
+  padding: 12,
+  background: '#2563eb',
+  color: '#fff',
+  borderRadius: 8
 }

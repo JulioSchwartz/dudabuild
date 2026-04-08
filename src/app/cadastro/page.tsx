@@ -14,71 +14,75 @@ export default function Cadastro(){
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
 
-  async function cadastrar(e:any){
-    e.preventDefault()
+  async function cadastrar(e: any) {
+  e.preventDefault()
 
-    setErro('')
-    setLoading(true)
+  setErro('')
+  setLoading(true)
 
-    // 🔥 1. cria usuário no auth
+  try {
     const { data, error } = await supabase.auth.signUp({
       email,
-      password: senha
+      password: senha,
     })
 
-    if(error){
-      setErro(error.message)
-      setLoading(false)
+    if (error) {
+      if (error.message.includes('already registered')) {
+        setErro('Este email já está cadastrado. Faça login.')
+      } else {
+        setErro(error.message)
+      }
       return
     }
 
     const user = data.user
 
     if (!user) {
-      setErro('Verifique seu email para confirmar a conta')
-      setLoading(false)
+      setErro('Erro ao criar usuário')
       return
     }
 
-    // 🔥 2. cria empresa
+    // 🏢 cria empresa
     const { data: empresa, error: erroEmpresa } = await supabase
       .from('empresas')
       .insert({
-        nome: nomeEmpresa,
-        status: 'ativo'
+        nome: nomeEmpresa || email,
+        plano: 'basico',
+        status: 'incomplete' // 🔥 IMPORTANTE
       })
       .select()
       .single()
 
-    if(erroEmpresa){
+    if (erroEmpresa || !empresa) {
       setErro('Erro ao criar empresa')
-      setLoading(false)
       return
     }
 
-    // 🔥 3. cria vínculo usuário → empresa
+    // 👤 cria usuario
     const { error: erroUsuario } = await supabase
       .from('usuarios')
       .insert({
         email,
+        user_id: user.id,
         empresa_id: empresa.id,
-        user_id: user.id
+        is_admin: false
       })
 
-    if(erroUsuario){
+    if (erroUsuario) {
       setErro('Erro ao vincular usuário')
-      setLoading(false)
       return
     }
 
-    // 🔥 4. login automático
-    await supabase.auth.signInWithPassword({
-      email,
-      password: senha
-    })
+    // 🚀 REDIRECIONA PRA PAGAMENTO
+    router.push('/planos')
 
-    router.push('/dashboard')
+  } catch (err) {
+    console.error(err)
+    setErro('Erro inesperado')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div style={container}>

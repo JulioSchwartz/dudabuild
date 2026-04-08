@@ -37,7 +37,7 @@ export default function Planos() {
 
         {/* BASICO */}
         <div style={card}>
-          <h2>Free</h2>
+          <h2>Básico</h2>
           <p>R$ 49,90</p>
           <ul>
             <li>2 obras</li>
@@ -56,7 +56,7 @@ export default function Planos() {
 
           <button
             style={botao}
-            onClick={() => assinar('price_xxxxx')} // 🔥 SEU PRICE ID
+            onClick={() => assinar('price_1TJg8HFjaswz9WcmLtUD1Wzk')} // 🔥 SEU PRICE ID
           >
             Assinar
           </button>
@@ -73,7 +73,7 @@ export default function Planos() {
 
           <button
             style={botao}
-            onClick={() => assinar('price_yyyyy')} // 🔥 OUTRO PRICE
+            onClick={() => assinar('price_1TJg99Fjaswz9WcmOhX7PsvZ')} // 🔥 OUTRO PRICE
           >
             Assinar
           </button>
