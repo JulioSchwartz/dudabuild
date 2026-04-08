@@ -73,13 +73,16 @@ export default function Login() {
     // 🚨 SE NÃO TEM EMPRESA → CRIAR AUTOMATICAMENTE
     if (!usuario?.empresa_id) {
       const { data: novaEmpresa, error: erroEmpresa } = await supabase
-        .from('empresas')
-        .insert({
-          nome: user.email,
-          plano: 'basico',
-        })
-        .select()
-        .single()
+  .from('empresas')
+  .insert([
+    {
+      nome: user.email,
+      plano: 'basico',
+      user_id: user.id // 🔥 AQUI
+    }
+  ])
+  .select()
+  .single()
 
       if (erroEmpresa || !novaEmpresa) {
         setErro('Erro ao criar empresa')
