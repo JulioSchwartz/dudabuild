@@ -25,88 +25,17 @@ export default function Login() {
     setLoading(true)
  
     try {
-      // 1️⃣ Autentica
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: senha,
       })
  
-      if (error || !data.user || !data.session) {
+      if (error || !data.user) {
         setErro('Email ou senha inválidos')
         return
       }
  
-      // 2️⃣ Garante que a sessão está ativa ANTES de qualquer query
-      await supabase.auth.setSession({
-        access_token:  data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      })
- 
-      const user = data.user
- 
-      // 3️⃣ Verifica se já tem empresa vinculada
-      const { data: usuario, error: errUsuario } = await supabase
-        .from('usuarios')
-        .select('empresa_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
- 
-      if (errUsuario) {
-        console.error('Erro ao buscar usuário:', errUsuario)
-        setErro('Erro ao carregar dados. Tente novamente.')
-        return
-      }
- 
-      // 4️⃣ Só cria empresa se realmente não tiver nenhuma
-      if (usuario && !usuario.empresa_id) {
-        const { data: novaEmpresa, error: erroEmpresa } = await supabase
-          .from('empresas')
-          .insert({
-            nome:   email,
-            plano:  'basico',
-            status: 'incomplete',
-          })
-          .select()
-          .single()
- 
-        if (erroEmpresa || !novaEmpresa) {
-          console.error('Erro ao criar empresa:', erroEmpresa)
-          setErro('Erro ao configurar empresa. Contate o suporte.')
-          return
-        }
- 
-        await supabase
-          .from('usuarios')
-          .update({ empresa_id: novaEmpresa.id })
-          .eq('user_id', user.id)
-      }
- 
-      // 5️⃣ Se não tem registro em usuarios ainda, cria (usuário novo direto do Auth)
-      if (!usuario) {
-        const { data: novaEmpresa, error: erroEmpresa } = await supabase
-          .from('empresas')
-          .insert({
-            nome:   email,
-            plano:  'basico',
-            status: 'incomplete',
-          })
-          .select()
-          .single()
- 
-        if (erroEmpresa || !novaEmpresa) {
-          setErro('Erro ao configurar empresa. Contate o suporte.')
-          return
-        }
- 
-        await supabase.from('usuarios').insert({
-          email,
-          user_id:    user.id,
-          empresa_id: novaEmpresa.id,
-          is_admin:   false,
-        })
-      }
- 
-      // 6️⃣ Redireciona
+      // Redireciona imediatamente — useEmpresa no layout busca os dados via RPC
       router.push('/dashboard')
  
     } catch (err) {
@@ -177,103 +106,41 @@ export default function Login() {
   )
 }
  
-/* ================= ESTILOS ================= */
- 
 const container: React.CSSProperties = {
-  minHeight: '100vh',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  background: '#0f172a',
-  padding: 20,
+  minHeight: '100vh', display: 'flex', justifyContent: 'center',
+  alignItems: 'center', background: '#0f172a', padding: 20,
 }
- 
 const card: React.CSSProperties = {
-  background: '#1e293b',
-  padding: 36,
-  borderRadius: 16,
-  width: '100%',
-  maxWidth: 400,
-  color: '#fff',
+  background: '#1e293b', padding: 36, borderRadius: 16,
+  width: '100%', maxWidth: 400, color: '#fff',
   boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
 }
- 
-const logoArea: React.CSSProperties = {
-  textAlign: 'center',
-  marginBottom: 28,
-}
- 
-const logoTitulo: React.CSSProperties = {
-  fontSize: 26,
-  fontWeight: 800,
-  color: '#fff',
-}
- 
-const logoSub: React.CSSProperties = {
-  fontSize: 13,
-  color: '#94a3b8',
-  marginTop: 4,
-}
- 
+const logoArea: React.CSSProperties = { textAlign: 'center', marginBottom: 28 }
+const logoTitulo: React.CSSProperties = { fontSize: 26, fontWeight: 800, color: '#fff' }
+const logoSub: React.CSSProperties = { fontSize: 13, color: '#94a3b8', marginTop: 4 }
 const label: React.CSSProperties = {
-  display: 'block',
-  fontSize: 12,
-  fontWeight: 600,
-  color: '#94a3b8',
-  marginBottom: 4,
-  marginTop: 16,
+  display: 'block', fontSize: 12, fontWeight: 600,
+  color: '#94a3b8', marginBottom: 4, marginTop: 16,
 }
- 
 const input: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 12px',
-  borderRadius: 8,
-  border: '1px solid #334155',
-  background: '#0f172a',
-  color: '#f1f5f9',
-  fontSize: 14,
-  boxSizing: 'border-box',
+  width: '100%', padding: '10px 12px', borderRadius: 8,
+  border: '1px solid #334155', background: '#0f172a',
+  color: '#f1f5f9', fontSize: 14, boxSizing: 'border-box',
 }
- 
 const olho: React.CSSProperties = {
-  position: 'absolute',
-  right: 10,
-  top: '50%',
-  transform: 'translateY(-50%)',
-  cursor: 'pointer',
-  fontSize: 16,
+  position: 'absolute', right: 10, top: '50%',
+  transform: 'translateY(-50%)', cursor: 'pointer', fontSize: 16,
 }
- 
 const erroStyle: React.CSSProperties = {
-  color: '#f87171',
-  fontSize: 13,
-  marginTop: 10,
-  background: '#450a0a',
-  padding: '8px 12px',
-  borderRadius: 6,
+  color: '#f87171', fontSize: 13, marginTop: 10,
+  background: '#450a0a', padding: '8px 12px', borderRadius: 6,
 }
- 
 const botao: React.CSSProperties = {
-  width: '100%',
-  padding: 13,
-  marginTop: 22,
-  background: '#22c55e',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 8,
-  fontSize: 15,
-  fontWeight: 700,
-  cursor: 'pointer',
+  width: '100%', padding: 13, marginTop: 22, background: '#22c55e',
+  color: '#fff', border: 'none', borderRadius: 8, fontSize: 15,
+  fontWeight: 700, cursor: 'pointer',
 }
- 
 const linkCadastro: React.CSSProperties = {
-  textAlign: 'center',
-  marginTop: 18,
-  fontSize: 13,
-  color: '#64748b',
+  textAlign: 'center', marginTop: 18, fontSize: 13, color: '#64748b',
 }
- 
-const link: React.CSSProperties = {
-  color: '#38bdf8',
-  cursor: 'pointer',
-}
+const link: React.CSSProperties = { color: '#38bdf8', cursor: 'pointer' }

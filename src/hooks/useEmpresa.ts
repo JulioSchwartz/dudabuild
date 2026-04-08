@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
  
-export type PlanoTipo = 'basico' | 'pro' | 'premium'
+export type PlanoTipo  = 'basico' | 'pro' | 'premium'
 export type StatusTipo = 'active' | 'past_due' | 'canceled' | 'incomplete'
  
 type Limites = {
@@ -32,8 +32,15 @@ export function useEmpresa() {
  
     carregar(mounted)
  
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      if (mounted) carregar(mounted)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        if (session) {
+          carregar(mounted)
+        } else {
+          limparEstado()
+          setLoading(false)
+        }
+      }
     })
  
     return () => {
@@ -46,54 +53,38 @@ export function useEmpresa() {
     try {
       setLoading(true)
  
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      // 1️⃣ Verifica sessão ativa
+      const { data: { session } } = await supabase.auth.getSession()
  
-      if (userError || !user) {
+      if (!session) {
         if (mounted) limparEstado()
         return
       }
  
-      const { data: usuario, error: usuarioError } = await supabase
-        .from('usuarios')
-        .select('empresa_id, nome')
-        .eq('user_id', user.id)
-        .maybeSingle()
+      // 2️⃣ Usa RPC com SECURITY DEFINER — ignora RLS, sempre funciona
+      const { data, error } = await supabase.rpc('get_dados_empresa')
  
-      if (usuarioError || !usuario?.empresa_id) {
-        if (mounted) limparEstado()
-        return
-      }
- 
-      const { data: empresa, error: empresaError } = await supabase
-        .from('empresas')
-        .select('plano, status, nome')
-        .eq('id', usuario.empresa_id)
-        .maybeSingle()
- 
-      if (empresaError || !empresa) {
+      if (error || !data) {
+        console.error('Erro RPC get_dados_empresa:', error)
         if (mounted) limparEstado()
         return
       }
  
       if (!mounted) return
  
-      const planoAtual  = (empresa.plano  || 'basico')  as PlanoTipo
-      const statusAtual = (empresa.status || 'incomplete') as StatusTipo
+      const planoAtual  = (data.plano  || 'basico')     as PlanoTipo
+      const statusAtual = (data.status || 'incomplete') as StatusTipo
  
-      setEmpresaId(usuario.empresa_id)
+      setEmpresaId(data.empresa_id)
       setPlano(planoAtual)
       setStatus(statusAtual)
       setLimites(LIMITES_POR_PLANO[planoAtual] ?? LIMITES_POR_PLANO.basico)
-      setNomeUsuario(usuario.nome || user.email || 'Usuário')
-      setNomeEmpresa(empresa.nome || 'Minha Empresa')
- 
-      // 🔒 Bloqueado apenas se status explicitamente inativo
-      // 'active' = liberado | qualquer outro = bloqueado
+      setNomeUsuario(data.nome_usuario || session.user.email || 'Usuário')
+      setNomeEmpresa(data.nome_empresa || 'Minha Empresa')
       setBloqueado(statusAtual !== 'active')
  
     } catch (err) {
       console.error('Erro ao carregar empresa:', err)
-      // Não bloqueia em erro de rede — mantém estado anterior
     } finally {
       if (mounted) setLoading(false)
     }
