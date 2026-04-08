@@ -41,12 +41,15 @@ export default function Login() {
     // ✅ GARANTE USUÁRIO NA TABELA
     const { error: upsertError } = await supabase
       .from('usuarios')
-      .upsert({
-        email: user.email,
-        user_id: user.id,
-      }, {
-        onConflict: 'user_id'
-      })
+      .upsert(
+        {
+          email: user.email,
+          user_id: user.id,
+        },
+        {
+          onConflict: 'user_id',
+        }
+      )
 
     if (upsertError) {
       setErro('Erro ao sincronizar usuário')
@@ -73,7 +76,7 @@ export default function Login() {
         .from('empresas')
         .insert({
           nome: user.email,
-          plano: 'basico'
+          plano: 'basico',
         })
         .select()
         .single()
@@ -88,7 +91,7 @@ export default function Login() {
       const { error: vinculoError } = await supabase
         .from('usuarios')
         .update({
-          empresa_id: novaEmpresa.id
+          empresa_id: novaEmpresa.id,
         })
         .eq('user_id', user.id)
 
@@ -103,36 +106,26 @@ export default function Login() {
     router.push('/dashboard')
   }
 
-  // 🔐 CONTROLE DE ACESSO POR PLANO (CORRIGIDO)
-  export function podeAcessar(plano: string, recurso: string) {
-    const regras: any = {
-      basico: ['obras'],
-      pro: ['obras', 'orcamentos'],
-      premium: ['obras', 'orcamentos', 'financeiro', 'relatorios'],
-      admin: ['tudo']
-    }
-
-    if (plano === 'admin') return true
-
-    return regras[plano]?.includes(recurso)
-  }
-
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      background: '#0f172a'
-    }}>
-      <div style={{
-        background: '#1e293b',
-        padding: '30px',
-        borderRadius: '12px',
-        width: '100%',
-        maxWidth: '400px',
-        color: '#fff'
-      }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: '#0f172a',
+      }}
+    >
+      <div
+        style={{
+          background: '#1e293b',
+          padding: '30px',
+          borderRadius: '12px',
+          width: '100%',
+          maxWidth: '400px',
+          color: '#fff',
+        }}
+      >
         <h1>🏗️ DudaBuild</h1>
         <p style={{ marginBottom: '20px', color: '#cbd5f5' }}>
           Acesse sua conta
@@ -145,7 +138,7 @@ export default function Login() {
             style={{
               width: '100%',
               padding: '10px',
-              marginBottom: '15px'
+              marginBottom: '15px',
             }}
           />
 
@@ -156,7 +149,7 @@ export default function Login() {
               onChange={(e) => setSenha(e.target.value)}
               style={{
                 width: '100%',
-                padding: '10px'
+                padding: '10px',
               }}
             />
 
@@ -167,7 +160,7 @@ export default function Login() {
                 right: '10px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               {mostrarSenha ? '🙈' : '👁'}
@@ -175,9 +168,7 @@ export default function Login() {
           </div>
 
           {erro && (
-            <p style={{ color: 'red', marginBottom: '10px' }}>
-              {erro}
-            </p>
+            <p style={{ color: 'red', marginBottom: '10px' }}>{erro}</p>
           )}
 
           <button
@@ -187,7 +178,7 @@ export default function Login() {
               background: '#22c55e',
               color: '#fff',
               border: 'none',
-              borderRadius: '8px'
+              borderRadius: '8px',
             }}
             disabled={loading}
           >
