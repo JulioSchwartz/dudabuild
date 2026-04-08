@@ -11,22 +11,51 @@ export default function Register() {
   const [senha, setSenha] = useState('')
 
   async function cadastrar(e: any) {
-    e.preventDefault()
+  e.preventDefault()
 
-    const empresa_id = crypto.randomUUID()
-
-    await supabase.from('usuarios').insert([
-      {
-        email,
-        senha,
-        empresa_id,
-      },
-    ])
-
-    alert('Usuário criado com sucesso')
-
-    router.push('/login')
+  if (!email || !senha) {
+    alert('Preencha todos os campos')
+    return
   }
+
+  // 🔐 cria usuário no AUTH
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: senha,
+  })
+
+  if (error || !data.user) {
+    alert(error?.message || 'Erro ao cadastrar')
+    return
+  }
+
+  const user = data.user
+
+  // 🏢 cria empresa
+  const { data: empresa, error: erroEmpresa } = await supabase
+    .from('empresas')
+    .insert({
+      nome: email,
+      plano: 'admin', // 👈 primeiro usuário = ADMIN
+    })
+    .select()
+    .single()
+
+  if (erroEmpresa || !empresa) {
+    alert('Erro ao criar empresa')
+    return
+  }
+
+  // 👤 cria usuário vinculado
+  await supabase.from('usuarios').insert({
+    email: user.email,
+    user_id: user.id,
+    empresa_id: empresa.id
+  })
+
+  alert('Conta criada!')
+  router.push('/login')
+}
 
   return (
     <div style={container}>

@@ -16,6 +16,11 @@ export default function Login() {
   async function entrar(e: any) {
     e.preventDefault()
 
+    if (!email || !senha) {
+      setErro('Preencha email e senha')
+      return
+    }
+
     setErro('')
     setLoading(true)
 
@@ -37,9 +42,11 @@ export default function Login() {
     const { error: upsertError } = await supabase
       .from('usuarios')
       .upsert({
-  email: user.email,
-  user_id: user.id,
-})
+        email: user.email,
+        user_id: user.id,
+      }, {
+        onConflict: 'user_id'
+      })
 
     if (upsertError) {
       setErro('Erro ao sincronizar usuário')
@@ -92,121 +99,107 @@ export default function Login() {
       }
     }
 
-    // 🚀 REDIRECIONA (SEM LOCALSTORAGE!)
+    // 🚀 REDIRECIONA
     router.push('/dashboard')
   }
 
-const container = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  height: '100vh',
-  background: '#0f172a',
-}
+  // 🔐 CONTROLE DE ACESSO POR PLANO (CORRIGIDO)
+  export function podeAcessar(plano: string, recurso: string) {
+    const regras: any = {
+      basico: ['obras'],
+      pro: ['obras', 'orcamentos'],
+      premium: ['obras', 'orcamentos', 'financeiro', 'relatorios'],
+      admin: ['tudo']
+    }
 
-const card = {
-  background: '#1e293b',
-  padding: '30px',
-  borderRadius: '12px',
-  width: '100%',
-  maxWidth: '400px',
-  color: '#fff',
-}
+    if (plano === 'admin') return true
 
-const titulo = {
-  fontSize: '24px',
-  marginBottom: '10px',
-}
-
-const subtitulo = {
-  marginBottom: '20px',
-  color: '#cbd5f5',
-}
-
-const input = {
-  width: '100%',
-  padding: '10px',
-  marginBottom: '15px',
-  borderRadius: '8px',
-  border: 'none',
-}
-
-const senhaBox = {
-  position: 'relative' as const,
-  marginBottom: '15px',
-}
-
-const toggleSenha = {
-  position: 'absolute' as const,
-  right: '10px',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  cursor: 'pointer',
-}
-
-const botao = {
-  width: '100%',
-  padding: '12px',
-  borderRadius: '8px',
-  border: 'none',
-  background: '#22c55e',
-  color: '#fff',
-  cursor: 'pointer',
-}
-
-const erroStyle = {
-  color: 'red',
-  marginBottom: '10px',
-}
-
-const linkCadastro = {
-  marginTop: '15px',
-  fontSize: '14px',
-}
-
-const link = {
-  color: '#38bdf8',
-  cursor: 'pointer',
-}
+    return regras[plano]?.includes(recurso)
+  }
 
   return (
-    <div style={container}>
-      <div style={card}>
-        <h1 style={titulo}>🏗️ DudaBuild</h1>
-        <p style={subtitulo}>Acesse sua conta</p>
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      background: '#0f172a'
+    }}>
+      <div style={{
+        background: '#1e293b',
+        padding: '30px',
+        borderRadius: '12px',
+        width: '100%',
+        maxWidth: '400px',
+        color: '#fff'
+      }}>
+        <h1>🏗️ DudaBuild</h1>
+        <p style={{ marginBottom: '20px', color: '#cbd5f5' }}>
+          Acesse sua conta
+        </p>
 
         <form onSubmit={entrar}>
           <input
             placeholder="Email"
             onChange={(e) => setEmail(e.target.value)}
-            style={input}
+            style={{
+              width: '100%',
+              padding: '10px',
+              marginBottom: '15px'
+            }}
           />
 
-          <div style={senhaBox}>
+          <div style={{ position: 'relative', marginBottom: '15px' }}>
             <input
               placeholder="Senha"
               type={mostrarSenha ? 'text' : 'password'}
               onChange={(e) => setSenha(e.target.value)}
-              style={{ ...input, marginBottom: 0 }}
+              style={{
+                width: '100%',
+                padding: '10px'
+              }}
             />
 
             <span
               onClick={() => setMostrarSenha(!mostrarSenha)}
-              style={toggleSenha}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                cursor: 'pointer'
+              }}
             >
               {mostrarSenha ? '🙈' : '👁'}
             </span>
           </div>
 
-          {erro && <p style={erroStyle}>{erro}</p>}
+          {erro && (
+            <p style={{ color: 'red', marginBottom: '10px' }}>
+              {erro}
+            </p>
+          )}
 
-          <button style={botao} disabled={loading}>
+          <button
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#22c55e',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px'
+            }}
+            disabled={loading}
+          >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
 
-          <p style={linkCadastro}>
+          <p style={{ marginTop: '15px', fontSize: '14px' }}>
             Não tem conta?{' '}
-            <span onClick={() => router.push('/cadastro')} style={link}>
+            <span
+              onClick={() => router.push('/cadastro')}
+              style={{ color: '#38bdf8', cursor: 'pointer' }}
+            >
               Criar agora
             </span>
           </p>

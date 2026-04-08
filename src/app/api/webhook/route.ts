@@ -13,7 +13,11 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   const body = await req.text()
-  const sig = headers().get('stripe-signature')!
+  const sig = headers().get('stripe-signature')
+
+  if (!sig) {
+    return new Response('Sem assinatura', { status: 400 })
+  }
 
   let event: Stripe.Event
 
@@ -24,20 +28,16 @@ export async function POST(req: Request) {
       process.env.STRIPE_WEBHOOK_SECRET!
     )
   } catch (err: any) {
-    console.error('Erro webhook:', err.message)
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 })
+    return new Response(`Erro webhook: ${err.message}`, { status: 400 })
   }
 
   try {
-
-    // ✅ PAGAMENTO CONCLUÍDO
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session
 
       const customerId = session.customer as string
       const subscriptionId = session.subscription as string
 
-      // 🔥 PEGA O PRICE ID (PLANO)
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id)
       const priceId = lineItems.data[0]?.price?.id
 
@@ -55,26 +55,18 @@ export async function POST(req: Request) {
           plano
         })
         .eq('stripe_customer_id', customerId)
-
-      console.log('✅ Plano atualizado:', plano)
     }
 
-    // 🔴 PAGAMENTO FALHOU
     if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object as Stripe.Invoice
       const customerId = invoice.customer as string
 
       await supabase
         .from('empresas')
-        .update({
-          status: 'past_due'
-        })
+        .update({ status: 'past_due' })
         .eq('stripe_customer_id', customerId)
-
-      console.log('⚠️ Cliente em atraso')
     }
 
-    // ❌ CANCELAMENTO
     if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object as Stripe.Subscription
       const customerId = sub.customer as string
@@ -86,12 +78,10 @@ export async function POST(req: Request) {
           plano: 'basico'
         })
         .eq('stripe_customer_id', customerId)
-
-      console.log('❌ Assinatura cancelada')
     }
 
   } catch (err) {
-    console.error('Erro processamento webhook:', err)
+    console.error('Erro processamento:', err)
   }
 
   return new Response('OK', { status: 200 })
