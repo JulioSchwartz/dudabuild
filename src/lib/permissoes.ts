@@ -1,6 +1,6 @@
 // 🔐 TIPOS DE PLANO
 export type Plano = 'basico' | 'pro' | 'premium' | 'admin'
-
+ 
 // 🔐 RECURSOS DO SISTEMA
 export type Recurso =
   | 'obras'
@@ -8,33 +8,37 @@ export type Recurso =
   | 'financeiro'
   | 'relatorios'
   | 'usuarios'
-
+ 
 // 🔐 REGRAS DE PERMISSÃO
 const permissoes: Record<Plano, Recurso[]> = {
-  basico: ['obras'],
-  pro: ['obras', 'orcamentos'],
+  basico:  ['obras'],
+  pro:     ['obras', 'orcamentos'],
   premium: ['obras', 'orcamentos', 'financeiro', 'relatorios'],
-  admin: ['obras', 'orcamentos', 'financeiro', 'relatorios', 'usuarios'],
+  admin:   ['obras', 'orcamentos', 'financeiro', 'relatorios', 'usuarios'],
 }
-
+ 
 // ✅ FUNÇÃO PRINCIPAL
 export function podeAcessar(plano: Plano, recurso: Recurso): boolean {
   if (plano === 'admin') return true
-  return permissoes[plano]?.includes(recurso)
+  return permissoes[plano]?.includes(recurso) ?? false
 }
-
-// ✅ VERIFICA MÚLTIPLOS ACESSOS
-export function podeAcessarAlgum(plano: Plano, recursos: Recurso[]) {
+ 
+// ✅ VERIFICA MÚLTIPLOS RECURSOS
+export function podeAcessarAlgum(plano: Plano, recursos: Recurso[]): boolean {
   if (plano === 'admin') return true
-  return recursos.some((r) => permissoes[plano]?.includes(r))
+  return recursos.some(r => permissoes[plano]?.includes(r))
 }
-
-// 🚫 BLOQUEIO (útil pra UI)
-export function bloquearSeSemPermissao(
-  plano: Plano,
-  recurso: Recurso
-) {
+ 
+// 🚫 LANÇA ERRO SE SEM PERMISSÃO
+export function bloquearSeSemPermissao(plano: Plano, recurso: Recurso): void {
   if (!podeAcessar(plano, recurso)) {
-    throw new Error('Plano não permite acesso a este recurso')
+    throw new Error(`Plano "${plano}" não permite acesso ao recurso "${recurso}"`)
   }
 }
+ 
+// 📋 LISTA DE ADMINS (server-side only)
+export const ADMIN_EMAILS = [
+  'j.ulioschwartz@hotmail.com',
+  'julio@teste.com',
+  'admin@duda.com',
+]

@@ -1,12 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://cpyvksnsfihybemvxvap.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNweXZrc25zZmloeWJlbXZ4dmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMTgwNjMsImV4cCI6MjA4OTY5NDA2M30.LHDXuuylGg6rbMp4JegxGB85z6uNu4Umcc46fpOQAFQ'
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+ 
+const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+ 
+if (!supabaseUrl || !supabaseAnon) {
+  throw new Error('Variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY não definidas')
+}
+ 
+export const supabase = createClient(supabaseUrl, supabaseAnon, {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  }
+    persistSession:     true,
+    autoRefreshToken:   true,
+    detectSessionInUrl: true,
+  },
 })
