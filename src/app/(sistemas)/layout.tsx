@@ -8,7 +8,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
   const router   = useRouter()
   const pathname = usePathname()
  
-  const [liberado, setLiberado]     = useState(false)
+  const [liberado,    setLiberado]    = useState(false)
   const [nomeUsuario, setNomeUsuario] = useState('')
   const [nomeEmpresa, setNomeEmpresa] = useState('')
  
@@ -18,37 +18,31 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
  
   async function verificar() {
     try {
-      const { data: { user }, error: errUser } = await supabase.auth.getUser()
+      // 1️⃣ Verifica sessão
+      const { data: { session }, error: errSession } = await supabase.auth.getSession()
  
-      if (errUser || !user) {
+      if (errSession || !session) {
         router.push('/login')
         return
       }
  
-      const { data: usuario } = await supabase
-        .from('usuarios')
-        .select('empresa_id, nome')
-        .eq('user_id', user.id)
-        .maybeSingle()
+      // 2️⃣ Busca dados via RPC — SECURITY DEFINER, ignora RLS, sem erro 400/403
+      const { data, error } = await supabase.rpc('get_dados_empresa')
  
-      if (!usuario?.empresa_id) {
+      if (error || !data) {
+        console.error('Erro RPC:', error)
         router.push('/login')
         return
       }
  
-      const { data: empresa } = await supabase
-        .from('empresas')
-        .select('status, nome')
-        .eq('id', usuario.empresa_id)
-        .maybeSingle()
- 
-      if (empresa?.status !== 'ativo') {
+      // 3️⃣ Verifica status — 'active' (inglês, não 'ativo')
+      if (data.status !== 'active') {
         router.push('/bloqueado')
         return
       }
  
-      setNomeUsuario(usuario.nome || user.email || 'Usuário')
-      setNomeEmpresa(empresa.nome || 'Minha Empresa')
+      setNomeUsuario(data.nome_usuario || session.user.email || 'Usuário')
+      setNomeEmpresa(data.nome_empresa || 'Minha Empresa')
       setLiberado(true)
  
     } catch (err) {
@@ -59,7 +53,6 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
  
   async function sair() {
     await supabase.auth.signOut()
-    localStorage.removeItem('empresa_id')
     router.push('/login')
   }
  
@@ -78,17 +71,14 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
       {/* ── SIDEBAR ─────────────────────────────────────── */}
       <aside style={sidebar}>
  
-        {/* LOGO */}
         <div>
           <div style={logoBox}>
             <img src="/logo.png" alt="Logo" style={{ width: 110, display: 'block' }} />
             <p style={logoText}>DudaBuild</p>
           </div>
  
-          {/* SEPARADOR */}
           <div style={divider} />
  
-          {/* MENU */}
           <nav>
             <p style={menuLabel}>MENU</p>
             <MenuItem texto="🏠  Dashboard"  rota="/dashboard"  ativo={pathname === '/dashboard'} />
@@ -99,11 +89,9 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
           </nav>
         </div>
  
-        {/* RODAPÉ SIDEBAR */}
         <div>
           <div style={divider} />
  
-          {/* INFO USUÁRIO */}
           <div style={userInfo}>
             <div style={avatar}>
               {nomeUsuario.charAt(0).toUpperCase()}
@@ -114,7 +102,6 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
             </div>
           </div>
  
-          {/* BOTÃO SAIR */}
           <button onClick={sair} style={btnSair}>
             <span>⏻</span> Sair da conta
           </button>
@@ -125,7 +112,6 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
       {/* ── CONTEÚDO ────────────────────────────────────── */}
       <div style={mainWrapper}>
  
-        {/* TOPBAR — apenas título da página atual */}
         <header style={topbar}>
           <div>
             <strong style={topbarTitle}>{tituloPagina(pathname)}</strong>
@@ -137,7 +123,6 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
           </button>
         </header>
  
-        {/* CONTEÚDO DA PÁGINA */}
         <main style={content}>
           {children}
         </main>
@@ -151,15 +136,15 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 /* ================= HELPERS ================= */
  
 function tituloPagina(pathname: string): string {
-  if (pathname === '/dashboard')              return 'Dashboard'
-  if (pathname.startsWith('/obras'))          return 'Obras'
-  if (pathname.startsWith('/financeiro'))     return 'Financeiro'
-  if (pathname.startsWith('/orcamentos'))     return 'Orçamentos'
-  if (pathname.startsWith('/relatorios'))     return 'Relatórios'
+  if (pathname === '/dashboard')          return 'Dashboard'
+  if (pathname.startsWith('/obras'))      return 'Obras'
+  if (pathname.startsWith('/financeiro')) return 'Financeiro'
+  if (pathname.startsWith('/orcamentos')) return 'Orçamentos'
+  if (pathname.startsWith('/relatorios')) return 'Relatórios'
   return 'Sistema'
 }
  
-/* ================= COMPONENTE MENU ITEM ================= */
+/* ================= MENU ITEM ================= */
  
 function MenuItem({ texto, rota, ativo }: { texto: string; rota: string; ativo: boolean }) {
   const router = useRouter()
@@ -231,10 +216,7 @@ const sidebar: React.CSSProperties = {
   zIndex: 10
 }
  
-const logoBox: React.CSSProperties = {
-  marginBottom: 20,
-  paddingLeft: 4
-}
+const logoBox: React.CSSProperties = { marginBottom: 20, paddingLeft: 4 }
  
 const logoText: React.CSSProperties = {
   marginTop: 8,
