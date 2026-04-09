@@ -1,5 +1,5 @@
 'use client'
- 
+
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -8,7 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend
 } from 'recharts'
- 
+
 const CATEGORIAS_ENTRADA = [
   'Pagamento Inicial / Sinal', 'Parcela Cliente', 'Parcela Final',
   'Aditivo de Contrato', 'Medição Parcial', 'Outros (Entrada)',
@@ -19,51 +19,68 @@ const CATEGORIAS_SAIDA = [
   'Ferramentas', 'Energia Elétrica / Água', 'Segurança do Trabalho (EPI)',
   'Projeto / Engenharia', 'Outros (Saída)',
 ]
- 
+
+const CLIMA_OPCOES = ['☀️ Ensolarado', '⛅ Nublado', '🌧️ Chuvoso', '🌪️ Ventoso', '❄️ Frio']
+
 export default function DetalheObra() {
- 
+
   const { empresaId, loading: loadingEmpresa } = useEmpresa()
   const { id }   = useParams()
   const router   = useRouter()
- 
+
   const [obra,        setObra]        = useState<any>(null)
   const [financeiro,  setFinanceiro]  = useState<any[]>([])
+  const [diarios,     setDiarios]     = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
- 
+
+  // Form lançamento financeiro
   const [tipo,      setTipo]      = useState<'entrada' | 'saida'>('entrada')
   const [categoria, setCategoria] = useState('')
   const [valor,     setValor]     = useState('')
   const [data,      setData]      = useState(new Date().toISOString().split('T')[0])
   const [salvando,  setSalvando]  = useState(false)
   const [abaAtiva,  setAbaAtiva]  = useState<'entrada' | 'saida'>('entrada')
- 
+
+  // Form diário de obra
+  const [diarioData,         setDiarioData]         = useState(new Date().toISOString().split('T')[0])
+  const [diarioClima,        setDiarioClima]        = useState('☀️ Ensolarado')
+  const [diarioFuncionarios, setDiarioFuncionarios] = useState('')
+  const [diarioServicos,     setDiarioServicos]     = useState('')
+  const [diarioProblemas,    setDiarioProblemas]    = useState('')
+  const [diarioObservacoes,  setDiarioObservacoes]  = useState('')
+  const [salvandoDiario,     setSalvandoDiario]     = useState(false)
+  const [mostrarFormDiario,  setMostrarFormDiario]  = useState(false)
+  const [diarioExpandido,    setDiarioExpandido]    = useState<string | null>(null)
+
   useEffect(() => {
     if (loadingEmpresa) return
     if (!empresaId) { router.push('/login'); return }
     if (!id) return
     carregar()
   }, [id, empresaId, loadingEmpresa])
- 
+
   async function carregar() {
     try {
       setLoadingData(true)
-      const [{ data: obraData }, { data: finData }] = await Promise.all([
+      const [{ data: obraData }, { data: finData }, { data: diarioData }] = await Promise.all([
         supabase.from('obras').select('*').eq('id', Number(id)).eq('empresa_id', empresaId).maybeSingle(),
         supabase.from('financeiro').select('*').eq('obra_id', Number(id)).eq('empresa_id', empresaId).order('created_at', { ascending: false }),
+        supabase.from('diario_obra').select('*').eq('obra_id', Number(id)).eq('empresa_id', empresaId).order('data', { ascending: false }),
       ])
       setObra(obraData)
       setFinanceiro(finData || [])
+      setDiarios(diarioData || [])
     } catch (err) {
       console.error(err)
     } finally {
       setLoadingData(false)
     }
   }
- 
+
   async function lancar() {
     if (!categoria)                   return alert('Selecione uma categoria')
     if (!valor || Number(valor) <= 0) return alert('Informe um valor válido')
- 
+
     setSalvando(true)
     try {
       const { error } = await supabase.from('financeiro').insert({
@@ -81,19 +98,57 @@ export default function DetalheObra() {
       setSalvando(false)
     }
   }
- 
+
+  async function salvarDiario() {
+    if (!diarioServicos.trim()) return alert('Descreva os serviços executados')
+
+    setSalvandoDiario(true)
+    try {
+      const { error } = await supabase.from('diario_obra').insert({
+        obra_id:      Number(id),
+        empresa_id:   empresaId,
+        data:         diarioData,
+        clima:        diarioClima,
+        funcionarios: diarioFuncionarios ? Number(diarioFuncionarios) : null,
+        servicos:     diarioServicos.trim(),
+        problemas:    diarioProblemas.trim() || null,
+        observacoes:  diarioObservacoes.trim() || null,
+      })
+      if (error) throw error
+
+      // Limpa form
+      setDiarioServicos('')
+      setDiarioProblemas('')
+      setDiarioObservacoes('')
+      setDiarioFuncionarios('')
+      setDiarioData(new Date().toISOString().split('T')[0])
+      setMostrarFormDiario(false)
+      await carregar()
+    } catch (err) {
+      alert('Erro ao salvar diário')
+    } finally {
+      setSalvandoDiario(false)
+    }
+  }
+
+  async function excluirDiario(diarioId: string) {
+    if (!confirm('Excluir este registro do diário?')) return
+    await supabase.from('diario_obra').delete().eq('id', diarioId)
+    carregar()
+  }
+
   async function excluir(lancId: string) {
     if (!confirm('Excluir este lançamento?')) return
     await supabase.from('financeiro').delete().eq('id', lancId)
     carregar()
   }
- 
+
   if (loadingEmpresa || loadingData) return <p style={{ padding: 24 }}>Carregando...</p>
   if (!obra) return <p style={{ padding: 24 }}>Obra não encontrada.</p>
- 
+
   /* ── MÉTRICAS FINANCEIRAS ── */
-  const entradas     = financeiro.filter(f => f.tipo === 'entrada')
-  const saidas       = financeiro.filter(f => f.tipo === 'saida')
+  const entradas      = financeiro.filter(f => f.tipo === 'entrada')
+  const saidas        = financeiro.filter(f => f.tipo === 'saida')
   const totalEntradas = entradas.reduce((a, e) => a + Number(e.valor), 0)
   const totalSaidas   = saidas.reduce((a, s)   => a + Number(s.valor), 0)
   const lucro         = totalEntradas - totalSaidas
@@ -103,21 +158,20 @@ export default function DetalheObra() {
   const restReceber   = valorContrato - totalEntradas
   const lucroPrevisto = valorContrato - totalSaidas
   const custoPorMetro = obra.area && obra.area > 0 ? totalSaidas / obra.area : 0
- 
-  /* ── ORÇADO VS REALIZADO ── */
-  const percOrcado = orcCusto > 0 ? (totalSaidas / orcCusto) * 100 : 0
+
+  const percOrcado      = orcCusto > 0 ? (totalSaidas / orcCusto) * 100 : 0
   const alertaOrcamento = orcCusto > 0 && percOrcado > 90
- 
-  /* ── CRONOGRAMA ── */
+
   const perc          = Number(obra.percentual_concluido || 0)
   const hoje          = new Date()
-  const dataInicio    = obra.data_inicio    ? new Date(obra.data_inicio)    : null
-  const dataPrevisao  = obra.data_previsao  ? new Date(obra.data_previsao)  : null
-  const diasRestantes = dataPrevisao ? Math.ceil((dataPrevisao.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24)) : null
-  const atrasada      = diasRestantes !== null && diasRestantes < 0 && perc < 100
-  const corProgresso  = perc < 30 ? '#ef4444' : perc < 70 ? '#f59e0b' : '#22c55e'
- 
-  /* ── GRÁFICO ── */
+  const dataInicio    = obra.data_inicio   ? new Date(obra.data_inicio)   : null
+  const dataPrevisao  = obra.data_previsao ? new Date(obra.data_previsao) : null
+  const diasRestantes = dataPrevisao
+    ? Math.ceil((dataPrevisao.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
+    : null
+  const atrasada     = diasRestantes !== null && diasRestantes < 0 && perc < 100
+  const corProgresso = perc < 30 ? '#ef4444' : perc < 70 ? '#f59e0b' : '#22c55e'
+
   const fluxoMensal: Record<string, { mes: string; entrada: number; saida: number }> = {}
   financeiro.forEach(item => {
     const mes = new Date(item.created_at).toLocaleDateString('pt-BR', { month: 'short' })
@@ -126,25 +180,24 @@ export default function DetalheObra() {
     else                         fluxoMensal[mes].saida   += Number(item.valor)
   })
   const dadosGrafico = Object.values(fluxoMensal)
- 
-  /* ── RANKING CUSTOS ── */
+
   const resumoCategoria: Record<string, number> = {}
   saidas.forEach(s => { resumoCategoria[s.descricao] = (resumoCategoria[s.descricao] || 0) + Number(s.valor) })
   const rankingCategorias = Object.entries(resumoCategoria)
     .map(([k, v]) => ({ nome: k, valor: v, perc: totalSaidas > 0 ? (v / totalSaidas) * 100 : 0 }))
     .sort((a, b) => b.valor - a.valor)
- 
+
   const categorias    = tipo === 'entrada' ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA
   const listaFiltrada = financeiro.filter(f => f.tipo === abaAtiva)
- 
+
   return (
     <div style={{ padding: 24 }}>
- 
+
       {/* ALERTAS */}
-      {lucro < 0 && <Alerta cor="#fee2e2" borda="#fca5a5" texto="🚨 Obra em prejuízo — revise os custos imediatamente" />}
-      {atrasada   && <Alerta cor="#fef3c7" borda="#fcd34d" texto={`⏰ Obra atrasada — prazo venceu há ${Math.abs(diasRestantes!)} dias`} />}
+      {lucro < 0      && <Alerta cor="#fee2e2" borda="#fca5a5" texto="🚨 Obra em prejuízo — revise os custos imediatamente" />}
+      {atrasada       && <Alerta cor="#fef3c7" borda="#fcd34d" texto={`⏰ Obra atrasada — prazo venceu há ${Math.abs(diasRestantes!)} dias`} />}
       {alertaOrcamento && <Alerta cor="#fff7ed" borda="#fdba74" texto={`⚠️ Custo atingiu ${percOrcado.toFixed(0)}% do orçamento previsto`} />}
- 
+
       {/* CABEÇALHO */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
@@ -157,19 +210,21 @@ export default function DetalheObra() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => router.push(`/obras/${id}/fotos`)} style={btnFotos}>📸 Fotos</button>
+          <button onClick={() => router.push(`/obras/${id}/fotos`)}  style={btnFotos}>📸 Fotos</button>
           <button onClick={() => router.push(`/obras/${id}/editar`)} style={btnEditar}>✏️ Editar</button>
         </div>
       </div>
- 
-      {/* ── PROGRESSO DA OBRA ── */}
+
+      {/* PROGRESSO */}
       <div style={progressoCard}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <div>
             <p style={{ fontWeight: 700, fontSize: 15 }}>📐 Progresso da Obra</p>
             {dataInicio   && <p style={{ fontSize: 12, color: '#64748b' }}>Início: {new Date(dataInicio).toLocaleDateString('pt-BR')}</p>}
             {dataPrevisao && <p style={{ fontSize: 12, color: diasRestantes! < 0 ? '#dc2626' : '#64748b' }}>
-              {diasRestantes! >= 0 ? `${diasRestantes} dias restantes` : `${Math.abs(diasRestantes!)} dias de atraso`}
+              {diasRestantes! >= 0
+                ? `${diasRestantes} dias restantes`
+                : `${Math.abs(diasRestantes!)} dias de atraso`}
               {' '}(previsto: {dataPrevisao.toLocaleDateString('pt-BR')})
             </p>}
           </div>
@@ -192,8 +247,8 @@ export default function DetalheObra() {
           </div>
         )}
       </div>
- 
-      {/* ── CARDS FINANCEIROS ── */}
+
+      {/* CARDS FINANCEIROS */}
       <div style={grid}>
         <Card titulo="Receita"        valor={totalEntradas}   cor="#22c55e" />
         <Card titulo="Custos"         valor={totalSaidas}     cor="#ef4444" />
@@ -203,8 +258,8 @@ export default function DetalheObra() {
         <Card titulo="Lucro Previsto" valor={lucroPrevisto}   cor="#10b981" />
         {custoPorMetro > 0 && <Card titulo="Custo/m²" valor={custoPorMetro} cor="#f97316" />}
       </div>
- 
-      {/* ── GRÁFICO ── */}
+
+      {/* GRÁFICO */}
       {dadosGrafico.length > 0 && (
         <div style={graficoBox}>
           <h3 style={{ marginBottom: 12 }}>📈 Fluxo Financeiro da Obra</h3>
@@ -217,8 +272,148 @@ export default function DetalheObra() {
           </ResponsiveContainer>
         </div>
       )}
- 
-      {/* ── FORMULÁRIO LANÇAMENTO ── */}
+
+      {/* ── DIÁRIO DE OBRA ── */}
+      <div style={graficoBox}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>📓 Diário de Obra</h3>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+              {diarios.length} registro(s) · obrigatório por norma técnica (NBR)
+            </p>
+          </div>
+          <button
+            onClick={() => setMostrarFormDiario(!mostrarFormDiario)}
+            style={btnNovoDiario}
+          >
+            {mostrarFormDiario ? '✕ Cancelar' : '+ Novo Registro'}
+          </button>
+        </div>
+
+        {/* FORMULÁRIO DIÁRIO */}
+        {mostrarFormDiario && (
+          <div style={formDiario}>
+            <div style={diarioGrid}>
+              <div style={formGrupoD}>
+                <label style={labelSt}>Data *</label>
+                <input type="date" value={diarioData}
+                  onChange={e => setDiarioData(e.target.value)} style={inputSt} />
+              </div>
+              <div style={formGrupoD}>
+                <label style={labelSt}>Clima</label>
+                <select value={diarioClima} onChange={e => setDiarioClima(e.target.value)} style={inputSt}>
+                  {CLIMA_OPCOES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={formGrupoD}>
+                <label style={labelSt}>Nº de Funcionários</label>
+                <input type="number" value={diarioFuncionarios}
+                  onChange={e => setDiarioFuncionarios(e.target.value)}
+                  placeholder="Ex: 8" style={inputSt} min="0" />
+              </div>
+            </div>
+
+            <div style={formGrupoD}>
+              <label style={labelSt}>Serviços Executados *</label>
+              <textarea
+                value={diarioServicos}
+                onChange={e => setDiarioServicos(e.target.value)}
+                placeholder="Descreva os serviços realizados no dia..."
+                style={textareaSt}
+                rows={3}
+              />
+            </div>
+
+            <div style={formGrupoD}>
+              <label style={labelSt}>Problemas / Ocorrências</label>
+              <textarea
+                value={diarioProblemas}
+                onChange={e => setDiarioProblemas(e.target.value)}
+                placeholder="Registre problemas, imprevistos ou ocorrências..."
+                style={textareaSt}
+                rows={2}
+              />
+            </div>
+
+            <div style={formGrupoD}>
+              <label style={labelSt}>Observações Gerais</label>
+              <textarea
+                value={diarioObservacoes}
+                onChange={e => setDiarioObservacoes(e.target.value)}
+                placeholder="Material recebido, visitas, decisões tomadas..."
+                style={textareaSt}
+                rows={2}
+              />
+            </div>
+
+            <button
+              onClick={salvarDiario}
+              style={btnSalvarDiario}
+              disabled={salvandoDiario}
+            >
+              {salvandoDiario ? 'Salvando...' : '📓 Salvar Registro'}
+            </button>
+          </div>
+        )}
+
+        {/* LISTA DIÁRIOS */}
+        {diarios.length === 0 && !mostrarFormDiario && (
+          <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px 0', fontSize: 13 }}>
+            Nenhum registro ainda. Clique em "+ Novo Registro" para começar.
+          </p>
+        )}
+
+        {diarios.map(d => (
+          <div key={d.id} style={diarioItem}>
+            <div
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              onClick={() => setDiarioExpandido(diarioExpandido === d.id ? null : d.id)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={diarioDataBadge}>
+                  <p style={{ fontSize: 18, fontWeight: 800, lineHeight: 1 }}>
+                    {new Date(d.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit' })}
+                  </p>
+                  <p style={{ fontSize: 10, color: '#64748b' }}>
+                    {new Date(d.data + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'short' })}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>
+                    {d.clima}
+                    {d.funcionarios ? ` · ${d.funcionarios} funcionários` : ''}
+                  </p>
+                  <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
+                    {d.servicos.length > 60 ? d.servicos.substring(0, 60) + '...' : d.servicos}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {d.problemas && (
+                  <span style={badgeProblema}>⚠️ Ocorrência</span>
+                )}
+                <span style={{ color: '#94a3b8', fontSize: 12 }}>
+                  {diarioExpandido === d.id ? '▲' : '▼'}
+                </span>
+              </div>
+            </div>
+
+            {/* EXPANDIDO */}
+            {diarioExpandido === d.id && (
+              <div style={diarioExpandidoBox}>
+                <DiarioSecao titulo="Serviços Executados" conteudo={d.servicos} />
+                {d.problemas    && <DiarioSecao titulo="Problemas / Ocorrências" conteudo={d.problemas} cor="#dc2626" />}
+                {d.observacoes  && <DiarioSecao titulo="Observações" conteudo={d.observacoes} />}
+                <button onClick={() => excluirDiario(d.id)} style={btnExcluirDiario}>
+                  🗑 Excluir registro
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* FORMULÁRIO LANÇAMENTO */}
       <div style={formCard}>
         <h3 style={formTitulo}>➕ Novo Lançamento</h3>
         <div style={tipoToggle}>
@@ -247,8 +442,8 @@ export default function DetalheObra() {
           {salvando ? 'Salvando...' : tipo === 'entrada' ? '↑ Registrar Entrada' : '↓ Registrar Saída'}
         </button>
       </div>
- 
-      {/* ── LISTA LANÇAMENTOS ── */}
+
+      {/* LISTA LANÇAMENTOS */}
       <div style={listaCard}>
         <div style={abaRow}>
           <button onClick={() => setAbaAtiva('entrada')} style={abaAtiva === 'entrada' ? abaAtivaStyle('#16a34a') : abaInativa}>Entradas ({entradas.length})</button>
@@ -270,8 +465,8 @@ export default function DetalheObra() {
           </div>
         ))}
       </div>
- 
-      {/* ── RANKING CUSTOS ── */}
+
+      {/* RANKING CUSTOS */}
       {rankingCategorias.length > 0 && (
         <div style={{ ...graficoBox, marginTop: 20 }}>
           <h3 style={{ marginBottom: 14 }}>💸 Breakdown de Custos</h3>
@@ -288,14 +483,14 @@ export default function DetalheObra() {
           ))}
         </div>
       )}
- 
+
     </div>
   )
 }
- 
+
 /* ── HELPERS ── */
 function format(v: number) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
- 
+
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
     <div style={{ background: cor + '15', padding: 16, borderRadius: 12, border: `1px solid ${cor}40` }}>
@@ -306,19 +501,28 @@ function Card({ titulo, valor, cor, tipo }: any) {
     </div>
   )
 }
- 
+
 function Alerta({ cor, borda, texto }: any) {
   return <div style={{ background: cor, border: `1px solid ${borda}`, borderRadius: 10, padding: '12px 16px', marginBottom: 10, fontWeight: 600, fontSize: 14 }}>{texto}</div>
 }
- 
+
+function DiarioSecao({ titulo, conteudo, cor }: any) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: cor || '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>{titulo}</p>
+      <p style={{ fontSize: 14, color: '#0f172a', whiteSpace: 'pre-wrap' }}>{conteudo}</p>
+    </div>
+  )
+}
+
 /* ── ESTILOS ── */
 const btnVoltar: React.CSSProperties = { background: 'transparent', border: 'none', cursor: 'pointer', color: '#2563eb', fontSize: 14, padding: 0 }
 const btnFotos: React.CSSProperties  = { background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }
 const btnEditar: React.CSSProperties = { background: '#f59e0b', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }
 const grid: React.CSSProperties      = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 20 }
-const graficoBox: React.CSSProperties = { background: '#fff', padding: 20, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
+const graficoBox: React.CSSProperties   = { background: '#fff', padding: 20, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
 const progressoCard: React.CSSProperties = { background: '#fff', padding: 20, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
-const formCard: React.CSSProperties  = { background: '#fff', padding: 24, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.06)', marginBottom: 20, marginTop: 4 }
+const formCard: React.CSSProperties  = { background: '#fff', padding: 24, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.06)', marginBottom: 20 }
 const formTitulo: React.CSSProperties = { fontSize: 16, fontWeight: 700, marginBottom: 16, color: '#0f172a' }
 const tipoToggle: React.CSSProperties = { display: 'flex', gap: 10, marginBottom: 18 }
 const formRow: React.CSSProperties   = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 16 }
@@ -335,3 +539,16 @@ const abaAtivaStyle = (cor: string): React.CSSProperties => ({ flex: 1, padding:
 const abaInativa: React.CSSProperties = { flex: 1, padding: '14px 0', border: 'none', background: '#f8fafc', color: '#94a3b8', fontWeight: 600, cursor: 'pointer', fontSize: 14 }
 const itemLinha = (tipo: string): React.CSSProperties => ({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #f1f5f9', borderLeft: `4px solid ${tipo === 'entrada' ? '#16a34a' : '#dc2626'}` })
 const btnExcluir: React.CSSProperties = { background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 16, padding: '2px 6px' }
+
+// Diário
+const btnNovoDiario: React.CSSProperties  = { background: '#2563eb', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }
+const formDiario: React.CSSProperties    = { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 14 }
+const diarioGrid: React.CSSProperties    = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12 }
+const formGrupoD: React.CSSProperties    = { display: 'flex', flexDirection: 'column', gap: 4 }
+const textareaSt: React.CSSProperties    = { padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, resize: 'vertical' as const, fontFamily: 'inherit' }
+const btnSalvarDiario: React.CSSProperties = { background: '#0f172a', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start' }
+const diarioItem: React.CSSProperties    = { border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, marginBottom: 10 }
+const diarioDataBadge: React.CSSProperties = { background: '#f1f5f9', borderRadius: 8, padding: '6px 10px', textAlign: 'center', minWidth: 44 }
+const diarioExpandidoBox: React.CSSProperties = { marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9' }
+const btnExcluirDiario: React.CSSProperties = { background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 12, padding: 0, marginTop: 8 }
+const badgeProblema: React.CSSProperties  = { background: '#fef3c7', color: '#d97706', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999 }
