@@ -86,7 +86,7 @@ export default function DetalheObra() {
       const { error } = await supabase.from('financeiro').insert({
         empresa_id: empresaId, obra_id: Number(id),
         tipo, descricao: categoria, valor: Number(valor),
-        created_at: new Date(data).toISOString(),
+        created_at: `${data}T12:00:00-03:00`,
       })
       if (error) throw error
       setCategoria(''); setValor('')

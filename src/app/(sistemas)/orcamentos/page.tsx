@@ -167,9 +167,10 @@ export default function OrcamentosPage() {
 
       {/* ── APROVADOS SEM OBRA ── */}
       {aprovadosSemObra.length > 0 && (
-        <Secao titulo="✅ Aprovados" qtd={aprovadosSemObra.length} cor="#16a34a">
+        <Secao titulo="✅ Aprovados (sem obra)" qtd={aprovadosSemObra.length} cor="#16a34a">
           {aprovadosSemObra.map(o => (
             <CardOrcamento key={o.id} o={o} aprovando={aprovando}
+              onAprovar={() => aprovarEGerarObra(o)}
               onVer={() => router.push(`/orcamentos/${o.id}`)}
               onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
               onLink={() => o.token && copiarLink(o.id, o.token)}
@@ -255,7 +256,7 @@ function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onVer, onEditar, on
         </button>
       )}
 
-      {/* Botões aprovar/recusar — só pendentes */}
+      {/* Botões aprovar/recusar — pendentes */}
       {(!o.status || o.status === 'pendente') && onAprovar && (
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onAprovar} style={btnAprovar} disabled={estaAprovando}>
@@ -263,6 +264,13 @@ function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onVer, onEditar, on
           </button>
           <button onClick={onRecusar} style={btnRecusar}>❌</button>
         </div>
+      )}
+
+      {/* Botão gerar obra — aprovados cuja obra foi excluída */}
+      {o.status === 'aprovado' && !o.obra_id && onAprovar && (
+        <button onClick={onAprovar} style={btnGerarObra} disabled={estaAprovando}>
+          {estaAprovando ? '⏳ Gerando...' : '🏗️ Gerar Obra Novamente'}
+        </button>
       )}
 
       {/* Ações secundárias */}
@@ -304,4 +312,5 @@ const btnSec: React.CSSProperties       = { background: '#f1f5f9', color: '#3741
 const btnWhats: React.CSSProperties     = { background: '#22c55e', color: '#fff', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12 }
 const alertaLimite: React.CSSProperties = { background: '#fef3c7', padding: 12, borderRadius: 8, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }
 const btnUpgrade: React.CSSProperties   = { background: '#f59e0b', color: '#fff', padding: '6px 10px', border: 'none', borderRadius: 6, cursor: 'pointer' }
+const btnGerarObra: React.CSSProperties  = { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '8px 14px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13, width: '100%' }
 const vazioCard: React.CSSProperties    = { textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
