@@ -144,14 +144,14 @@ export default function Relatorios() {
         </div>
       </div>
 
-      {/* MÉTRICAS — grid que quebra linha automaticamente, sem overflow */}
+      {/* ── MÉTRICAS 3 + 3 ── */}
       <div style={resumoGrid}>
-        <Metrica label="Receitas"     valor={format(receita)} cor="#16a34a" icone="↑" />
-        <Metrica label="Saídas"       valor={format(custo)}   cor="#dc2626" icone="↓" />
-        <Metrica label="Resultado"    valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} icone={lucro >= 0 ? '✓' : '!'} />
-        <Metrica label="Margem"       valor={margem.toFixed(1) + '%'} cor="#a855f7" icone="%" />
-        <Metrica label="Lançamentos"  valor={String(dados.length)}    cor="#0ea5e9" icone="#" />
-        <Metrica label="Obras"        valor={String(Object.keys(porObra).length)} cor="#f59e0b" icone="🏗" />
+        <Metrica label="Receitas"    valor={format(receita)} cor="#16a34a" icone="↑" />
+        <Metrica label="Saídas"      valor={format(custo)}   cor="#dc2626" icone="↓" />
+        <Metrica label="Resultado"   valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} icone={lucro >= 0 ? '✓' : '!'} />
+        <Metrica label="Margem"      valor={margem.toFixed(1) + '%'} cor="#a855f7" icone="%" />
+        <Metrica label="Lançamentos" valor={String(dados.length)}    cor="#0ea5e9" icone="#" />
+        <Metrica label="Obras"       valor={String(Object.keys(porObra).length)} cor="#f59e0b" icone="🏗" />
       </div>
 
       {dados.length === 0 && (
@@ -239,15 +239,7 @@ function Metrica({ label, valor, cor, icone }: any) {
         <p style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
           {label}
         </p>
-        <p style={{
-          fontSize: 16,
-          fontWeight: 800,
-          color: cor,
-          marginTop: 2,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}>
+        <p style={{ fontSize: 18, fontWeight: 800, color: cor, marginTop: 2 }}>
           {valor}
         </p>
       </div>
@@ -265,10 +257,10 @@ const filtroGrupo: React.CSSProperties  = { display: 'flex', flexDirection: 'col
 const label: React.CSSProperties        = { fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }
 const inputStyle: React.CSSProperties   = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff' }
 
-// ✅ CORREÇÃO: minmax(180px, 1fr) garante que cada card cresce mas nunca vaza
+// ✅ Fixo em 3 colunas — 2 linhas de 3 cards, valores completos visíveis
 const resumoGrid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+  gridTemplateColumns: 'repeat(3, 1fr)',
   gap: 12,
   marginBottom: 20,
 }
@@ -276,20 +268,20 @@ const resumoGrid: React.CSSProperties = {
 const metricaBox: React.CSSProperties = {
   background: '#fff',
   borderRadius: 12,
-  padding: '14px 16px',
+  padding: '16px 20px',
   boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
   display: 'flex',
-  gap: 12,
+  gap: 14,
   alignItems: 'center',
-  overflow: 'hidden', // ✅ impede vazamento
-  minWidth: 0,        // ✅ permite shrink correto no grid
+  overflow: 'hidden',
+  minWidth: 0,
 }
 
 const metricaIcone = (cor: string): React.CSSProperties => ({
-  width: 36, height: 36, borderRadius: 8,
+  width: 40, height: 40, borderRadius: 10,
   background: cor + '20', color: cor,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontWeight: 800, fontSize: 14, flexShrink: 0
+  fontWeight: 800, fontSize: 16, flexShrink: 0
 })
 
 const secaoCard: React.CSSProperties   = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
