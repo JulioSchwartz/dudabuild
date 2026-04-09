@@ -6,37 +6,37 @@ import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
 import { useEmpresa } from '@/hooks/useEmpresa'
 
+const itemMaterialVazio = () => ({
+  tipo: 'material', codigo: '', descricao: '', unidade: 'm²',
+  quantidade: 1, material: 0, mao_obra: 0, equipamentos: 0
+})
+
+const itemServicoVazio = () => ({
+  tipo: 'servico', codigo: '', descricao: '', unidade: 'h',
+  quantidade: 1, material: 0, mao_obra: 0, equipamentos: 0
+})
+
 export default function NovoOrcamento() {
 
   const { empresaId } = useEmpresa()
-  const router = useRouter()
+  const router        = useRouter()
 
   const [cliente,   setCliente]   = useState('')
   const [telefone,  setTelefone]  = useState('')
   const [descricao, setDescricao] = useState('')
   const [loading,   setLoading]   = useState(false)
 
-  const [itens, setItens] = useState<any[]>([{
-    codigo: '', descricao: '', unidade: 'm²',
-    quantidade: 1, material: 0, mao_obra: 0, equipamentos: 0
-  }])
+  const [materiais, setMateriais] = useState<any[]>([itemMaterialVazio()])
+  const [servicos,  setServicos]  = useState<any[]>([itemServicoVazio()])
 
-  function atualizarItem(index: number, campo: string, valor: any) {
-    const novos = [...itens]
-    novos[index][campo] = valor
-    setItens(novos)
+  function atualizarMaterial(index: number, campo: string, valor: any) {
+    const novos = [...materiais]; novos[index][campo] = valor; setMateriais(novos)
   }
-
-  function removerItem(index: number) {
-    setItens(itens.filter((_, i) => i !== index))
+  function atualizarServico(index: number, campo: string, valor: any) {
+    const novos = [...servicos]; novos[index][campo] = valor; setServicos(novos)
   }
-
-  function adicionarItem() {
-    setItens([...itens, {
-      codigo: '', descricao: '', unidade: 'm²',
-      quantidade: 1, material: 0, mao_obra: 0, equipamentos: 0
-    }])
-  }
+  function removerMaterial(index: number) { setMateriais(materiais.filter((_, i) => i !== index)) }
+  function removerServico(index: number)  { setServicos(servicos.filter((_, i) => i !== index)) }
 
   function totalItem(i: any) {
     return (Number(i.material || 0) + Number(i.mao_obra || 0) + Number(i.equipamentos || 0))
@@ -44,7 +44,7 @@ export default function NovoOrcamento() {
   }
 
   function totalGeral() {
-    return itens.reduce((a, i) => a + totalItem(i), 0)
+    return [...materiais, ...servicos].reduce((a, i) => a + totalItem(i), 0)
   }
 
   async function salvar() {
@@ -64,15 +64,17 @@ export default function NovoOrcamento() {
           telefone:     telefone.trim() || null,
           descricao:    descricao.trim(),
           valor_total:  totalGeral(),
-          token
+          token,
         })
         .select()
         .single()
 
       if (error || !orc) throw error || new Error('Orçamento não retornado')
 
-      // ✅ Mapeia apenas as colunas que existem na tabela orcamento_itens
-      const itensPayload = itens.map(i => ({
+      // Combina materiais e serviços em um único array de itens
+      const todosItens = [...materiais, ...servicos]
+
+      const itensPayload = todosItens.map(i => ({
         orcamento_id: orc.id,
         codigo:       i.codigo       || null,
         descricao:    i.descricao    || null,
@@ -106,46 +108,58 @@ export default function NovoOrcamento() {
 
   function gerarPDF() {
     import('html2pdf.js').then(({ default: html2pdf }) => {
-      const dataHoje = new Date().toLocaleDateString('pt-BR')
-      const element  = document.createElement('div')
-      element.innerHTML = `
+      const dataHoje  = new Date().toLocaleDateString('pt-BR')
+      const format    = (v: number) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      const totalMat  = materiais.reduce((a, i) => a + totalItem(i), 0)
+      const totalServ = servicos.reduce((a, i)  => a + totalItem(i), 0)
+
+      const el = document.createElement('div')
+      el.innerHTML = `
         <div style="font-family:Arial;color:#0f172a">
-          <div style="height:200px;background:#0f172a;color:white;display:flex;flex-direction:column;justify-content:center;align-items:center">
-            <h1 style="margin:0">DudaBuild Engenharia</h1>
-            <p style="margin:4px 0 0">Proposta Comercial</p>
+          <div style="height:180px;background:#0f172a;color:white;display:flex;flex-direction:column;justify-content:center;align-items:center">
+            <h1 style="margin:0;font-size:24px">DudaBuild Engenharia</h1>
+            <p style="margin:6px 0 0;opacity:0.7">Proposta Comercial</p>
           </div>
           <div style="padding:40px">
-            <div style="margin-bottom:30px">
-              <h2>Dados do Cliente</h2>
-              <p><strong>Cliente:</strong> ${cliente}</p>
-              <p><strong>Descrição:</strong> ${descricao}</p>
-              <p><strong>Data:</strong> ${dataHoje}</p>
+            <p><strong>Cliente:</strong> ${cliente}</p>
+            ${descricao ? `<p><strong>Descrição:</strong> ${descricao}</p>` : ''}
+            <p><strong>Data:</strong> ${dataHoje}</p>
+            <hr style="margin:20px 0;border:none;border-top:1px solid #e2e8f0"/>
+
+            <h3 style="color:#3b82f6;margin-bottom:10px">🧱 Materiais</h3>
+            ${materiais.map(i => `
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px">
+                <span>${i.codigo ? `[${i.codigo}] ` : ''}${i.descricao || '—'} (${i.quantidade} ${i.unidade})</span>
+                <strong>${format(totalItem(i))}</strong>
+              </div>
+            `).join('')}
+            <div style="text-align:right;padding:8px 0;font-weight:700;color:#3b82f6">Subtotal Materiais: ${format(totalMat)}</div>
+
+            <h3 style="color:#f59e0b;margin:20px 0 10px">👷 Serviços</h3>
+            ${servicos.map(i => `
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px">
+                <span>${i.codigo ? `[${i.codigo}] ` : ''}${i.descricao || '—'} (${i.quantidade} ${i.unidade})</span>
+                <strong>${format(totalItem(i))}</strong>
+              </div>
+            `).join('')}
+            <div style="text-align:right;padding:8px 0;font-weight:700;color:#f59e0b">Subtotal Serviços: ${format(totalServ)}</div>
+
+            <div style="margin-top:30px;padding:24px;background:#16a34a;color:white;border-radius:10px;text-align:center">
+              <p style="margin:0;opacity:0.8;font-size:14px">Total do Investimento</p>
+              <h1 style="margin:8px 0 0;font-size:30px">${format(totalGeral())}</h1>
             </div>
-            <div>
-              <h2 style="margin-bottom:10px">Itens do Orçamento</h2>
-              ${itens.map(i => `
-                <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #e2e8f0">
-                  <span>${i.descricao || '—'}</span>
-                  <strong>${format(totalItem(i))}</strong>
-                </div>
-              `).join('')}
-            </div>
-            <div style="margin-top:40px;padding:25px;background:#16a34a;color:white;border-radius:10px;text-align:center">
-              <h2>Total do Investimento</h2>
-              <h1>${format(totalGeral())}</h1>
-            </div>
-            <div style="margin-top:60px">
+
+            <div style="margin-top:50px">
               <p>______________________________________</p>
-              <p><strong>DudaBuild Engenharia</strong></p>
-              <p>Responsável Técnico</p>
+              <p><strong>DudaBuild Engenharia</strong> · Responsável Técnico</p>
             </div>
-            <div style="margin-top:40px;text-align:center;font-size:12px;color:#64748b">
-              Proposta válida por 7 dias<br/>contato@dudabuild.com
-            </div>
+            <p style="margin-top:30px;text-align:center;font-size:11px;color:#94a3b8">
+              Proposta válida por 7 dias · contato@dudabuild.com
+            </p>
           </div>
         </div>
       `
-      html2pdf().from(element).set({
+      html2pdf().from(el).set({
         margin: 0,
         filename: `Proposta_${cliente.replace(/\s+/g, '_')}.pdf`,
         html2canvas: { scale: 2 },
@@ -158,41 +172,54 @@ export default function NovoOrcamento() {
     <div style={container}>
 
       <button onClick={() => router.back()} style={btnVoltar}>← Voltar</button>
-      <h1 style={titulo}>Nova Proposta Comercial</h1>
+      <h1 style={titulo}>📋 Nova Proposta Comercial</h1>
 
-      <div style={formGroup}>
-        <label style={label}>Cliente *</label>
-        <input value={cliente} onChange={e => setCliente(e.target.value)}
-          placeholder="Nome do cliente" style={input} />
+      {/* DADOS DO CLIENTE */}
+      <div style={dadosCard}>
+        <h3 style={secTitulo}>Dados do Cliente</h3>
+        <div style={formGrid}>
+          <div style={formGrupo}>
+            <label style={label}>Cliente *</label>
+            <input value={cliente} onChange={e => setCliente(e.target.value)}
+              placeholder="Nome do cliente" style={input} />
+          </div>
+          <div style={formGrupo}>
+            <label style={label}>Telefone (WhatsApp)</label>
+            <input value={telefone} onChange={e => setTelefone(e.target.value)}
+              placeholder="5511999999999" style={input} />
+          </div>
+          <div style={{ ...formGrupo, gridColumn: '1 / -1' }}>
+            <label style={label}>Descrição da Obra</label>
+            <input value={descricao} onChange={e => setDescricao(e.target.value)}
+              placeholder="Ex: Construção de residência unifamiliar" style={input} />
+          </div>
+        </div>
       </div>
 
-      <div style={formGroup}>
-        <label style={label}>Telefone (WhatsApp)</label>
-        <input value={telefone} onChange={e => setTelefone(e.target.value)}
-          placeholder="5511999999999" style={input} />
-      </div>
-
-      <div style={formGroup}>
-        <label style={label}>Descrição</label>
-        <input value={descricao} onChange={e => setDescricao(e.target.value)}
-          placeholder="Descrição do serviço" style={input} />
-      </div>
-
+      {/* TABELA COM DUAS SEÇÕES */}
       <TabelaOrcamento
-        itens={itens}
-        atualizarItem={atualizarItem}
-        removerItem={removerItem}
+        materiais={materiais}
+        servicos={servicos}
+        atualizarMaterial={atualizarMaterial}
+        atualizarServico={atualizarServico}
+        removerMaterial={removerMaterial}
+        removerServico={removerServico}
       />
 
-      <button onClick={adicionarItem} style={btnAdd}>+ Adicionar Item</button>
-
-      <div style={totalBox}>
-        Total: <strong>{format(totalGeral())}</strong>
+      {/* BOTÕES ADICIONAR */}
+      <div style={{ display: 'flex', gap: 10, marginTop: 8, marginBottom: 24 }}>
+        <button onClick={() => setMateriais([...materiais, itemMaterialVazio()])} style={btnAddMat}>
+          + Material
+        </button>
+        <button onClick={() => setServicos([...servicos, itemServicoVazio()])} style={btnAddServ}>
+          + Serviço
+        </button>
       </div>
 
+      {/* AÇÕES */}
       <div style={acoes}>
-        <button onClick={salvar} style={btnPrim} disabled={loading}>
-          {loading ? 'Salvando...' : 'Salvar Orçamento'}
+        <button onClick={salvar} style={btnSalvar} disabled={loading}>
+          {loading ? 'Salvando...' : '💾 Salvar Orçamento'}
         </button>
         <button onClick={gerarPDF} style={btnPdf}>📄 Baixar PDF</button>
       </div>
@@ -201,18 +228,18 @@ export default function NovoOrcamento() {
   )
 }
 
-function format(v: number) {
-  return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
-const container: React.CSSProperties  = { maxWidth: 900, margin: '0 auto', padding: 24 }
-const titulo: React.CSSProperties     = { fontSize: 26, fontWeight: 700, marginBottom: 20 }
-const formGroup: React.CSSProperties  = { marginBottom: 14 }
-const label: React.CSSProperties      = { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 4 }
-const input: React.CSSProperties      = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box' }
-const totalBox: React.CSSProperties   = { fontSize: 20, marginTop: 16, marginBottom: 16, color: '#16a34a' }
+/* ── ESTILOS ── */
+const container: React.CSSProperties  = { maxWidth: 1100, margin: '0 auto', padding: 24 }
+const titulo: React.CSSProperties     = { fontSize: 24, fontWeight: 800, color: '#0f172a', marginBottom: 20 }
+const dadosCard: React.CSSProperties  = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 24 }
+const secTitulo: React.CSSProperties  = { fontSize: 14, fontWeight: 700, color: '#64748b', marginBottom: 14 }
+const formGrid: React.CSSProperties   = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }
+const formGrupo: React.CSSProperties  = { display: 'flex', flexDirection: 'column', gap: 4 }
+const label: React.CSSProperties      = { fontSize: 12, fontWeight: 600, color: '#374151' }
+const input: React.CSSProperties      = { padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, background: '#f8fafc' }
 const acoes: React.CSSProperties      = { display: 'flex', gap: 10 }
-const btnVoltar: React.CSSProperties  = { background: 'transparent', border: 'none', cursor: 'pointer', marginBottom: 12, color: '#2563eb' }
-const btnAdd: React.CSSProperties     = { marginTop: 10, padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer' }
-const btnPrim: React.CSSProperties    = { background: '#2563eb', color: '#fff', padding: '12px 20px', borderRadius: 8, border: 'none', cursor: 'pointer' }
-const btnPdf: React.CSSProperties     = { background: '#0f172a', color: '#fff', padding: '12px 20px', borderRadius: 8, border: 'none', cursor: 'pointer' }
+const btnVoltar: React.CSSProperties  = { background: 'transparent', border: 'none', cursor: 'pointer', marginBottom: 12, color: '#2563eb', fontSize: 14 }
+const btnAddMat: React.CSSProperties  = { background: '#eff6ff', color: '#3b82f6', border: '1px dashed #3b82f6', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }
+const btnAddServ: React.CSSProperties = { background: '#fffbeb', color: '#f59e0b', border: '1px dashed #f59e0b', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }
+const btnSalvar: React.CSSProperties  = { background: '#2563eb', color: '#fff', padding: '12px 24px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15 }
+const btnPdf: React.CSSProperties     = { background: '#0f172a', color: '#fff', padding: '12px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600 }
