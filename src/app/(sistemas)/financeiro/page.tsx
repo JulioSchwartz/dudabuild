@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Legend
+  BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, Legend, Cell
 } from 'recharts'
 
 export default function Financeiro() {
@@ -31,136 +31,200 @@ export default function Financeiro() {
     try {
       const [{ data: finData, error: errFin }, { data: obrasData, error: errObras }] =
         await Promise.all([
-          supabase.from('financeiro').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }),
+          supabase.from('financeiro').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: true }),
           supabase.from('obras').select('id, nome').eq('empresa_id', empresaId),
         ])
       if (errFin)   throw errFin
       if (errObras) throw errObras
-      setDados(finData  || [])
+      setDados(finData   || [])
       setObras(obrasData || [])
     } catch (err) {
       console.error('Erro financeiro:', err)
-      alert('Erro ao carregar financeiro')
     } finally {
       setLoadingData(false)
     }
   }
 
-  if (loading || loadingData) return <p style={{ padding: 24 }}>Carregando financeiro...</p>
+  if (loading || loadingData) return <p style={{ padding: 24 }}>Carregando...</p>
 
-  /* ── TOTAIS GERAIS ── */
+  /* ── TOTAIS ── */
   const entradas = dados.filter(d => d.tipo === 'entrada')
   const saidas   = dados.filter(d => d.tipo === 'saida')
   const receita  = soma(entradas)
   const custo    = soma(saidas)
   const lucro    = receita - custo
-  const margem   = receita > 0 ? (lucro / receita) * 100 : 0
 
-  /* ── GRÁFICO MENSAL ── */
-  const porMes: Record<string, { mes: string; entrada: number; saida: number }> = {}
+  /* ── FLUXO DE CAIXA MENSAL COM SALDO ACUMULADO ── */
+  const porMes: Record<string, { mes: string; entrada: number; saida: number; saldo: number }> = {}
   dados.forEach(d => {
     if (!d.created_at) return
     const valor = Number(d.valor || 0)
-    const mes = new Date(d.created_at).toLocaleDateString('pt-BR', { month: 'short' })
-    if (!porMes[mes]) porMes[mes] = { mes, entrada: 0, saida: 0 }
+    const mes   = new Date(d.created_at).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+    if (!porMes[mes]) porMes[mes] = { mes, entrada: 0, saida: 0, saldo: 0 }
     if (d.tipo === 'entrada') porMes[mes].entrada += valor
     else                      porMes[mes].saida   += valor
   })
-  const grafico = Object.values(porMes)
+  let acumulado = 0
+  const fluxo = Object.values(porMes).map(m => {
+    acumulado += m.entrada - m.saida
+    return { ...m, saldo: acumulado }
+  })
 
-  /* ── RESULTADO POR OBRA ── */
+  /* ── BREAKDOWN POR CATEGORIA DE CUSTO ── */
+  const porCategoria: Record<string, number> = {}
+  saidas.forEach(s => {
+    const cat = s.descricao || 'Outros'
+    porCategoria[cat] = (porCategoria[cat] || 0) + Number(s.valor || 0)
+  })
+  const categorias = Object.entries(porCategoria)
+    .map(([nome, valor]) => ({ nome, valor, perc: custo > 0 ? (valor / custo) * 100 : 0 }))
+    .sort((a, b) => b.valor - a.valor)
+
+  /* ── COMPARATIVO ENTRE OBRAS ── */
   const nomeObra: Record<string, string> = {}
   obras.forEach(o => { nomeObra[String(o.id)] = o.nome })
 
-  const porObra: Record<string, { receita: number; custo: number; lucro: number }> = {}
+  const porObra: Record<string, { nome: string; receita: number; custo: number; lucro: number }> = {}
   dados.forEach(d => {
     if (!d.obra_id) return
-    const key = String(d.obra_id)
+    const key   = String(d.obra_id)
     const valor = Number(d.valor || 0)
-    if (!porObra[key]) porObra[key] = { receita: 0, custo: 0, lucro: 0 }
+    if (!porObra[key]) porObra[key] = { nome: nomeObra[key] || `Obra ${key}`, receita: 0, custo: 0, lucro: 0 }
     if (d.tipo === 'entrada') porObra[key].receita += valor
     else                      porObra[key].custo   += valor
     porObra[key].lucro = porObra[key].receita - porObra[key].custo
   })
-  const listaObras = Object.entries(porObra).sort((a: any, b: any) => b[1].lucro - a[1].lucro)
+  const comparativo = Object.values(porObra).sort((a, b) => b.lucro - a.lucro)
+
+  const CORES = ['#3b82f6','#8b5cf6','#06b6d4','#f59e0b','#ec4899','#14b8a6','#f97316','#6366f1']
 
   return (
     <div style={{ padding: 24 }}>
 
       <h1 style={titulo}>💰 Financeiro</h1>
-      <p style={{ color: '#64748b', marginTop: -14, marginBottom: 20 }}>
-        Resumo consolidado de todas as obras
-      </p>
+      <p style={subtitulo}>Fluxo de caixa e análise de custos consolidada</p>
 
-      {lucro < 0 && <div style={alertaErro}>⚠️ Prejuízo no período — verifique os lançamentos nas obras</div>}
-
-      {/* CARDS */}
-      <div style={grid}>
-        <Card titulo="Receita Total" valor={receita} cor="#16a34a" />
-        <Card titulo="Custos Totais" valor={custo}   cor="#dc2626" />
-        <Card titulo="Lucro Total"   valor={lucro}   cor="#2563eb" />
-        <Card titulo="Margem Geral"  valor={margem}  cor="#a855f7" tipo="porcentagem" />
+      {/* ── SALDO ATUAL ── */}
+      <div style={saldoCard(lucro)}>
+        <div>
+          <p style={{ fontSize: 13, color: lucro >= 0 ? '#166534' : '#991b1b', fontWeight: 600 }}>
+            {lucro >= 0 ? '✅ Saldo positivo' : '⚠️ Saldo negativo'}
+          </p>
+          <p style={{ fontSize: 32, fontWeight: 900, color: lucro >= 0 ? '#15803d' : '#dc2626', marginTop: 4 }}>
+            {lucro >= 0 ? '+' : ''}{format(lucro)}
+          </p>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ fontSize: 13, color: '#64748b' }}>Total entradas</p>
+          <p style={{ fontSize: 18, fontWeight: 700, color: '#16a34a' }}>{format(receita)}</p>
+          <p style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>Total saídas</p>
+          <p style={{ fontSize: 18, fontWeight: 700, color: '#dc2626' }}>{format(custo)}</p>
+        </div>
       </div>
 
-      {/* GRÁFICO */}
-      <div style={graficoBox}>
-        <h3 style={{ marginBottom: 12 }}>📊 Evolução Financeira Mensal</h3>
-        {grafico.length === 0
-          ? <p style={{ color: '#94a3b8', textAlign: 'center', padding: 20 }}>Sem dados ainda. Lance nas obras.</p>
-          : (
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={grafico}>
-                <XAxis dataKey="mes" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line dataKey="entrada" stroke="#16a34a" strokeWidth={2} />
-                <Line dataKey="saida"   stroke="#dc2626" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          )
-        }
-      </div>
-
-      {/* RESULTADO POR OBRA */}
-      <div style={tabelaCard}>
-        <h3 style={{ marginBottom: 16 }}>🏗️ Resultado por Obra</h3>
-
-        {listaObras.length === 0
-          ? <p style={{ color: '#94a3b8' }}>Nenhum lançamento encontrado. Acesse uma obra para lançar entradas e saídas.</p>
+      {/* ── FLUXO DE CAIXA MENSAL ── */}
+      <div style={secaoCard}>
+        <h3 style={secaoTitulo}>📅 Fluxo de Caixa Mensal</h3>
+        {fluxo.length === 0
+          ? <p style={vazio}>Sem lançamentos ainda. Lance nas obras.</p>
           : (
             <>
-              <div style={linhaHeader}>
-                <span><strong>Obra</strong></span>
-                <span style={{ textAlign: 'right' }}><strong>Receita</strong></span>
-                <span style={{ textAlign: 'right' }}><strong>Custo</strong></span>
-                <span style={{ textAlign: 'right' }}><strong>Lucro</strong></span>
-                <span style={{ textAlign: 'right' }}><strong>Margem</strong></span>
-              </div>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={fluxo} barGap={4}>
+                  <XAxis dataKey="mes" fontSize={12} />
+                  <YAxis fontSize={11} tickFormatter={v => 'R$' + (v/1000).toFixed(0) + 'k'} />
+                  <Tooltip formatter={(v: any) => format(v)} />
+                  <Legend />
+                  <Bar dataKey="entrada" name="Entradas" fill="#22c55e" radius={[4,4,0,0]} />
+                  <Bar dataKey="saida"   name="Saídas"   fill="#ef4444" radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
 
-              {listaObras.map(([id, d]: any) => {
-                const m = d.receita > 0 ? (d.lucro / d.receita) * 100 : 0
-                return (
-                  <div
-                    key={id}
-                    onClick={() => router.push(`/obras/${id}`)}
-                    style={linhaObra(d.lucro)}
-                  >
-                    <span style={{ fontWeight: 600 }}>{nomeObra[id] || `Obra ${id}`}</span>
-                    <span style={{ textAlign: 'right', color: '#16a34a' }}>{format(d.receita)}</span>
-                    <span style={{ textAlign: 'right', color: '#dc2626' }}>{format(d.custo)}</span>
-                    <span style={{ textAlign: 'right', color: d.lucro >= 0 ? '#2563eb' : '#dc2626', fontWeight: 700 }}>
-                      {format(d.lucro)}
-                    </span>
-                    <span style={{ textAlign: 'right', color: '#a855f7' }}>
-                      {m.toFixed(1)}%
-                    </span>
-                  </div>
-                )
-              })}
+              {/* TABELA DE SALDO */}
+              <div style={{ marginTop: 16 }}>
+                <div style={tabelaHeader}>
+                  <span>Mês</span>
+                  <span style={{ textAlign: 'right' }}>Entradas</span>
+                  <span style={{ textAlign: 'right' }}>Saídas</span>
+                  <span style={{ textAlign: 'right' }}>Saldo do mês</span>
+                  <span style={{ textAlign: 'right' }}>Saldo acumulado</span>
+                </div>
+                {fluxo.map((m, i) => {
+                  const saldoMes = m.entrada - m.saida
+                  return (
+                    <div key={m.mes} style={tabelaLinha}>
+                      <span style={{ fontWeight: 600 }}>{m.mes}</span>
+                      <span style={{ textAlign: 'right', color: '#16a34a' }}>{format(m.entrada)}</span>
+                      <span style={{ textAlign: 'right', color: '#dc2626' }}>{format(m.saida)}</span>
+                      <span style={{ textAlign: 'right', color: saldoMes >= 0 ? '#2563eb' : '#dc2626', fontWeight: 600 }}>
+                        {saldoMes >= 0 ? '+' : ''}{format(saldoMes)}
+                      </span>
+                      <span style={{ textAlign: 'right', color: m.saldo >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                        {format(m.saldo)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
             </>
           )
         }
+      </div>
+
+      <div style={doisGrid}>
+
+        {/* ── BREAKDOWN DE CUSTOS ── */}
+        <div style={secaoCard}>
+          <h3 style={secaoTitulo}>🔍 Breakdown de Custos</h3>
+          {categorias.length === 0
+            ? <p style={vazio}>Sem saídas registradas</p>
+            : categorias.map((c, i) => (
+              <div key={c.nome} style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{c.nome}</span>
+                  <span style={{ fontSize: 13, color: '#64748b' }}>{format(c.valor)} · {c.perc.toFixed(1)}%</span>
+                </div>
+                <div style={barraFundo}>
+                  <div style={{ ...barraPreenchida, width: `${c.perc}%`, background: CORES[i % CORES.length] }} />
+                </div>
+              </div>
+            ))
+          }
+        </div>
+
+        {/* ── COMPARATIVO ENTRE OBRAS ── */}
+        <div style={secaoCard}>
+          <h3 style={secaoTitulo}>📊 Comparativo por Obra</h3>
+          {comparativo.length === 0
+            ? <p style={vazio}>Sem dados</p>
+            : comparativo.map((o, i) => (
+              <div
+                key={o.nome}
+                style={obraItem(o.lucro)}
+                onClick={() => {
+                  const obra = obras.find(ob => nomeObra[String(ob.id)] === o.nome)
+                  if (obra) router.push(`/obras/${obra.id}`)
+                }}
+              >
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: 14 }}>{o.nome}</p>
+                  <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                    Custo: {format(o.custo)}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ color: o.lucro >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                    {o.lucro >= 0 ? '+' : ''}{format(o.lucro)}
+                  </p>
+                  <p style={{ fontSize: 12, color: '#94a3b8' }}>
+                    {o.receita > 0 ? ((o.lucro / o.receita) * 100).toFixed(1) + '%' : '—'}
+                  </p>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+
       </div>
 
     </div>
@@ -171,39 +235,38 @@ export default function Financeiro() {
 function soma(lista: any[]) { return lista.reduce((a, b) => a + Number(b.valor || 0), 0) }
 function format(v: number)  { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 
-function Card({ titulo, valor, cor, tipo }: any) {
-  return (
-    <div style={{ background: cor + '15', padding: 20, borderRadius: 12, border: `1px solid ${cor}`, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-      <p style={{ color: '#64748b' }}>{titulo}</p>
-      <h2 style={{ color: cor, fontSize: 22, fontWeight: 700 }}>
-        {tipo === 'porcentagem' ? Number(valor).toFixed(2) + '%' : format(valor)}
-      </h2>
-    </div>
-  )
+/* ── ESTILOS ── */
+const titulo: React.CSSProperties    = { fontSize: 24, fontWeight: 800, color: '#0f172a' }
+const subtitulo: React.CSSProperties = { fontSize: 13, color: '#94a3b8', marginTop: 2, marginBottom: 20 }
+const vazio: React.CSSProperties     = { color: '#94a3b8', fontSize: 13 }
+
+const saldoCard = (lucro: number): React.CSSProperties => ({
+  background: lucro >= 0 ? '#f0fdf4' : '#fff1f2',
+  border: `1px solid ${lucro >= 0 ? '#bbf7d0' : '#fecdd3'}`,
+  borderRadius: 16, padding: '20px 24px', marginBottom: 24,
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+})
+
+const secaoCard: React.CSSProperties  = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
+const secaoTitulo: React.CSSProperties = { fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 16 }
+const doisGrid: React.CSSProperties   = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }
+
+const tabelaHeader: React.CSSProperties = {
+  display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
+  padding: '8px 12px', background: '#f8fafc', borderRadius: 8,
+  fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 4
+}
+const tabelaLinha: React.CSSProperties = {
+  display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
+  padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontSize: 13
 }
 
-/* ── ESTILOS ── */
-const titulo: React.CSSProperties      = { fontSize: 26, fontWeight: 700, marginBottom: 6 }
-const grid: React.CSSProperties        = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16, marginBottom: 24 }
-const graficoBox: React.CSSProperties  = { background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 24 }
-const alertaErro: React.CSSProperties  = { background: '#fee2e2', padding: 12, borderRadius: 8, marginBottom: 16, color: '#991b1b', fontWeight: 600 }
-const tabelaCard: React.CSSProperties  = { background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }
-const linhaHeader: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-  padding: '8px 12px',
-  background: '#f8fafc',
-  borderRadius: 8,
-  marginBottom: 6,
-  fontSize: 13
-}
-const linhaObra = (lucro: number): React.CSSProperties => ({
-  display: 'grid',
-  gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-  padding: '12px',
-  borderBottom: '1px solid #f1f5f9',
-  borderLeft: `4px solid ${lucro >= 0 ? '#22c55e' : '#ef4444'}`,
-  cursor: 'pointer',
-  fontSize: 14,
-  transition: 'background 0.1s',
+const barraFundo: React.CSSProperties       = { height: 8, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden' }
+const barraPreenchida: React.CSSProperties  = { height: '100%', borderRadius: 999, transition: 'width 0.3s' }
+
+const obraItem = (lucro: number): React.CSSProperties => ({
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  padding: '10px 0', borderBottom: '1px solid #f1f5f9',
+  borderLeft: `3px solid ${lucro >= 0 ? '#22c55e' : '#ef4444'}`,
+  paddingLeft: 10, cursor: 'pointer'
 })
