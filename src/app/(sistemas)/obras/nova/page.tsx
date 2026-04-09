@@ -10,38 +10,35 @@ export default function NovaObra() {
   const { empresaId } = useEmpresa()
   const router = useRouter()
 
-  const [nome, setNome] = useState('')
-  const [cliente, setCliente] = useState('')
-  const [valor, setValor] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [nome,      setNome]      = useState('')
+  const [cliente,   setCliente]   = useState('')
+  const [valor,     setValor]     = useState('')
+  const [area,      setArea]      = useState('')
+  const [endereco,  setEndereco]  = useState('')
+  const [loading,   setLoading]   = useState(false)
 
-  async function salvar(e:any) {
+  async function salvar(e: React.FormEvent) {
     e.preventDefault()
 
-    if (!empresaId) return alert('Erro empresa')
-
-    if (!nome || !cliente || !valor) {
-      alert('Preencha todos os campos')
-      return
-    }
-
-    if (Number(valor) <= 0) {
-      alert('Valor inválido')
-      return
-    }
+    if (!empresaId)              return alert('Erro: empresa não identificada')
+    if (!nome.trim())            return alert('Informe o nome da obra')
+    if (!cliente.trim())         return alert('Informe o nome do cliente')
+    if (!valor || Number(valor) <= 0) return alert('Informe um valor de contrato válido')
 
     setLoading(true)
 
     const { error } = await supabase.from('obras').insert({
-      nome,
-      cliente,
-      valor: Number(valor),
-      empresa_id: empresaId
+      nome:       nome.trim(),
+      cliente:    cliente.trim(),
+      valor:      Number(valor),
+      area:       area ? Number(area) : null,
+      endereco:   endereco.trim() || null,
+      empresa_id: empresaId,
     })
 
     if (error) {
       console.error(error)
-      alert('Erro ao salvar')
+      alert('Erro ao salvar obra')
       setLoading(false)
       return
     }
@@ -51,86 +48,161 @@ export default function NovaObra() {
 
   return (
     <div style={container}>
-
       <div style={card}>
+
+        <button onClick={() => router.back()} style={btnVoltar}>← Voltar</button>
 
         <h1 style={titulo}>🏗️ Nova Obra</h1>
 
         <form onSubmit={salvar} style={form}>
 
-          <input
-            value={nome}
-            onChange={e=>setNome(e.target.value)}
-            placeholder="Nome da obra"
-            style={input}
-          />
+          <div style={grupo}>
+            <label style={label}>Nome da Obra *</label>
+            <input
+              value={nome}
+              onChange={e => setNome(e.target.value)}
+              placeholder="Ex: Residência Silva"
+              style={input}
+              required
+            />
+          </div>
 
-          <input
-            value={cliente}
-            onChange={e=>setCliente(e.target.value)}
-            placeholder="Nome do cliente"
-            style={input}
-          />
+          <div style={grupo}>
+            <label style={label}>Cliente *</label>
+            <input
+              value={cliente}
+              onChange={e => setCliente(e.target.value)}
+              placeholder="Ex: João Silva"
+              style={input}
+              required
+            />
+          </div>
 
-          <input
-            value={valor}
-            onChange={e=>setValor(e.target.value)}
-            placeholder="Valor do contrato"
-            style={input}
-          />
+          <div style={grupo}>
+            <label style={label}>Valor do Contrato (R$) *</label>
+            <input
+              type="number"
+              value={valor}
+              onChange={e => setValor(e.target.value)}
+              placeholder="Ex: 250000"
+              style={input}
+              min="0"
+              step="0.01"
+              required
+            />
+          </div>
 
-          <button style={botao} disabled={loading}>
+          <div style={grupo}>
+            <label style={label}>Área Total (m²)</label>
+            <input
+              type="number"
+              value={area}
+              onChange={e => setArea(e.target.value)}
+              placeholder="Ex: 120"
+              style={input}
+              min="0"
+              step="0.01"
+            />
+            <span style={dica}>Usado para calcular o custo por m²</span>
+          </div>
+
+          <div style={grupo}>
+            <label style={label}>Endereço</label>
+            <input
+              value={endereco}
+              onChange={e => setEndereco(e.target.value)}
+              placeholder="Ex: Rua das Flores, 123 - Joaçaba/SC"
+              style={input}
+            />
+          </div>
+
+          <button type="submit" style={botao} disabled={loading}>
             {loading ? 'Salvando...' : 'Salvar Obra'}
           </button>
 
         </form>
 
       </div>
-
     </div>
   )
 }
 
-/* UI */
+/* ── ESTILOS ── */
 
-const container = {
-  background:'#f1f5f9',
-  minHeight:'100vh',
-  display:'flex',
-  justifyContent:'center',
-  alignItems:'center'
+const container: React.CSSProperties = {
+  background: '#f1f5f9',
+  minHeight: '100vh',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 20,
 }
 
-const card = {
-  background:'#fff',
-  padding:30,
-  borderRadius:12,
-  width:400,
-  boxShadow:'0 10px 30px rgba(0,0,0,0.05)'
+const card: React.CSSProperties = {
+  background: '#fff',
+  padding: 32,
+  borderRadius: 16,
+  width: '100%',
+  maxWidth: 480,
+  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
 }
 
-const titulo = {
-  marginBottom:20
+const btnVoltar: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  color: '#2563eb',
+  cursor: 'pointer',
+  fontSize: 14,
+  padding: 0,
+  marginBottom: 16,
 }
 
-const form = {
-  display:'flex',
-  flexDirection:'column' as const,
-  gap:12
+const titulo: React.CSSProperties = {
+  fontSize: 22,
+  fontWeight: 800,
+  color: '#0f172a',
+  marginBottom: 24,
 }
 
-const input = {
-  padding:12,
-  borderRadius:8,
-  border:'1px solid #e2e8f0'
+const form: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 16,
 }
 
-const botao = {
-  background:'#2563eb',
-  color:'#fff',
-  padding:12,
-  borderRadius:8,
-  border:'none',
-  fontWeight:600,
-  cursor:'pointer'
+const grupo: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+}
+
+const label: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  color: '#374151',
+}
+
+const input: React.CSSProperties = {
+  padding: '10px 12px',
+  borderRadius: 8,
+  border: '1px solid #e2e8f0',
+  fontSize: 14,
+  background: '#f8fafc',
+}
+
+const dica: React.CSSProperties = {
+  fontSize: 11,
+  color: '#94a3b8',
+}
+
+const botao: React.CSSProperties = {
+  background: '#2563eb',
+  color: '#fff',
+  padding: 13,
+  borderRadius: 8,
+  border: 'none',
+  fontWeight: 700,
+  cursor: 'pointer',
+  fontSize: 15,
+  marginTop: 4,
 }

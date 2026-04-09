@@ -14,12 +14,12 @@ export default function Relatorios() {
   const { empresaId, bloqueado, loading: loadingEmpresa } = useEmpresa()
   const router = useRouter()
 
-  const [dados,  setDados]  = useState<any[]>([])
-  const [obras,  setObras]  = useState<any[]>([])
-  const [inicio, setInicio] = useState('')
-  const [fim,    setFim]    = useState('')
+  const [dados,      setDados]      = useState<any[]>([])
+  const [obras,      setObras]      = useState<any[]>([])
+  const [inicio,     setInicio]     = useState('')
+  const [fim,        setFim]        = useState('')
   const [obraFiltro, setObraFiltro] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading,    setLoading]    = useState(true)
 
   useEffect(() => {
     if (!loadingEmpresa && bloqueado) router.push('/bloqueado')
@@ -32,9 +32,9 @@ export default function Relatorios() {
       const [{ data: finData, error }, { data: obrasData }] = await Promise.all([
         (() => {
           let q = supabase.from('financeiro').select('*').eq('empresa_id', empresaId)
-          if (inicio)      q = q.gte('created_at', inicio)
-          if (fim)         q = q.lte('created_at', `${fim}T23:59:59`)
-          if (obraFiltro)  q = q.eq('obra_id', obraFiltro)
+          if (inicio)     q = q.gte('created_at', inicio)
+          if (fim)        q = q.lte('created_at', `${fim}T23:59:59`)
+          if (obraFiltro) q = q.eq('obra_id', obraFiltro)
           return q.order('created_at', { ascending: false })
         })(),
         supabase.from('obras').select('id, nome').eq('empresa_id', empresaId),
@@ -55,7 +55,6 @@ export default function Relatorios() {
     carregar()
   }, [empresaId])
 
-  /* ── DADOS ── */
   const entradas = dados.filter(d => d.tipo === 'entrada')
   const saidas   = dados.filter(d => d.tipo === 'saida')
   const receita  = soma(entradas)
@@ -63,7 +62,6 @@ export default function Relatorios() {
   const lucro    = receita - custo
   const margem   = receita > 0 ? (lucro / receita) * 100 : 0
 
-  /* ── GRÁFICO DE BARRAS POR OBRA ── */
   const nomeObra: Record<string, string> = {}
   obras.forEach(o => { nomeObra[String(o.id)] = o.nome })
 
@@ -78,7 +76,6 @@ export default function Relatorios() {
   })
   const comparativo = Object.values(porObra)
 
-  /* ── EXPORTAR CSV ── */
   function exportarCSV() {
     const linhas = [
       ['Data', 'Tipo', 'Categoria', 'Obra', 'Valor'],
@@ -90,12 +87,12 @@ export default function Relatorios() {
         String(Number(d.valor || 0).toFixed(2)).replace('.', ','),
       ])
     ]
-    const csv     = linhas.map(l => l.join(';')).join('\n')
-    const blob    = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url     = URL.createObjectURL(blob)
-    const a       = document.createElement('a')
-    a.href        = url
-    a.download    = `relatorio_${new Date().toISOString().split('T')[0]}.csv`
+    const csv  = linhas.map(l => l.join(';')).join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `relatorio_${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -117,7 +114,7 @@ export default function Relatorios() {
         </button>
       </div>
 
-      {/* ── FILTROS ── */}
+      {/* FILTROS */}
       <div style={filtroCard}>
         <p style={filtroTitulo}>🔍 Filtros</p>
         <div style={filtroRow}>
@@ -147,14 +144,14 @@ export default function Relatorios() {
         </div>
       </div>
 
-      {/* ── RESUMO DO PERÍODO ── */}
+      {/* MÉTRICAS — grid que quebra linha automaticamente, sem overflow */}
       <div style={resumoGrid}>
-        <Metrica label="Receitas no período"  valor={format(receita)} cor="#16a34a" icone="↑" />
-        <Metrica label="Saídas no período"    valor={format(custo)}   cor="#dc2626" icone="↓" />
-        <Metrica label="Resultado"            valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} icone={lucro >= 0 ? '✓' : '!'} />
-        <Metrica label="Margem"               valor={margem.toFixed(1) + '%'} cor="#a855f7" icone="%" />
-        <Metrica label="Lançamentos"          valor={String(dados.length)} cor="#0ea5e9" icone="#" />
-        <Metrica label="Obras no período"     valor={String(Object.keys(porObra).length)} cor="#f59e0b" icone="🏗" />
+        <Metrica label="Receitas"     valor={format(receita)} cor="#16a34a" icone="↑" />
+        <Metrica label="Saídas"       valor={format(custo)}   cor="#dc2626" icone="↓" />
+        <Metrica label="Resultado"    valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} icone={lucro >= 0 ? '✓' : '!'} />
+        <Metrica label="Margem"       valor={margem.toFixed(1) + '%'} cor="#a855f7" icone="%" />
+        <Metrica label="Lançamentos"  valor={String(dados.length)}    cor="#0ea5e9" icone="#" />
+        <Metrica label="Obras"        valor={String(Object.keys(porObra).length)} cor="#f59e0b" icone="🏗" />
       </div>
 
       {dados.length === 0 && (
@@ -183,7 +180,6 @@ export default function Relatorios() {
         </div>
       )}
 
-      {/* ── TABELA DETALHADA ── */}
       {dados.length > 0 && (
         <div style={secaoCard}>
           <h3 style={secaoTitulo}>📋 Lançamentos detalhados ({dados.length})</h3>
@@ -219,8 +215,6 @@ export default function Relatorios() {
               </div>
             ))}
           </div>
-
-          {/* TOTAIS */}
           <div style={tabelaTotal}>
             <span style={{ gridColumn: '1 / 5', fontWeight: 700 }}>Total do período</span>
             <span style={{ textAlign: 'right', fontWeight: 800, fontSize: 16, color: lucro >= 0 ? '#16a34a' : '#dc2626' }}>
@@ -234,7 +228,6 @@ export default function Relatorios() {
   )
 }
 
-/* ── HELPERS ── */
 function soma(lista: any[]) { return lista.reduce((a, b) => a + Number(b.valor || 0), 0) }
 function format(v: number)  { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 
@@ -242,30 +235,60 @@ function Metrica({ label, valor, cor, icone }: any) {
   return (
     <div style={metricaBox}>
       <div style={metricaIcone(cor)}>{icone}</div>
-      <div>
-        <p style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>{label}</p>
-        <p style={{ fontSize: 18, fontWeight: 800, color: cor, marginTop: 2 }}>{valor}</p>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          {label}
+        </p>
+        <p style={{
+          fontSize: 16,
+          fontWeight: 800,
+          color: cor,
+          marginTop: 2,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>
+          {valor}
+        </p>
       </div>
     </div>
   )
 }
 
-/* ── ESTILOS ── */
-const titulo: React.CSSProperties     = { fontSize: 24, fontWeight: 800, color: '#0f172a' }
-const subtitulo: React.CSSProperties  = { fontSize: 13, color: '#94a3b8', marginTop: 2 }
+const titulo: React.CSSProperties    = { fontSize: 24, fontWeight: 800, color: '#0f172a' }
+const subtitulo: React.CSSProperties = { fontSize: 13, color: '#94a3b8', marginTop: 2 }
 
-const filtroCard: React.CSSProperties  = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
+const filtroCard: React.CSSProperties   = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
 const filtroTitulo: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: '#64748b', marginBottom: 12 }
-const filtroRow: React.CSSProperties   = { display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }
-const filtroGrupo: React.CSSProperties = { display: 'flex', flexDirection: 'column' }
-const label: React.CSSProperties       = { fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }
-const inputStyle: React.CSSProperties  = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff' }
+const filtroRow: React.CSSProperties    = { display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }
+const filtroGrupo: React.CSSProperties  = { display: 'flex', flexDirection: 'column' }
+const label: React.CSSProperties        = { fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }
+const inputStyle: React.CSSProperties   = { padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff' }
 
-const resumoGrid: React.CSSProperties  = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 20 }
-const metricaBox: React.CSSProperties  = { background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', gap: 12, alignItems: 'center' }
+// ✅ CORREÇÃO: minmax(180px, 1fr) garante que cada card cresce mas nunca vaza
+const resumoGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+  gap: 12,
+  marginBottom: 20,
+}
+
+const metricaBox: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 12,
+  padding: '14px 16px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  display: 'flex',
+  gap: 12,
+  alignItems: 'center',
+  overflow: 'hidden', // ✅ impede vazamento
+  minWidth: 0,        // ✅ permite shrink correto no grid
+}
+
 const metricaIcone = (cor: string): React.CSSProperties => ({
-  width: 36, height: 36, borderRadius: 8, background: cor + '20',
-  color: cor, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  width: 36, height: 36, borderRadius: 8,
+  background: cor + '20', color: cor,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
   fontWeight: 800, fontSize: 14, flexShrink: 0
 })
 
@@ -273,26 +296,26 @@ const secaoCard: React.CSSProperties   = { background: '#fff', borderRadius: 14,
 const secaoTitulo: React.CSSProperties = { fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 16 }
 
 const tabelaHeader: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: '120px 100px 1fr 1fr 130px',
+  display: 'grid', gridTemplateColumns: '110px 100px 1fr 1fr 130px',
   padding: '8px 12px', background: '#f8fafc', borderRadius: 8,
   fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 4
 }
 const tabelaLinha: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: '120px 100px 1fr 1fr 130px',
-  padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontSize: 13,
-  alignItems: 'center'
+  display: 'grid', gridTemplateColumns: '110px 100px 1fr 1fr 130px',
+  padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontSize: 13, alignItems: 'center'
 }
 const tabelaTotal: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: '120px 100px 1fr 1fr 130px',
+  display: 'grid', gridTemplateColumns: '110px 100px 1fr 1fr 130px',
   padding: '12px', background: '#f8fafc', borderRadius: 8, marginTop: 8
 }
 
-const vazioCard: React.CSSProperties   = { textAlign: 'center', padding: '40px 20px', background: '#fff', borderRadius: 14, marginBottom: 20 }
-
+const vazioCard: React.CSSProperties = {
+  textAlign: 'center', padding: '40px 20px',
+  background: '#fff', borderRadius: 14, marginBottom: 20
+}
 const btnExport: React.CSSProperties = {
   background: '#0f172a', color: '#fff', border: 'none',
-  padding: '10px 20px', borderRadius: 10, fontSize: 13,
-  fontWeight: 700, cursor: 'pointer'
+  padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer'
 }
 const btnFiltrar: React.CSSProperties = {
   background: '#2563eb', color: '#fff', border: 'none',
