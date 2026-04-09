@@ -79,7 +79,7 @@ export default function EditarOrcamento() {
 
       await supabase.from('orcamento_itens').delete().eq('orcamento_id', id)
       await supabase.from('orcamento_itens').insert(itens.map(i => ({
-        ...i, orcamento_id: id, valor_total: totalItem(i)
+        orcamento_id: id, codigo: i.codigo || null, descricao: i.descricao || null, unidade: i.unidade || null, quantidade: Number(i.quantidade || 1), material: Number(i.material || 0), mao_obra: Number(i.mao_obra || 0), equipamentos: Number(i.equipamentos || 0), valor_total: totalItem(i)
       })))
 
       alert('Atualizado com sucesso!')
