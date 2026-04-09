@@ -32,8 +32,8 @@ export default function Relatorios() {
       const [{ data: finData, error }, { data: obrasData }] = await Promise.all([
         (() => {
           let q = supabase.from('financeiro').select('*').eq('empresa_id', empresaId)
-          if (inicio)     q = q.gte('created_at', inicio)
-          if (fim)        q = q.lte('created_at', `${fim}T23:59:59`)
+          if (inicio) q = q.gte('created_at', `${inicio}T00:00:00-03:00`)
+          if (fim)    q = q.lte('created_at', `${fim}T23:59:59-03:00`)
           if (obraFiltro) q = q.eq('obra_id', obraFiltro)
           return q.order('created_at', { ascending: false })
         })(),

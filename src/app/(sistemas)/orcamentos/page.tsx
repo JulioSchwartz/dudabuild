@@ -14,13 +14,14 @@ type Orcamento = {
   telefone?: string
   token?: string
   descricao?: string
+  obra_id?: number | null
 }
 
 export default function OrcamentosPage() {
 
   const { empresaId, limites, loading: loadingEmpresa } = useEmpresa()
-  const [lista,    setLista]    = useState<Orcamento[]>([])
-  const [loading,  setLoading]  = useState(true)
+  const [lista,     setLista]     = useState<Orcamento[]>([])
+  const [loading,   setLoading]   = useState(true)
   const [aprovando, setAprovando] = useState<string | null>(null)
   const router = useRouter()
 
@@ -48,41 +49,32 @@ export default function OrcamentosPage() {
 
   async function aprovarEGerarObra(o: Orcamento) {
     if (!confirm(`Aprovar orçamento de ${o.cliente_nome} e gerar obra automaticamente?`)) return
-
     setAprovando(o.id)
-
     try {
-      // 1️⃣ Atualiza status do orçamento para aprovado
-      const { error: errStatus } = await supabase
-        .from('orcamentos')
-        .update({ status: 'aprovado' })
-        .eq('id', o.id)
+      await supabase.from('orcamentos').update({ status: 'aprovado' }).eq('id', o.id)
 
-      if (errStatus) throw errStatus
-
-      // 2️⃣ Cria a obra automaticamente com dados do orçamento
       const { data: novaObra, error: errObra } = await supabase
         .from('obras')
         .insert({
-          nome:           `Obra — ${o.cliente_nome}`,
-          cliente:        o.cliente_nome,
-          valor:          o.valor_total,
-          empresa_id:     empresaId,
-          orcamento_id:   o.id, // vínculo com o orçamento de origem
+          nome:                 `Obra — ${o.cliente_nome}`,
+          cliente:              o.cliente_nome,
+          valor:                o.valor_total,
+          empresa_id:           empresaId,
+          orcamento_id:         o.id,
           percentual_concluido: 0,
         })
-        .select()
-        .single()
+        .select().single()
 
       if (errObra || !novaObra) throw errObra || new Error('Obra não criada')
 
+      // Vincula obra_id ao orçamento
+      await supabase.from('orcamentos').update({ obra_id: novaObra.id }).eq('id', o.id)
+
       await carregar()
 
-      // 3️⃣ Pergunta se quer ir para a obra criada
       const irParaObra = confirm(
-        `✅ Orçamento aprovado!\n\nObra "${novaObra.nome}" criada com sucesso.\n\nDeseja ir para a obra agora?`
+        `✅ Aprovado!\n\nObra "${novaObra.nome}" criada com sucesso.\n\nDeseja ir para a obra agora?`
       )
-
       if (irParaObra) router.push(`/obras/${novaObra.id}`)
 
     } catch (err) {
@@ -95,39 +87,31 @@ export default function OrcamentosPage() {
 
   async function recusar(id: string) {
     if (!confirm('Marcar orçamento como recusado?')) return
-
     await supabase.from('orcamentos').update({ status: 'recusado' }).eq('id', id)
     carregar()
   }
 
-  function formatarMoeda(valor: number) {
-    return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  }
-
   function copiarLink(id: string, token: string) {
-    const link = `${window.location.origin}/orcamento-publico/${id}?token=${token}`
-    navigator.clipboard.writeText(link)
+    navigator.clipboard.writeText(`${window.location.origin}/orcamento-publico/${id}?token=${token}`)
     alert('Link copiado!')
   }
 
   function enviarCliente(id: string, telefone: string, token: string) {
     const link  = `${window.location.origin}/orcamento-publico/${id}?token=${token}`
     const texto = `Olá! Segue sua proposta:\n${link}`
-    const url   = telefone
-      ? `https://wa.me/${telefone}?text=${encodeURIComponent(texto)}`
-      : `https://wa.me/?text=${encodeURIComponent(texto)}`
-    window.open(url)
+    window.open(telefone ? `https://wa.me/${telefone}?text=${encodeURIComponent(texto)}` : `https://wa.me/?text=${encodeURIComponent(texto)}`)
   }
 
-  const limite       = limites?.orcamentos
+  const limite        = limites?.orcamentos
   const atingiuLimite = limite !== undefined && limite !== Infinity && lista.length >= limite
 
   if (loadingEmpresa || loading) return <p style={{ padding: 40 }}>Carregando...</p>
 
-  // Separar por status para melhor visualização
-  const pendentes  = lista.filter(o => !o.status || o.status === 'pendente')
-  const aprovados  = lista.filter(o => o.status === 'aprovado')
-  const recusados  = lista.filter(o => o.status === 'recusado')
+  // ── SEPARAR POR SEÇÃO ──
+  const pendentes      = lista.filter(o => (!o.status || o.status === 'pendente'))
+  const aprovadosSemObra = lista.filter(o => o.status === 'aprovado' && !o.obra_id)
+  const comObra        = lista.filter(o => o.status === 'aprovado' && !!o.obra_id)
+  const recusados      = lista.filter(o => o.status === 'recusado')
 
   return (
     <div style={container}>
@@ -143,7 +127,7 @@ export default function OrcamentosPage() {
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a' }}>📑 Orçamentos</h1>
           <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 2 }}>
-            {pendentes.length} pendente(s) · {aprovados.length} aprovado(s) · {recusados.length} recusado(s)
+            {pendentes.length} pendente(s) · {aprovadosSemObra.length} aprovado(s) · {comObra.length} com obra · {recusados.length} recusado(s)
           </p>
         </div>
         <button
@@ -167,214 +151,157 @@ export default function OrcamentosPage() {
 
       {/* ── PENDENTES ── */}
       {pendentes.length > 0 && (
-        <div style={secaoWrapper}>
-          <h2 style={secaoTitulo}>⏳ Aguardando resposta ({pendentes.length})</h2>
-          <div style={grid}>
-            {pendentes.map(o => (
-              <CardOrcamento
-                key={o.id}
-                o={o}
-                aprovando={aprovando}
-                onAprovar={() => aprovarEGerarObra(o)}
-                onRecusar={() => recusar(o.id)}
-                onVer={() => router.push(`/orcamentos/${o.id}`)}
-                onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
-                onLink={() => o.token && copiarLink(o.id, o.token)}
-                onWhats={() => o.token && enviarCliente(o.id, o.telefone || '', o.token)}
-                formatarMoeda={formatarMoeda}
-              />
-            ))}
-          </div>
-        </div>
+        <Secao titulo="⏳ Aguardando resposta" qtd={pendentes.length}>
+          {pendentes.map(o => (
+            <CardOrcamento key={o.id} o={o} aprovando={aprovando}
+              onAprovar={() => aprovarEGerarObra(o)}
+              onRecusar={() => recusar(o.id)}
+              onVer={() => router.push(`/orcamentos/${o.id}`)}
+              onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
+              onLink={() => o.token && copiarLink(o.id, o.token)}
+              onWhats={() => o.token && enviarCliente(o.id, o.telefone || '', o.token)}
+            />
+          ))}
+        </Secao>
       )}
 
-      {/* ── APROVADOS ── */}
-      {aprovados.length > 0 && (
-        <div style={secaoWrapper}>
-          <h2 style={secaoTitulo}>✅ Aprovados ({aprovados.length})</h2>
-          <div style={grid}>
-            {aprovados.map(o => (
-              <CardOrcamento
-                key={o.id}
-                o={o}
-                aprovando={aprovando}
-                onVer={() => router.push(`/orcamentos/${o.id}`)}
-                onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
-                onLink={() => o.token && copiarLink(o.id, o.token)}
-                onWhats={() => o.token && enviarCliente(o.id, o.telefone || '', o.token)}
-                formatarMoeda={formatarMoeda}
-              />
-            ))}
-          </div>
-        </div>
+      {/* ── APROVADOS SEM OBRA ── */}
+      {aprovadosSemObra.length > 0 && (
+        <Secao titulo="✅ Aprovados" qtd={aprovadosSemObra.length} cor="#16a34a">
+          {aprovadosSemObra.map(o => (
+            <CardOrcamento key={o.id} o={o} aprovando={aprovando}
+              onVer={() => router.push(`/orcamentos/${o.id}`)}
+              onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
+              onLink={() => o.token && copiarLink(o.id, o.token)}
+              onWhats={() => o.token && enviarCliente(o.id, o.telefone || '', o.token)}
+            />
+          ))}
+        </Secao>
+      )}
+
+      {/* ── COM OBRA GERADA ── */}
+      {comObra.length > 0 && (
+        <Secao titulo="🏗️ Obra gerada" qtd={comObra.length} cor="#2563eb">
+          {comObra.map(o => (
+            <CardOrcamento key={o.id} o={o} aprovando={aprovando}
+              onVer={() => router.push(`/orcamentos/${o.id}`)}
+              onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
+              onLink={() => o.token && copiarLink(o.id, o.token)}
+              onWhats={() => o.token && enviarCliente(o.id, o.telefone || '', o.token)}
+              onVerObra={() => router.push(`/obras/${o.obra_id}`)}
+            />
+          ))}
+        </Secao>
       )}
 
       {/* ── RECUSADOS ── */}
       {recusados.length > 0 && (
-        <div style={secaoWrapper}>
-          <h2 style={secaoTitulo}>❌ Recusados ({recusados.length})</h2>
-          <div style={grid}>
-            {recusados.map(o => (
-              <CardOrcamento
-                key={o.id}
-                o={o}
-                aprovando={aprovando}
-                onVer={() => router.push(`/orcamentos/${o.id}`)}
-                onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
-                onLink={() => o.token && copiarLink(o.id, o.token)}
-                onWhats={() => o.token && enviarCliente(o.id, o.telefone || '', o.token)}
-                formatarMoeda={formatarMoeda}
-              />
-            ))}
-          </div>
-        </div>
+        <Secao titulo="❌ Recusados" qtd={recusados.length} cor="#dc2626">
+          {recusados.map(o => (
+            <CardOrcamento key={o.id} o={o} aprovando={aprovando}
+              onVer={() => router.push(`/orcamentos/${o.id}`)}
+              onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
+              onLink={() => o.token && copiarLink(o.id, o.token)}
+              onWhats={() => o.token && enviarCliente(o.id, o.telefone || '', o.token)}
+            />
+          ))}
+        </Secao>
       )}
 
     </div>
   )
 }
 
-/* ── CARD COMPONENTE ── */
-function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onVer, onEditar, onLink, onWhats, formatarMoeda }: any) {
+/* ── SEÇÃO ── */
+function Secao({ titulo, qtd, cor, children }: any) {
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: cor || '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+          {titulo}
+        </h2>
+        <span style={{ background: (cor || '#64748b') + '20', color: cor || '#64748b', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999 }}>
+          {qtd}
+        </span>
+      </div>
+      <div style={grid}>{children}</div>
+    </div>
+  )
+}
+
+/* ── CARD ── */
+function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onVer, onEditar, onLink, onWhats, onVerObra }: any) {
   const estaAprovando = aprovando === o.id
+  const f = (v: number) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
   return (
-    <div style={cardStyle(o.status)}>
-
+    <div style={cardStyle(o.status, !!o.obra_id)}>
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{o.cliente_nome}</h3>
-          <span style={badgeStyle(o.status)}>{o.status || 'pendente'}</span>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{o.cliente_nome}</h3>
+          <span style={badgeStyle(o.status, !!o.obra_id)}>
+            {o.obra_id ? '🏗️ com obra' : o.status || 'pendente'}
+          </span>
         </div>
-
-        <p style={{ fontSize: 20, fontWeight: 800, color: '#16a34a', marginTop: 6 }}>
-          {formatarMoeda(o.valor_total)}
-        </p>
-
-        {o.descricao && (
-          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{o.descricao}</p>
-        )}
-
-        <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
-          {new Date(o.created_at).toLocaleDateString('pt-BR')}
-        </p>
+        <p style={{ fontSize: 20, fontWeight: 800, color: '#16a34a', marginTop: 6 }}>{f(o.valor_total)}</p>
+        {o.descricao && <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{o.descricao}</p>}
+        <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>{new Date(o.created_at).toLocaleDateString('pt-BR')}</p>
       </div>
 
-      {/* BOTÕES DE AÇÃO PRINCIPAL — só para pendentes */}
+      {/* Botão Ver Obra — só para orçamentos com obra */}
+      {o.obra_id && onVerObra && (
+        <button onClick={onVerObra} style={btnVerObra}>
+          🏗️ Ver Obra →
+        </button>
+      )}
+
+      {/* Botões aprovar/recusar — só pendentes */}
       {(!o.status || o.status === 'pendente') && onAprovar && (
-        <div style={acoesPrincipais}>
-          <button
-            onClick={onAprovar}
-            style={btnAprovar}
-            disabled={estaAprovando}
-          >
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onAprovar} style={btnAprovar} disabled={estaAprovando}>
             {estaAprovando ? '⏳ Gerando...' : '✅ Aprovar e Gerar Obra'}
           </button>
-          <button onClick={onRecusar} style={btnRecusar}>
-            ❌ Recusar
-          </button>
+          <button onClick={onRecusar} style={btnRecusar}>❌</button>
         </div>
       )}
 
-      {/* AÇÕES SECUNDÁRIAS */}
+      {/* Ações secundárias */}
       <div style={acoesSecundarias}>
         <button onClick={onLink}   style={btnSec}>🔗 Link</button>
         <button onClick={onVer}    style={btnSec}>👁 Ver</button>
         <button onClick={onEditar} style={btnSec}>✏️ Editar</button>
         <button onClick={onWhats}  style={btnWhats}>WhatsApp</button>
       </div>
-
     </div>
   )
 }
 
-/* ── ESTILOS ── */
-
-function badgeStyle(status?: string): React.CSSProperties {
-  if (status === 'aprovado') return { background: '#dcfce7', color: '#16a34a', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }
-  if (status === 'recusado') return { background: '#fee2e2', color: '#dc2626', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }
+/* ── HELPERS DE ESTILO ── */
+function badgeStyle(status?: string, temObra?: boolean): React.CSSProperties {
+  if (temObra)                 return { background: '#dbeafe', color: '#2563eb', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }
+  if (status === 'aprovado')   return { background: '#dcfce7', color: '#16a34a', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }
+  if (status === 'recusado')   return { background: '#fee2e2', color: '#dc2626', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }
   return { background: '#fef3c7', color: '#d97706', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }
 }
 
-function cardStyle(status?: string): React.CSSProperties {
-  const base: React.CSSProperties = {
-    background: '#fff', padding: 20, borderRadius: 14,
-    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-    display: 'flex', flexDirection: 'column', gap: 14,
-    borderLeft: '4px solid #e2e8f0'
-  }
+function cardStyle(status?: string, temObra?: boolean): React.CSSProperties {
+  const base: React.CSSProperties = { background: '#fff', padding: 20, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: 12 }
+  if (temObra)               return { ...base, borderLeft: '4px solid #2563eb' }
   if (status === 'aprovado') return { ...base, borderLeft: '4px solid #22c55e' }
   if (status === 'recusado') return { ...base, borderLeft: '4px solid #ef4444' }
   return { ...base, borderLeft: '4px solid #f59e0b' }
 }
 
-const container: React.CSSProperties = { padding: 24 }
-
-const header: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between',
-  alignItems: 'flex-start', marginBottom: 24
-}
-
-const grid: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-  gap: 16
-}
-
-const secaoWrapper: React.CSSProperties = { marginBottom: 32 }
-
-const secaoTitulo: React.CSSProperties = {
-  fontSize: 14, fontWeight: 700, color: '#64748b',
-  textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14
-}
-
-const acoesPrincipais: React.CSSProperties = { display: 'flex', gap: 8 }
-
-const acoesSecundarias: React.CSSProperties = {
-  display: 'flex', flexWrap: 'wrap', gap: 6,
-  paddingTop: 12, borderTop: '1px solid #f1f5f9'
-}
-
-const btnNovo: React.CSSProperties = {
-  background: '#2563eb', color: '#fff',
-  padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-  fontWeight: 600, fontSize: 14
-}
-
-const btnAprovar: React.CSSProperties = {
-  flex: 1, background: '#16a34a', color: '#fff',
-  border: 'none', padding: '10px 0', borderRadius: 8,
-  fontWeight: 700, cursor: 'pointer', fontSize: 13
-}
-
-const btnRecusar: React.CSSProperties = {
-  background: '#fee2e2', color: '#dc2626',
-  border: 'none', padding: '10px 12px', borderRadius: 8,
-  fontWeight: 600, cursor: 'pointer', fontSize: 13
-}
-
-const btnSec: React.CSSProperties = {
-  background: '#f1f5f9', color: '#374151',
-  padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12
-}
-
-const btnWhats: React.CSSProperties = {
-  background: '#22c55e', color: '#fff',
-  padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12
-}
-
-const alertaLimite: React.CSSProperties = {
-  background: '#fef3c7', padding: 12, borderRadius: 8,
-  marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10
-}
-
-const btnUpgrade: React.CSSProperties = {
-  background: '#f59e0b', color: '#fff',
-  padding: '6px 10px', border: 'none', borderRadius: 6, cursor: 'pointer'
-}
-
-const vazioCard: React.CSSProperties = {
-  textAlign: 'center', padding: '48px 20px',
-  background: '#fff', borderRadius: 14,
-  boxShadow: '0 2px 12px rgba(0,0,0,0.06)'
-}
+const container: React.CSSProperties    = { padding: 24 }
+const header: React.CSSProperties       = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }
+const grid: React.CSSProperties         = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }
+const acoesSecundarias: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 10, borderTop: '1px solid #f1f5f9' }
+const btnNovo: React.CSSProperties      = { background: '#2563eb', color: '#fff', padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }
+const btnAprovar: React.CSSProperties   = { flex: 1, background: '#16a34a', color: '#fff', border: 'none', padding: '10px 0', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13 }
+const btnRecusar: React.CSSProperties   = { background: '#fee2e2', color: '#dc2626', border: 'none', padding: '10px 12px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13 }
+const btnVerObra: React.CSSProperties   = { background: '#dbeafe', color: '#2563eb', border: 'none', padding: '8px 14px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13, textAlign: 'left' }
+const btnSec: React.CSSProperties       = { background: '#f1f5f9', color: '#374151', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12 }
+const btnWhats: React.CSSProperties     = { background: '#22c55e', color: '#fff', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12 }
+const alertaLimite: React.CSSProperties = { background: '#fef3c7', padding: 12, borderRadius: 8, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }
+const btnUpgrade: React.CSSProperties   = { background: '#f59e0b', color: '#fff', padding: '6px 10px', border: 'none', borderRadius: 6, cursor: 'pointer' }
+const vazioCard: React.CSSProperties    = { textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
