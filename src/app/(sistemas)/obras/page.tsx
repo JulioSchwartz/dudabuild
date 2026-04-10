@@ -28,7 +28,7 @@ export default function Obras() {
     try {
       const [{ data: obrasData, error: errObras }, { data: finData, error: errFin }] =
         await Promise.all([
-          supabase.from('obras').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }),
+          supabase.from('obras').select('*').eq('empresa_id', empresaId),
           supabase.from('financeiro').select('*').eq('empresa_id', empresaId),
         ])
       if (errObras) throw errObras
