@@ -76,17 +76,18 @@ export default function OrcamentoPublico() {
   }
 
   async function recusar() {
-
-    await supabase
-      .from('orcamentos')
-      .update({
-        status: 'recusado',
-        aprovado_em: new Date().toISOString()
+    try {
+      const res = await fetch('/api/orcamento/recusar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orcamento_id: orcamento.id, token }),
       })
-      .eq('id', id)
-      .eq('token', token)
-
-    setFinalizadoStatus('recusado')
+      if (!res.ok) throw new Error('Erro ao recusar')
+      setFinalizadoStatus('recusado')
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao recusar proposta. Tente novamente.')
+    }
   }
 
   if (loading) return <p style={{padding:40}}>Carregando proposta...</p>
