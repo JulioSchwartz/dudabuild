@@ -293,12 +293,12 @@ export default function DetalheObra() {
   async function recalcularProgresso() {
     const { data } = await supabase.from('obra_etapas').select('peso, percentual').eq('obra_id', Number(id)).eq('empresa_id', empresaId)
     if (!data || data.length === 0) return
-    const totalPeso = data.reduce((a: number, e: any) => a + Number(e.peso || 0), 0)
-    if (totalPeso === 0) return
-    const percGlobal = data.reduce((a: number, e: any) => a + (Number(e.percentual || 0) * Number(e.peso || 0) / totalPeso), 0)
-    const novoPerc = Math.round(percGlobal)
+    // ✅ Sempre divide por 100 (não pelo total de pesos cadastrados)
+    // Ex: Fundação 100% × peso 20 ÷ 100 = 20% global
+    // Assim, etapas ainda não cadastradas contribuem com 0% corretamente
+    const percGlobal = data.reduce((a: number, e: any) => a + (Number(e.percentual || 0) * Number(e.peso || 0) / 100), 0)
+    const novoPerc = Math.min(Math.round(percGlobal), 100)
     await supabase.from('obras').update({ percentual_concluido: novoPerc }).eq('id', Number(id))
-    // ✅ Atualiza o estado local da obra para refletir imediatamente no card de progresso
     setObra((prev: any) => prev ? { ...prev, percentual_concluido: novoPerc } : prev)
   }
 
@@ -715,10 +715,7 @@ export default function DetalheObra() {
               )}
             </span>
             <span style={{ color: '#0f172a', fontWeight: 700 }}>
-              % Global calculado: {Math.round(etapas.reduce((a, e) => {
-                const totalPeso = etapas.reduce((s, x) => s + Number(x.peso), 0)
-                return totalPeso > 0 ? a + (Number(e.percentual) * Number(e.peso) / totalPeso) : a
-              }, 0))}%
+              % Global calculado: {Math.min(Math.round(etapas.reduce((a, e) => a + (Number(e.percentual) * Number(e.peso) / 100), 0)), 100)}%
             </span>
           </div>
         )}
