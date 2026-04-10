@@ -11,8 +11,8 @@ export default function Obras() {
   const { empresaId, loading: loadingEmpresa, bloqueado } = useEmpresa()
   const router = useRouter()
 
-  const [obras,      setObras]      = useState<any[]>([])
-  const [financeiro, setFinanceiro] = useState<any[]>([])
+  const [obras,       setObras]       = useState<any[]>([])
+  const [financeiro,  setFinanceiro]  = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function Obras() {
     try {
       const [{ data: obrasData, error: errObras }, { data: finData, error: errFin }] =
         await Promise.all([
-          supabase.from('obras').select('*').eq('empresa_id', empresaId),
+          supabase.from('obras').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }),
           supabase.from('financeiro').select('*').eq('empresa_id', empresaId),
         ])
       if (errObras) throw errObras
@@ -44,15 +44,12 @@ export default function Obras() {
   }
 
   async function excluir(id: number) {
-    if (!confirm('Excluir obra e todos os lançamentos financeiros relacionados?')) return
+    if (!confirm('Excluir obra e todos os lançamentos relacionados?')) return
     try {
-      const { error: errFin } = await supabase.from('financeiro').delete().eq('obra_id', id)
-      if (errFin) throw errFin
-      const { error: errObra } = await supabase.from('obras').delete().eq('id', id)
-      if (errObra) throw errObra
+      await supabase.from('financeiro').delete().eq('obra_id', id)
+      await supabase.from('obras').delete().eq('id', id)
       carregar()
     } catch (err) {
-      console.error('Erro ao excluir:', err)
       alert('Erro ao excluir obra')
     }
   }
@@ -66,57 +63,141 @@ export default function Obras() {
 
   if (loadingEmpresa || loadingData) return <p style={{ padding: 24 }}>Carregando...</p>
 
+  const emAndamento = obras.filter(o => o.status !== 'concluida')
+  const concluidas  = obras.filter(o => o.status === 'concluida')
+
   return (
     <div style={{ padding: 24 }}>
 
+      {/* CABEÇALHO */}
       <div style={header}>
-        <h1>🏗️ Obras</h1>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a' }}>🏗️ Obras</h1>
+          <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 2 }}>
+            {emAndamento.length} em andamento · {concluidas.length} concluída(s)
+          </p>
+        </div>
         <button style={btnNova} onClick={() => router.push('/obras/nova')}>
           + Nova Obra
         </button>
       </div>
 
       {obras.length === 0 && (
-        <p style={{ color: '#64748b' }}>Nenhuma obra cadastrada.</p>
+        <div style={vazioCard}>
+          <p style={{ fontSize: 36 }}>🏗️</p>
+          <p style={{ fontWeight: 600, color: '#0f172a' }}>Nenhuma obra cadastrada</p>
+          <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>Crie sua primeira obra para começar</p>
+        </div>
       )}
 
-      <div style={grid}>
-        {obras.map(obra => {
-          const lucro = calcularLucro(obra.id)
+      {/* ── EM ANDAMENTO ── */}
+      {emAndamento.length > 0 && (
+        <div style={secaoWrapper}>
+          <div style={secaoHeader}>
+            <h2 style={secaoTitulo}>🔄 Em Andamento</h2>
+            <span style={secaoBadge('#f59e0b', '#fef3c7')}>{emAndamento.length}</span>
+          </div>
+          <div style={grid}>
+            {emAndamento.map(obra => {
+              const lucro = calcularLucro(obra.id)
+              const perc  = Number(obra.percentual_concluido || 0)
+              const corPerc = perc < 30 ? '#ef4444' : perc < 70 ? '#f59e0b' : '#22c55e'
 
-          return (
-            <div key={obra.id} style={cardStyle(lucro)}>
-              <h3>{obra.nome}</h3>
-              <p style={{ color: '#64748b' }}>{obra.cliente}</p>
+              return (
+                <div key={obra.id} style={cardAndamento(lucro)}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', margin: 0 }}>{obra.nome}</h3>
+                      <p style={{ color: '#64748b', fontSize: 13, marginTop: 2 }}>{obra.cliente}</p>
+                    </div>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: corPerc, marginLeft: 8 }}>{perc}%</span>
+                  </div>
 
-              <p style={valorStyle}>
-                💰 {format(Number(obra.valor || 0))}
-              </p>
+                  {/* Barra de progresso */}
+                  <div style={{ height: 6, background: '#e2e8f0', borderRadius: 999, margin: '10px 0', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${perc}%`, background: corPerc, borderRadius: 999 }} />
+                  </div>
 
-              <p style={{ color: lucro >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
-                {lucro >= 0 ? 'Lucro' : 'Prejuízo'}: {format(lucro)}
-              </p>
+                  <p style={{ fontWeight: 600, fontSize: 14 }}>
+                    💰 {format(Number(obra.valor || 0))}
+                  </p>
+                  <p style={{ color: lucro >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600, fontSize: 13, marginTop: 2 }}>
+                    {lucro >= 0 ? '↑ Lucro' : '↓ Prejuízo'}: {format(lucro)}
+                  </p>
 
-              <div style={botoes}>
-                <Link href={`/obras/${obra.id}`}>
-                  <button style={btnVer}>Ver</button>
-                </Link>
+                  {obra.data_previsao && (
+                    <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+                      Previsão: {new Date(obra.data_previsao + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </p>
+                  )}
 
-                <button
-                  onClick={() => router.push(`/obras/${obra.id}/editar`)}
-                  style={btnEditar}
-                >
-                  Editar
-                </button>
+                  <div style={botoes}>
+                    <Link href={`/obras/${obra.id}`}>
+                      <button style={btnVer}>Ver</button>
+                    </Link>
+                    <button onClick={() => router.push(`/obras/${obra.id}/editar`)} style={btnEditar}>Editar</button>
+                    <button onClick={() => excluir(obra.id)} style={btnExcluir}>Excluir</button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
-                <button onClick={() => excluir(obra.id)} style={btnExcluir}>
-                  Excluir
-                </button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      {/* ── CONCLUÍDAS ── */}
+      {concluidas.length > 0 && (
+        <div style={secaoWrapper}>
+          <div style={secaoHeader}>
+            <h2 style={secaoTitulo}>✅ Concluídas</h2>
+            <span style={secaoBadge('#16a34a', '#dcfce7')}>{concluidas.length}</span>
+          </div>
+          <div style={grid}>
+            {concluidas.map(obra => {
+              const lucro = calcularLucro(obra.id)
+
+              return (
+                <div key={obra.id} style={cardConcluida}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', margin: 0 }}>{obra.nome}</h3>
+                      <p style={{ color: '#64748b', fontSize: 13, marginTop: 2 }}>{obra.cliente}</p>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '3px 10px', borderRadius: 999 }}>
+                      100%
+                    </span>
+                  </div>
+
+                  {/* Barra 100% verde */}
+                  <div style={{ height: 6, background: '#bbf7d0', borderRadius: 999, margin: '10px 0' }}>
+                    <div style={{ height: '100%', width: '100%', background: '#16a34a', borderRadius: 999 }} />
+                  </div>
+
+                  <p style={{ fontWeight: 600, fontSize: 14 }}>
+                    💰 {format(Number(obra.valor || 0))}
+                  </p>
+                  <p style={{ color: lucro >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600, fontSize: 13, marginTop: 2 }}>
+                    {lucro >= 0 ? '↑ Lucro' : '↓ Prejuízo'}: {format(lucro)}
+                  </p>
+
+                  {obra.data_conclusao && (
+                    <p style={{ fontSize: 12, color: '#16a34a', marginTop: 4, fontWeight: 600 }}>
+                      ✅ Concluída em {new Date(obra.data_conclusao + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </p>
+                  )}
+
+                  <div style={botoes}>
+                    <Link href={`/obras/${obra.id}`}>
+                      <button style={btnVer}>Ver</button>
+                    </Link>
+                    <button onClick={() => excluir(obra.id)} style={btnExcluir}>Excluir</button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
     </div>
   )
@@ -126,44 +207,42 @@ function format(v: number) {
   return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-const header: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between',
-  alignItems: 'center', marginBottom: 20
-}
+const header: React.CSSProperties      = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }
+const secaoWrapper: React.CSSProperties = { marginBottom: 32 }
+const secaoHeader: React.CSSProperties  = { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }
+const secaoTitulo: React.CSSProperties  = { fontSize: 15, fontWeight: 700, color: '#0f172a', margin: 0 }
+const secaoBadge = (cor: string, bg: string): React.CSSProperties => ({
+  background: bg, color: cor, fontSize: 12, fontWeight: 700,
+  padding: '3px 10px', borderRadius: 999
+})
 
 const grid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
   gap: 16
 }
 
-const cardStyle = (lucro: number): React.CSSProperties => ({
-  background: lucro >= 0 ? '#ecfdf5' : '#fee2e2',
-  padding: 20, borderRadius: 12,
-  border: `1px solid ${lucro >= 0 ? '#16a34a' : '#dc2626'}`,
-  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+const cardBase: React.CSSProperties = {
+  background: '#fff', padding: 20, borderRadius: 14,
+  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+}
+
+const cardAndamento = (lucro: number): React.CSSProperties => ({
+  ...cardBase,
+  borderLeft: `4px solid ${lucro >= 0 ? '#22c55e' : '#ef4444'}`,
 })
 
+const cardConcluida: React.CSSProperties = {
+  ...cardBase,
+  borderLeft: '4px solid #16a34a',
+  background: '#f0fdf4',
+}
+
+const botoes: React.CSSProperties  = { marginTop: 14, display: 'flex', gap: 8 }
 const valorStyle: React.CSSProperties = { fontWeight: 600, marginTop: 6 }
+const vazioCard: React.CSSProperties  = { textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
 
-const botoes: React.CSSProperties = { marginTop: 10, display: 'flex', gap: 8 }
-
-const btnNova: React.CSSProperties = {
-  background: '#2563eb', color: '#fff',
-  padding: '10px 14px', borderRadius: 8, border: 'none', cursor: 'pointer'
-}
-
-const btnVer: React.CSSProperties = {
-  background: '#22c55e', color: '#fff',
-  border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer'
-}
-
-const btnEditar: React.CSSProperties = {
-  background: '#f59e0b', color: '#fff',
-  border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer'
-}
-
-const btnExcluir: React.CSSProperties = {
-  background: '#ef4444', color: '#fff',
-  border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer'
-}
+const btnNova: React.CSSProperties   = { background: '#2563eb', color: '#fff', padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600 }
+const btnVer: React.CSSProperties    = { background: '#22c55e', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
+const btnEditar: React.CSSProperties = { background: '#f59e0b', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
+const btnExcluir: React.CSSProperties = { background: '#ef4444', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
