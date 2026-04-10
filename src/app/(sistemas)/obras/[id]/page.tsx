@@ -210,8 +210,9 @@ export default function DetalheObra() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => router.push(`/obras/${id}/fotos`)}  style={btnFotos}>📸 Fotos</button>
-          <button onClick={() => router.push(`/obras/${id}/editar`)} style={btnEditar}>✏️ Editar</button>
+          <button onClick={() => router.push(`/obras/${id}/fotos`)}    style={btnFotos}>📸 Fotos</button>
+          <button onClick={() => router.push(`/obras/${id}/contrato`)} style={btnContrato}>📄 Contrato</button>
+          <button onClick={() => router.push(`/obras/${id}/editar`)}   style={btnEditar}>✏️ Editar</button>
         </div>
       </div>
 
@@ -518,6 +519,7 @@ function DiarioSecao({ titulo, conteudo, cor }: any) {
 /* ── ESTILOS ── */
 const btnVoltar: React.CSSProperties = { background: 'transparent', border: 'none', cursor: 'pointer', color: '#2563eb', fontSize: 14, padding: 0 }
 const btnFotos: React.CSSProperties  = { background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }
+const btnContrato: React.CSSProperties = { background: '#0f172a', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }
 const btnEditar: React.CSSProperties = { background: '#f59e0b', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }
 const grid: React.CSSProperties      = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 20 }
 const graficoBox: React.CSSProperties   = { background: '#fff', padding: 20, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
