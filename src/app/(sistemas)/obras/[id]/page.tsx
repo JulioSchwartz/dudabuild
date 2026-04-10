@@ -52,6 +52,15 @@ export default function DetalheObra() {
   const [mostrarFormDiario,  setMostrarFormDiario]  = useState(false)
   const [diarioExpandido,    setDiarioExpandido]    = useState<string | null>(null)
 
+  // Etapas da obra
+  const [etapas,          setEtapas]          = useState<any[]>([])
+  const [salvandoEtapa,   setSalvandoEtapa]   = useState<string | null>(null)
+  const [novaEtapaNome,   setNovaEtapaNome]   = useState('')
+  const [novaEtapaPeso,   setNovaEtapaPeso]   = useState('20')
+  const [novaEtapaData,   setNovaEtapaData]   = useState('')
+  const [mostrarFormEtapa, setMostrarFormEtapa] = useState(false)
+  const [adicionandoEtapa, setAdicionandoEtapa] = useState(false)
+
   useEffect(() => {
     if (loadingEmpresa) return
     if (!empresaId) { router.push('/login'); return }
@@ -62,14 +71,16 @@ export default function DetalheObra() {
   async function carregar() {
     try {
       setLoadingData(true)
-      const [{ data: obraData }, { data: finData }, { data: diarioData }] = await Promise.all([
+      const [{ data: obraData }, { data: finData }, { data: diarioData }, { data: etapasData }] = await Promise.all([
         supabase.from('obras').select('*').eq('id', Number(id)).eq('empresa_id', empresaId).maybeSingle(),
         supabase.from('financeiro').select('*').eq('obra_id', Number(id)).eq('empresa_id', empresaId).order('created_at', { ascending: false }),
         supabase.from('diario_obra').select('*').eq('obra_id', Number(id)).eq('empresa_id', empresaId).order('data', { ascending: false }),
+        supabase.from('obra_etapas').select('*').eq('obra_id', Number(id)).eq('empresa_id', empresaId).order('ordem', { ascending: true }),
       ])
       setObra(obraData)
       setFinanceiro(finData || [])
       setDiarios(diarioData || [])
+      setEtapas(etapasData || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -141,6 +152,70 @@ export default function DetalheObra() {
     if (!confirm('Excluir este lançamento?')) return
     await supabase.from('financeiro').delete().eq('id', lancId)
     carregar()
+  }
+
+  async function adicionarEtapa() {
+    if (!novaEtapaNome.trim()) return alert('Informe o nome da etapa')
+    setAdicionandoEtapa(true)
+    try {
+      const { error } = await supabase.from('obra_etapas').insert({
+        obra_id:      Number(id),
+        empresa_id:   empresaId,
+        nome:         novaEtapaNome.trim(),
+        peso:         Number(novaEtapaPeso || 20),
+        percentual:   0,
+        data_prevista: novaEtapaData || null,
+        status:       'aguardando',
+        ordem:        etapas.length,
+      })
+      if (error) throw error
+      setNovaEtapaNome('')
+      setNovaEtapaPeso('20')
+      setNovaEtapaData('')
+      setMostrarFormEtapa(false)
+      await carregar()
+      await recalcularProgresso()
+    } catch (err) {
+      alert('Erro ao adicionar etapa')
+    } finally {
+      setAdicionandoEtapa(false)
+    }
+  }
+
+  async function atualizarEtapa(etapaId: string, campo: string, valor: any) {
+    setSalvandoEtapa(etapaId)
+    try {
+      const updates: any = { [campo]: valor }
+      if (campo === 'percentual' && Number(valor) === 100) {
+        updates.status = 'concluida'
+        updates.data_conclusao = new Date().toISOString().split('T')[0]
+      } else if (campo === 'percentual' && Number(valor) > 0) {
+        updates.status = 'em_andamento'
+      } else if (campo === 'percentual' && Number(valor) === 0) {
+        updates.status = 'aguardando'
+      }
+      await supabase.from('obra_etapas').update(updates).eq('id', etapaId)
+      await carregar()
+      await recalcularProgresso()
+    } finally {
+      setSalvandoEtapa(null)
+    }
+  }
+
+  async function excluirEtapa(etapaId: string) {
+    if (!confirm('Excluir esta etapa?')) return
+    await supabase.from('obra_etapas').delete().eq('id', etapaId)
+    await carregar()
+    await recalcularProgresso()
+  }
+
+  async function recalcularProgresso() {
+    const { data } = await supabase.from('obra_etapas').select('peso, percentual').eq('obra_id', Number(id)).eq('empresa_id', empresaId)
+    if (!data || data.length === 0) return
+    const totalPeso = data.reduce((a: number, e: any) => a + Number(e.peso || 0), 0)
+    if (totalPeso === 0) return
+    const percGlobal = data.reduce((a: number, e: any) => a + (Number(e.percentual || 0) * Number(e.peso || 0) / totalPeso), 0)
+    await supabase.from('obras').update({ percentual_concluido: Math.round(percGlobal) }).eq('id', Number(id))
   }
 
   if (loadingEmpresa || loadingData) return <p style={{ padding: 24 }}>Carregando...</p>
@@ -245,6 +320,185 @@ export default function DetalheObra() {
             <div style={{ height: 8, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${Math.min(percOrcado, 100)}%`, background: percOrcado > 90 ? '#ef4444' : '#3b82f6', borderRadius: 999 }} />
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── CRONOGRAMA FÍSICO ── */}
+      <div style={graficoBox}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>📋 Cronograma Físico</h3>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+              Etapas personalizáveis · % global calculado automaticamente
+            </p>
+          </div>
+          <button onClick={() => setMostrarFormEtapa(!mostrarFormEtapa)} style={btnNovoDiario}>
+            {mostrarFormEtapa ? '✕ Cancelar' : '+ Nova Etapa'}
+          </button>
+        </div>
+
+        {/* FORM NOVA ETAPA */}
+        {mostrarFormEtapa && (
+          <div style={{ ...formDiario, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
+              <div style={formGrupoD}>
+                <label style={labelSt}>Nome da Etapa *</label>
+                <input value={novaEtapaNome} onChange={e => setNovaEtapaNome(e.target.value)}
+                  placeholder="Ex: Fundação, Estrutura..." style={inputSt} />
+              </div>
+              <div style={formGrupoD}>
+                <label style={labelSt}>Peso (%)</label>
+                <input type="number" value={novaEtapaPeso} onChange={e => setNovaEtapaPeso(e.target.value)}
+                  placeholder="20" style={inputSt} min="1" max="100" />
+              </div>
+              <div style={formGrupoD}>
+                <label style={labelSt}>Data Prevista</label>
+                <input type="date" value={novaEtapaData} onChange={e => setNovaEtapaData(e.target.value)} style={inputSt} />
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: '#94a3b8' }}>
+              O peso define quanto esta etapa contribui para o % global da obra.
+              Ex: Fundação=15, Estrutura=25, Cobertura=15, Instalações=20, Acabamento=25
+            </p>
+            <button onClick={adicionarEtapa} disabled={adicionandoEtapa} style={btnSalvarDiario}>
+              {adicionandoEtapa ? 'Adicionando...' : '+ Adicionar Etapa'}
+            </button>
+          </div>
+        )}
+
+        {/* SUGESTÕES RÁPIDAS */}
+        {etapas.length === 0 && !mostrarFormEtapa && (
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>💡 Sugestões rápidas:</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[
+                { nome: 'Fundação',    peso: 15 },
+                { nome: 'Estrutura',   peso: 25 },
+                { nome: 'Cobertura',   peso: 15 },
+                { nome: 'Instalações', peso: 20 },
+                { nome: 'Acabamento',  peso: 25 },
+              ].map(s => (
+                <button key={s.nome} style={btnSugestao}
+                  onClick={async () => {
+                    await supabase.from('obra_etapas').insert({
+                      obra_id: Number(id), empresa_id: empresaId,
+                      nome: s.nome, peso: s.peso, percentual: 0,
+                      status: 'aguardando', ordem: etapas.length
+                    })
+                    await carregar()
+                  }}
+                >
+                  + {s.nome} ({s.peso}%)
+                </button>
+              ))}
+              <button style={{ ...btnSugestao, background: '#f0fdf4', color: '#16a34a', border: '1px dashed #86efac' }}
+                onClick={async () => {
+                  const etapasPadrao = [
+                    { nome: 'Fundação', peso: 15 }, { nome: 'Estrutura', peso: 25 },
+                    { nome: 'Cobertura', peso: 15 }, { nome: 'Instalações', peso: 20 }, { nome: 'Acabamento', peso: 25 }
+                  ]
+                  for (let i = 0; i < etapasPadrao.length; i++) {
+                    await supabase.from('obra_etapas').insert({
+                      obra_id: Number(id), empresa_id: empresaId,
+                      nome: etapasPadrao[i].nome, peso: etapasPadrao[i].peso,
+                      percentual: 0, status: 'aguardando', ordem: i
+                    })
+                  }
+                  await carregar()
+                }}
+              >
+                ✨ Adicionar todas
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* LISTA DE ETAPAS */}
+        {etapas.length === 0 && !mostrarFormEtapa && (
+          <p style={{ color: '#94a3b8', textAlign: 'center', padding: '12px 0', fontSize: 13 }}>
+            Nenhuma etapa cadastrada. Use as sugestões acima ou crie etapas personalizadas.
+          </p>
+        )}
+
+        {etapas.map((etapa, i) => {
+          const corStatus = etapa.status === 'concluida' ? '#16a34a'
+            : etapa.status === 'em_andamento' ? '#f59e0b'
+            : etapa.status === 'atrasada' ? '#dc2626' : '#94a3b8'
+          const hoje2 = new Date()
+          const prevista = etapa.data_prevista ? new Date(etapa.data_prevista + 'T12:00:00') : null
+          const atrasadaEtapa = prevista && prevista < hoje2 && etapa.percentual < 100
+
+          return (
+            <div key={etapa.id} style={{ ...diarioItem, borderLeft: `4px solid ${corStatus}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{etapa.nome}</p>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+                      background: corStatus + '20', color: corStatus }}>
+                      {etapa.status === 'concluida' ? '✅ Concluída'
+                        : etapa.status === 'em_andamento' ? '🔄 Em andamento'
+                        : atrasadaEtapa ? '⚠️ Atrasada' : '⏳ Aguardando'}
+                    </span>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Peso: {etapa.peso}%</span>
+                  </div>
+                  {etapa.data_prevista && (
+                    <p style={{ fontSize: 12, color: atrasadaEtapa ? '#dc2626' : '#64748b', marginTop: 2 }}>
+                      {atrasadaEtapa ? '⚠️ ' : ''}Previsto: {new Date(etapa.data_prevista + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      {etapa.data_conclusao && ` · Concluído: ${new Date(etapa.data_conclusao + 'T12:00:00').toLocaleDateString('pt-BR')}`}
+                    </p>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 20, fontWeight: 900, color: corStatus }}>{etapa.percentual}%</span>
+                  <button onClick={() => excluirEtapa(etapa.id)} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                </div>
+              </div>
+
+              {/* SLIDER */}
+              <input
+                type="range" min="0" max="100" step="5"
+                value={etapa.percentual}
+                onChange={e => atualizarEtapa(etapa.id, 'percentual', Number(e.target.value))}
+                style={{ width: '100%', accentColor: corStatus, cursor: 'pointer' }}
+                disabled={salvandoEtapa === etapa.id}
+              />
+              <div style={{ height: 6, background: '#e2e8f0', borderRadius: 999, marginTop: 4, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${etapa.percentual}%`, background: corStatus, borderRadius: 999, transition: 'width 0.3s' }} />
+              </div>
+
+              {/* DATA PREVISTA INLINE */}
+              <div style={{ display: 'flex', gap: 12, marginTop: 10, alignItems: 'center' }}>
+                <label style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Data prevista:</label>
+                <input type="date"
+                  value={etapa.data_prevista || ''}
+                  onChange={e => atualizarEtapa(etapa.id, 'data_prevista', e.target.value || null)}
+                  style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc' }}
+                />
+                {etapa.observacoes && (
+                  <p style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic' }}>{etapa.observacoes}</p>
+                )}
+              </div>
+            </div>
+          )
+        })}
+
+        {/* TOTAL PESOS */}
+        {etapas.length > 0 && (
+          <div style={{ marginTop: 12, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <span style={{ color: '#64748b' }}>
+              Total de pesos: <strong>{etapas.reduce((a, e) => a + Number(e.peso), 0)}%</strong>
+              {etapas.reduce((a, e) => a + Number(e.peso), 0) !== 100 && (
+                <span style={{ color: '#f59e0b', marginLeft: 8 }}>⚠️ Idealmente deve somar 100%</span>
+              )}
+            </span>
+            <span style={{ color: '#0f172a', fontWeight: 700 }}>
+              % Global calculado: {Math.round(etapas.reduce((a, e) => {
+                const totalPeso = etapas.reduce((s, x) => s + Number(x.peso), 0)
+                return totalPeso > 0 ? a + (Number(e.percentual) * Number(e.peso) / totalPeso) : a
+              }, 0))}%
+            </span>
           </div>
         )}
       </div>
@@ -541,6 +795,8 @@ const abaAtivaStyle = (cor: string): React.CSSProperties => ({ flex: 1, padding:
 const abaInativa: React.CSSProperties = { flex: 1, padding: '14px 0', border: 'none', background: '#f8fafc', color: '#94a3b8', fontWeight: 600, cursor: 'pointer', fontSize: 14 }
 const itemLinha = (tipo: string): React.CSSProperties => ({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #f1f5f9', borderLeft: `4px solid ${tipo === 'entrada' ? '#16a34a' : '#dc2626'}` })
 const btnExcluir: React.CSSProperties = { background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 16, padding: '2px 6px' }
+
+const btnSugestao: React.CSSProperties = { background: '#f1f5f9', color: '#374151', border: '1px solid #e2e8f0', padding: '6px 12px', borderRadius: 999, fontSize: 12, cursor: 'pointer', fontWeight: 600 }
 
 // Diário
 const btnNovoDiario: React.CSSProperties  = { background: '#2563eb', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }
