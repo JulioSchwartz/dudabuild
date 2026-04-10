@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
 import { useEmpresa } from '@/hooks/useEmpresa'
+import { InputTelefone, telefoneParaWhatsApp } from '@/components/InputFormatado'
 
 const itemMaterialVazio = () => ({
   tipo: 'material', codigo: '', descricao: '', unidade: 'm²',
@@ -61,7 +62,7 @@ export default function NovoOrcamento() {
         .insert({
           empresa_id:   empresaId,
           cliente_nome: cliente.trim(),
-          telefone:     telefone.trim() || null,
+          telefone:     telefone.replace(/\D/g, '') ? `+55${telefone.replace(/\D/g, '')}` : null,
           descricao:    descricao.trim(),
           valor_total:  totalGeral(),
           token,
@@ -185,8 +186,7 @@ export default function NovoOrcamento() {
           </div>
           <div style={formGrupo}>
             <label style={label}>Telefone (WhatsApp)</label>
-            <input value={telefone} onChange={e => setTelefone(e.target.value)}
-              placeholder="5511999999999" style={input} />
+            <InputTelefone value={telefone} onChange={setTelefone} style={input} />
           </div>
           <div style={{ ...formGrupo, gridColumn: '1 / -1' }}>
             <label style={label}>Descrição da Obra</label>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { lancarMovimento } from '@/lib/financeiro'
 
 export default function OrcamentoPublico() {
 
@@ -61,47 +60,19 @@ export default function OrcamentoPublico() {
   }
 
   async function aprovar() {
-
     if (!orcamento) return
-
-    // Atualiza status
-    await supabase
-      .from('orcamentos')
-      .update({
-        status: 'aprovado',
-        aprovado_em: new Date().toISOString()
+    try {
+      const res = await fetch('/api/orcamento/aprovar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orcamento_id: orcamento.id, token }),
       })
-      .eq('id', orcamento.id)
-
-    // Cria obra
-    const { data: obra } = await supabase
-      .from('obras')
-      .insert({
-        nome: `Obra - ${orcamento.cliente_nome}`,
-        cliente: orcamento.cliente_nome,
-        valor: totalGeral(),
-        empresa_id: orcamento.empresa_id
-      })
-      .select()
-      .single()
-
-    if (obra) {
-
-      await supabase
-        .from('orcamentos')
-        .update({ obra_id: obra.id })
-        .eq('id', orcamento.id)
-
-      await lancarMovimento({
-        obra_id: obra.id,
-        empresa_id: orcamento.empresa_id,
-        tipo: 'entrada',
-        descricao: 'Proposta aprovada',
-        valor: totalGeral()
-      })
+      if (!res.ok) throw new Error('Erro ao aprovar')
+      setFinalizadoStatus('aprovado')
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao aprovar proposta. Tente novamente.')
     }
-
-    setFinalizadoStatus('aprovado')
   }
 
   async function recusar() {
@@ -163,9 +134,9 @@ export default function OrcamentoPublico() {
 
         {/* STATUS FINAL */}
         {(orcamento.status === 'aprovado' || orcamento.status === 'recusado' || finalizadoStatus) && (
-          <div style={statusBox(orcamento.status)}>
+          <div style={statusBox(finalizadoStatus || orcamento.status)}>
             {(finalizadoStatus || orcamento.status) === 'aprovado'
-              ? '✅ Proposta aprovada'
+              ? '✅ Proposta aprovada — obrigado!'
               : '❌ Proposta recusada'}
           </div>
         )}

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
+import { InputTelefone, InputCNPJ, InputCPF } from '@/components/InputFormatado'
+import { InputTelefone, InputCNPJ, InputCPF } from '@/components/InputFormatado'
 
 export default function PerfilEmpresa() {
 
@@ -128,12 +130,10 @@ export default function PerfilEmpresa() {
               placeholder="Ex: DudaBuild Engenharia Ltda" style={input} />
           </Campo>
           <Campo label="CNPJ">
-            <input value={cnpj} onChange={e => setCnpj(e.target.value)}
-              placeholder="00.000.000/0001-00" style={input} />
+            <InputCNPJ value={cnpj} onChange={setCnpj} style={input} />
           </Campo>
-          <Campo label="Telefone">
-            <input value={telefone} onChange={e => setTelefone(e.target.value)}
-              placeholder="(49) 99999-9999" style={input} />
+          <Campo label="Telefone / WhatsApp">
+            <InputTelefone value={telefone} onChange={setTelefone} style={input} />
           </Campo>
           <Campo label="E-mail" full>
             <input value={email} onChange={e => setEmail(e.target.value)}
@@ -173,8 +173,7 @@ export default function PerfilEmpresa() {
               placeholder="Ex: Eng. João da Silva" style={input} />
           </Campo>
           <Campo label="CPF do Responsável">
-            <input value={respDoc} onChange={e => setRespDoc(e.target.value)}
-              placeholder="000.000.000-00" style={input} />
+            <InputCPF value={respDoc} onChange={setRespDoc} style={input} />
           </Campo>
           <Campo label="Tipo de Registro">
             <select value={tipoRegistro} onChange={e => setTipoRegistro(e.target.value)} style={input}>

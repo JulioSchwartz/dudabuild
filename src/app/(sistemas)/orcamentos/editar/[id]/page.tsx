@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
+import { InputTelefone } from '@/components/InputFormatado'
 import TabelaOrcamento from '@/components/TabelaOrcamento'
 
 const itemMaterialVazio = () => ({
@@ -253,7 +254,7 @@ export default function EditarOrcamento() {
         </div>
         <div style={formGroup}>
           <label style={label}>Telefone (WhatsApp)</label>
-          <input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="5511999999999" style={input} />
+          <InputTelefone value={telefone} onChange={setTelefone} style={input} />
         </div>
         <div style={formGroup}>
           <label style={label}>Descrição</label>
