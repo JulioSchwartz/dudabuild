@@ -161,16 +161,16 @@ export default function OrcamentoPublico() {
         </div>
 
         {/* STATUS FINAL */}
-        {(orcamento.status || finalizado) && (
-          <div style={statusBox(orcamento.status)}>
+        {(orcamento.status === 'aprovado' || orcamento.status === 'recusado' || finalizado) && (
+          <div style={statusBox(finalizado ? 'aprovado' : orcamento.status)}>
             {orcamento.status === 'aprovado' || finalizado
-              ? '✅ Proposta aprovada'
+              ? '✅ Proposta aprovada — obrigado!'
               : '❌ Proposta recusada'}
           </div>
         )}
 
         {/* BOTÕES */}
-        {!orcamento.status && !finalizado && (
+        {(orcamento.status === 'pendente' || !orcamento.status) && !finalizado && (
           <div style={acoes}>
 
             <button style={btnAprovar} onClick={aprovar}>
