@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 import { InputTelefone, InputCNPJ, InputCPF } from '@/components/InputFormatado'
-import { InputTelefone, InputCNPJ, InputCPF } from '@/components/InputFormatado'
 
 export default function PerfilEmpresa() {
 
