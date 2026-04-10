@@ -24,6 +24,8 @@ export default function FotosObra() {
   const [loading,         setLoading]         = useState(false)
   const [fotoSelecionada, setFotoSelecionada] = useState<string | null>(null)
   const [tipoAtivo,       setTipoAtivo]       = useState('todos')
+  const [obraToken,       setObraToken]       = useState<string | null>(null)
+  const [linkCopiado,     setLinkCopiado]     = useState(false)
  
   useEffect(() => {
     if (loadingEmpresa) return
@@ -104,6 +106,21 @@ export default function FotosObra() {
         <div>
           <h1 style={titulo}>📸 Registro Fotográfico</h1>
           <p style={subtitulo}>{fotos.length} foto(s) registrada(s)</p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {obraToken && (
+            <a
+              href={`/obra-publica/${id}?token=${obraToken}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: 12, color: '#2563eb', textDecoration: 'underline' }}
+            >
+              Visualizar como cliente →
+            </a>
+          )}
+          <button onClick={gerarLinkPublico} style={btnLinkPublico}>
+            {linkCopiado ? '✅ Link copiado!' : '🔗 Link público para cliente'}
+          </button>
         </div>
       </div>
  
@@ -208,7 +225,8 @@ export default function FotosObra() {
 }
  
 /* ── ESTILOS ── */
-const btnVoltar: React.CSSProperties  = { background: 'transparent', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, padding: 0, marginBottom: 16 }
+const btnVoltar: React.CSSProperties     = { background: 'transparent', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, padding: 0, marginBottom: 16 }
+const btnLinkPublico: React.CSSProperties = { background: '#2563eb', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }
 const titulo: React.CSSProperties    = { fontSize: 24, fontWeight: 800, color: '#0f172a' }
 const subtitulo: React.CSSProperties = { fontSize: 13, color: '#94a3b8', marginTop: 2 }
  

@@ -31,7 +31,11 @@ export default function DetalheObra() {
   const [obra,        setObra]        = useState<any>(null)
   const [financeiro,  setFinanceiro]  = useState<any[]>([])
   const [diarios,     setDiarios]     = useState<any[]>([])
-  const [loadingData, setLoadingData] = useState(true)
+  const [loadingData,   setLoadingData]   = useState(true)
+  const [finalizando,   setFinalizando]   = useState(false)
+  const [mostrarFinalizar, setMostrarFinalizar] = useState(false)
+  const [dataFinalReal, setDataFinalReal] = useState(new Date().toISOString().split('T')[0])
+  const [obsFinalizacao, setObsFinalizacao] = useState('')
 
   // Form lançamento financeiro
   const [tipo,      setTipo]      = useState<'entrada' | 'saida'>('entrada')
@@ -173,6 +177,28 @@ export default function DetalheObra() {
     if (!confirm('Excluir este lançamento?')) return
     await supabase.from('financeiro').delete().eq('id', lancId)
     carregar()
+  }
+
+  async function finalizarObra() {
+    if (!confirm('Confirmar finalização da obra? Esta ação marcará a obra como concluída.')) return
+    setFinalizando(true)
+    try {
+      const { error } = await supabase.from('obras').update({
+        status:               'concluida',
+        data_conclusao:       dataFinalReal,
+        obs_finalizacao:      obsFinalizacao.trim() || null,
+        percentual_concluido: 100,
+      }).eq('id', Number(id)).eq('empresa_id', empresaId)
+      if (error) throw error
+      setMostrarFinalizar(false)
+      await carregar()
+      alert('✅ Obra finalizada com sucesso!')
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao finalizar obra')
+    } finally {
+      setFinalizando(false)
+    }
   }
 
   async function adicionarEtapa() {
@@ -352,10 +378,60 @@ export default function DetalheObra() {
   return (
     <div style={{ padding: 24 }}>
 
+      {/* BANNER OBRA CONCLUÍDA */}
+      {obra.status === 'concluida' && (
+        <div style={bannerConcluida}>
+          <div>
+            <p style={{ fontWeight: 800, fontSize: 16 }}>🏁 Obra Concluída</p>
+            {obra.data_conclusao && (
+              <p style={{ fontSize: 13, marginTop: 2 }}>
+                Concluída em {new Date(obra.data_conclusao + 'T12:00:00').toLocaleDateString('pt-BR')}
+              </p>
+            )}
+            {obra.obs_finalizacao && (
+              <p style={{ fontSize: 13, marginTop: 4, fontStyle: 'italic' }}>{obra.obs_finalizacao}</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ALERTAS */}
       {lucro < 0      && <Alerta cor="#fee2e2" borda="#fca5a5" texto="🚨 Obra em prejuízo — revise os custos imediatamente" />}
       {atrasada       && <Alerta cor="#fef3c7" borda="#fcd34d" texto={`⏰ Obra atrasada — prazo venceu há ${Math.abs(diasRestantes!)} dias`} />}
       {alertaOrcamento && <Alerta cor="#fff7ed" borda="#fdba74" texto={`⚠️ Custo atingiu ${percOrcado.toFixed(0)}% do orçamento previsto`} />}
+
+      {/* MODAL FINALIZAR OBRA */}
+      {mostrarFinalizar && (
+        <div style={modalOverlay}>
+          <div style={modalBox}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>🏁 Finalizar Obra</h2>
+            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>
+              Confirme os dados de conclusão da obra. Após finalizar, o status muda para <strong>Concluída</strong>
+              e o progresso será marcado como 100%.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={labelSt}>Data de Conclusão *</label>
+                <input type="date" value={dataFinalReal} onChange={e => setDataFinalReal(e.target.value)}
+                  style={{ ...inputSt, width: '100%', marginTop: 4 }} />
+              </div>
+              <div>
+                <label style={labelSt}>Observações / Pendências</label>
+                <textarea value={obsFinalizacao} onChange={e => setObsFinalizacao(e.target.value)}
+                  placeholder="Ex: Obra entregue conforme contrato. Pendente apenas a limpeza final..."
+                  rows={3}
+                  style={{ ...inputSt, width: '100%', marginTop: 4, resize: 'vertical', fontFamily: 'inherit' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+              <button onClick={() => setMostrarFinalizar(false)} style={btnCancelarModal}>Cancelar</button>
+              <button onClick={finalizarObra} disabled={finalizando} style={btnConfirmarFinal}>
+                {finalizando ? '⏳ Finalizando...' : '✅ Confirmar Finalização'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CABEÇALHO */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
@@ -368,10 +444,14 @@ export default function DetalheObra() {
             {orcCusto > 0 && <span style={{ color: '#64748b', fontWeight: 400 }}> · Orçamento de custo: {format(orcCusto)}</span>}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button onClick={() => router.push(`/obras/${id}/fotos`)}    style={btnFotos}>📸 Fotos</button>
           <button onClick={() => router.push(`/obras/${id}/contrato`)} style={btnContrato}>📄 Contrato</button>
           <button onClick={() => router.push(`/obras/${id}/editar`)}   style={btnEditar}>✏️ Editar</button>
+          {obra.status !== 'concluida'
+            ? <button onClick={() => setMostrarFinalizar(true)} style={btnFinalizar}>🏁 Finalizar Obra</button>
+            : <span style={badgeConcluida}>✅ Obra Concluída</span>
+          }
         </div>
       </div>
 
@@ -990,6 +1070,13 @@ function DiarioSecao({ titulo, conteudo, cor }: any) {
 
 /* ── ESTILOS ── */
 const btnVoltar: React.CSSProperties = { background: 'transparent', border: 'none', cursor: 'pointer', color: '#2563eb', fontSize: 14, padding: 0 }
+const btnFinalizar: React.CSSProperties = { background: '#16a34a', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }
+const badgeConcluida: React.CSSProperties = { background: '#dcfce7', color: '#15803d', padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 700 }
+const bannerConcluida: React.CSSProperties = { background: '#dcfce7', border: '1px solid #86efac', borderRadius: 12, padding: '16px 20px', marginBottom: 16, color: '#15803d' }
+const modalOverlay: React.CSSProperties = { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }
+const modalBox: React.CSSProperties = { background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
+const btnCancelarModal: React.CSSProperties = { background: '#f1f5f9', color: '#64748b', border: 'none', padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }
+const btnConfirmarFinal: React.CSSProperties = { background: '#16a34a', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 14 }
 const btnFotos: React.CSSProperties  = { background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }
 const btnContrato: React.CSSProperties = { background: '#0f172a', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }
 const btnEditar: React.CSSProperties = { background: '#f59e0b', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }
