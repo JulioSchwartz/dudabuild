@@ -70,6 +70,8 @@ export default function DetalheObra() {
   const [medDescricao,    setMedDescricao]    = useState('')
   const [medPercentual,   setMedPercentual]   = useState('')
   const [salvandoMedicao, setSalvandoMedicao] = useState(false)
+  const [medFoto,         setMedFoto]         = useState<File | null>(null)
+  const [medFotoPreview,  setMedFotoPreview]  = useState<string | null>(null)
 
   useEffect(() => {
     if (loadingEmpresa) return
@@ -217,7 +219,6 @@ export default function DetalheObra() {
   }
 
   async function adicionarMedicao(etapaId: string) {
-    if (!medDescricao.trim())  return alert('Descreva o serviço realizado')
     if (!medPercentual || Number(medPercentual) <= 0) return alert('Informe o % desta medição')
 
     // Verifica se não vai ultrapassar 100%
@@ -229,13 +230,28 @@ export default function DetalheObra() {
 
     setSalvandoMedicao(true)
     try {
+      // Upload da foto se existir
+      let fotoUrl: string | null = null
+      if (medFoto) {
+        const nomeLimpo   = medFoto.name.replace(/\s+/g, '-').replace(/[^\w.-]/g, '')
+        const nomeArquivo = `${id}/${etapaId}/${Date.now()}-${nomeLimpo}`
+        const { error: errUpload } = await supabase.storage
+          .from('medicoes')
+          .upload(nomeArquivo, medFoto, { upsert: true, contentType: medFoto.type })
+        if (!errUpload) {
+          const { data: urlData } = supabase.storage.from('medicoes').getPublicUrl(nomeArquivo)
+          fotoUrl = urlData.publicUrl
+        }
+      }
+
       const { error } = await supabase.from('etapa_medicoes').insert({
         etapa_id:   etapaId,
         obra_id:    Number(id),
         empresa_id: empresaId,
         data:       medData,
-        descricao:  medDescricao.trim(),
+        descricao:  medDescricao.trim() || null,
         percentual: Number(medPercentual),
+        foto_url:   fotoUrl,
       })
       if (error) throw error
 
@@ -250,6 +266,8 @@ export default function DetalheObra() {
       setMedDescricao('')
       setMedPercentual('')
       setMedData(new Date().toISOString().split('T')[0])
+      setMedFoto(null)
+      setMedFotoPreview(null)
       setFormMedicao(null)
       await carregar()
       await recalcularProgresso()
@@ -278,7 +296,10 @@ export default function DetalheObra() {
     const totalPeso = data.reduce((a: number, e: any) => a + Number(e.peso || 0), 0)
     if (totalPeso === 0) return
     const percGlobal = data.reduce((a: number, e: any) => a + (Number(e.percentual || 0) * Number(e.peso || 0) / totalPeso), 0)
-    await supabase.from('obras').update({ percentual_concluido: Math.round(percGlobal) }).eq('id', Number(id))
+    const novoPerc = Math.round(percGlobal)
+    await supabase.from('obras').update({ percentual_concluido: novoPerc }).eq('id', Number(id))
+    // ✅ Atualiza o estado local da obra para refletir imediatamente no card de progresso
+    setObra((prev: any) => prev ? { ...prev, percentual_concluido: novoPerc } : prev)
   }
 
   if (loadingEmpresa || loadingData) return <p style={{ padding: 24 }}>Carregando...</p>
@@ -571,18 +592,30 @@ export default function DetalheObra() {
                   )}
 
                   {medEtapa.map((m: any) => (
-                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: 8, marginBottom: 6, border: '1px solid #e2e8f0' }}>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{m.descricao}</p>
-                        <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                          {new Date(m.data + 'T12:00:00').toLocaleDateString('pt-BR')}
-                        </p>
+                    <div key={m.id} style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: 8, marginBottom: 6, border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          {m.descricao && <p style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{m.descricao}</p>}
+                          <p style={{ fontSize: 11, color: '#94a3b8', marginTop: m.descricao ? 2 : 0 }}>
+                            {new Date(m.data + 'T12:00:00').toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>+{m.percentual}%</span>
+                          {m.foto_url && (
+                            <a href={m.foto_url} target="_blank" rel="noreferrer"
+                              style={{ fontSize: 18, textDecoration: 'none' }} title="Ver foto">📷</a>
+                          )}
+                          <button onClick={() => excluirMedicao(m.id, etapa.id)}
+                            style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>+{m.percentual}%</span>
-                        <button onClick={() => excluirMedicao(m.id, etapa.id)}
-                          style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 14 }}>✕</button>
-                      </div>
+                      {m.foto_url && (
+                        <a href={m.foto_url} target="_blank" rel="noreferrer">
+                          <img src={m.foto_url} alt="foto medição"
+                            style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 6, marginTop: 8, border: '1px solid #e2e8f0', cursor: 'pointer' }} />
+                        </a>
+                      )}
                     </div>
                   ))}
 
@@ -607,18 +640,52 @@ export default function DetalheObra() {
                               style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', width: '100%' }} />
                           </div>
                         </div>
-                        <div style={{ marginBottom: 10 }}>
-                          <label style={{ fontSize: 11, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 4 }}>Descrição do serviço realizado *</label>
-                          <input value={medDescricao} onChange={e => setMedDescricao(e.target.value)}
-                            placeholder="Ex: Escavação e forma das sapatas concluída"
-                            style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', width: '100%' }} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                          <div>
+                            <label style={{ fontSize: 11, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                              Descrição do serviço <span style={{ color: '#94a3b8' }}>(opcional)</span>
+                            </label>
+                            <input value={medDescricao} onChange={e => setMedDescricao(e.target.value)}
+                              placeholder="Ex: Escavação das sapatas concluída"
+                              style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', width: '100%' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 11, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                              📷 Foto do serviço <span style={{ color: '#94a3b8' }}>(opcional)</span>
+                            </label>
+                            <input
+                              type="file" accept="image/*"
+                              onChange={e => {
+                                const file = e.target.files?.[0] || null
+                                setMedFoto(file)
+                                if (file) {
+                                  const reader = new FileReader()
+                                  reader.onload = ev => setMedFotoPreview(ev.target?.result as string)
+                                  reader.readAsDataURL(file)
+                                } else {
+                                  setMedFotoPreview(null)
+                                }
+                              }}
+                              style={{ fontSize: 12, cursor: 'pointer', width: '100%' }}
+                            />
+                            {medFotoPreview && (
+                              <div style={{ marginTop: 6, position: 'relative', display: 'inline-block' }}>
+                                <img src={medFotoPreview} alt="preview"
+                                  style={{ width: '100%', maxHeight: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #e2e8f0' }} />
+                                <button
+                                  onClick={() => { setMedFoto(null); setMedFotoPreview(null) }}
+                                  style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11, padding: '1px 5px' }}
+                                >✕</button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={() => adicionarMedicao(etapa.id)} disabled={salvandoMedicao}
                             style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
                             {salvandoMedicao ? 'Salvando...' : '✓ Registrar Medição'}
                           </button>
-                          <button onClick={() => { setFormMedicao(null); setMedDescricao(''); setMedPercentual('') }}
+                          <button onClick={() => { setFormMedicao(null); setMedDescricao(''); setMedPercentual(''); setMedFoto(null); setMedFotoPreview(null) }}
                             style={{ background: '#f1f5f9', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>
                             Cancelar
                           </button>
