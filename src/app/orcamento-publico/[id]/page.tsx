@@ -14,7 +14,7 @@ export default function OrcamentoPublico() {
   const [orcamento, setOrcamento] = useState<any>(null)
   const [itens, setItens] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [finalizado, setFinalizado] = useState(false)
+  const [finalizadoStatus, setFinalizadoStatus] = useState<'aprovado' | 'recusado' | null>(null)
 
   useEffect(() => {
     if (!id || !token) {
@@ -101,7 +101,7 @@ export default function OrcamentoPublico() {
       })
     }
 
-    setFinalizado(true)
+    setFinalizadoStatus('aprovado')
   }
 
   async function recusar() {
@@ -109,12 +109,13 @@ export default function OrcamentoPublico() {
     await supabase
       .from('orcamentos')
       .update({
-        status: 'recusado'
+        status: 'recusado',
+        aprovado_em: new Date().toISOString()
       })
       .eq('id', id)
       .eq('token', token)
 
-    setFinalizado(true)
+    setFinalizadoStatus('recusado')
   }
 
   if (loading) return <p style={{padding:40}}>Carregando proposta...</p>
@@ -161,16 +162,16 @@ export default function OrcamentoPublico() {
         </div>
 
         {/* STATUS FINAL */}
-        {(orcamento.status === 'aprovado' || orcamento.status === 'recusado' || finalizado) && (
-          <div style={statusBox(finalizado ? 'aprovado' : orcamento.status)}>
+        {(orcamento.status || finalizado) && (
+          <div style={statusBox(orcamento.status)}>
             {orcamento.status === 'aprovado' || finalizado
-              ? '✅ Proposta aprovada — obrigado!'
+              ? '✅ Proposta aprovada'
               : '❌ Proposta recusada'}
           </div>
         )}
 
         {/* BOTÕES */}
-        {(orcamento.status === 'pendente' || !orcamento.status) && !finalizado && (
+        {!orcamento.status && !finalizado && (
           <div style={acoes}>
 
             <button style={btnAprovar} onClick={aprovar}>

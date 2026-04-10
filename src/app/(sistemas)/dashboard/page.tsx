@@ -35,7 +35,7 @@ export default function Dashboard() {
         supabase.from('obras').select('*').eq('empresa_id', empresaId),
         supabase.from('orcamentos').select('*').eq('empresa_id', empresaId)
           .in('status', ['aprovado', 'recusado'])
-          .order('updated_at', { ascending: false })
+          .order('aprovado_em', { ascending: false })
           .limit(20),
       ])
       if (errFin)   throw errFin
@@ -49,8 +49,7 @@ export default function Dashboard() {
       const lidas = JSON.parse(localStorage.getItem('notif_lidas') || '[]')
       const novas = (orcData || []).filter(o =>
         !lidas.includes(o.id) &&
-        o.updated_at &&
-        new Date(o.updated_at) > seteDiasAtras
+        (o.aprovado_em || o.status === 'recusado')
       )
       setNotificacoes(novas)
     } catch (err) {
@@ -142,9 +141,9 @@ export default function Dashboard() {
                     <strong>{n.cliente_nome}</strong> —{' '}
                     {Number(n.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </p>
-                  {n.updated_at && (
+                  {n.aprovado_em && (
                     <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                      {new Date(n.updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(n.aprovado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
                 </div>
