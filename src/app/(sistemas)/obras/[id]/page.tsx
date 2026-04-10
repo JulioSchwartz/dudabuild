@@ -55,11 +55,21 @@ export default function DetalheObra() {
   // Etapas da obra
   const [etapas,          setEtapas]          = useState<any[]>([])
   const [salvandoEtapa,   setSalvandoEtapa]   = useState<string | null>(null)
-  const [novaEtapaNome,   setNovaEtapaNome]   = useState('')
-  const [novaEtapaPeso,   setNovaEtapaPeso]   = useState('20')
-  const [novaEtapaData,   setNovaEtapaData]   = useState('')
+  const [novaEtapaNome,    setNovaEtapaNome]    = useState('')
+  const [novaEtapaPeso,    setNovaEtapaPeso]    = useState('20')
+  const [novaEtapaData,    setNovaEtapaData]    = useState('')
+  const [novaEtapaInicio,  setNovaEtapaInicio]  = useState('')
   const [mostrarFormEtapa, setMostrarFormEtapa] = useState(false)
   const [adicionandoEtapa, setAdicionandoEtapa] = useState(false)
+
+  // Medições por etapa
+  const [medicoes,        setMedicoes]        = useState<Record<string, any[]>>({})
+  const [etapaExpandida,  setEtapaExpandida]  = useState<string | null>(null)
+  const [formMedicao,     setFormMedicao]     = useState<string | null>(null) // etapa_id com form aberto
+  const [medData,         setMedData]         = useState(new Date().toISOString().split('T')[0])
+  const [medDescricao,    setMedDescricao]    = useState('')
+  const [medPercentual,   setMedPercentual]   = useState('')
+  const [salvandoMedicao, setSalvandoMedicao] = useState(false)
 
   useEffect(() => {
     if (loadingEmpresa) return
@@ -71,16 +81,25 @@ export default function DetalheObra() {
   async function carregar() {
     try {
       setLoadingData(true)
-      const [{ data: obraData }, { data: finData }, { data: diarioData }, { data: etapasData }] = await Promise.all([
+      const [{ data: obraData }, { data: finData }, { data: diarioData }, { data: etapasData }, { data: medicoesData }] = await Promise.all([
         supabase.from('obras').select('*').eq('id', Number(id)).eq('empresa_id', empresaId).maybeSingle(),
         supabase.from('financeiro').select('*').eq('obra_id', Number(id)).eq('empresa_id', empresaId).order('created_at', { ascending: false }),
         supabase.from('diario_obra').select('*').eq('obra_id', Number(id)).eq('empresa_id', empresaId).order('data', { ascending: false }),
         supabase.from('obra_etapas').select('*').eq('obra_id', Number(id)).eq('empresa_id', empresaId).order('ordem', { ascending: true }),
+        supabase.from('etapa_medicoes').select('*').eq('obra_id', Number(id)).eq('empresa_id', empresaId).order('data', { ascending: true }),
       ])
       setObra(obraData)
       setFinanceiro(finData || [])
       setDiarios(diarioData || [])
       setEtapas(etapasData || [])
+
+      // Agrupa medições por etapa_id
+      const medPorEtapa: Record<string, any[]> = {}
+      ;(medicoesData || []).forEach((m: any) => {
+        if (!medPorEtapa[m.etapa_id]) medPorEtapa[m.etapa_id] = []
+        medPorEtapa[m.etapa_id].push(m)
+      })
+      setMedicoes(medPorEtapa)
     } catch (err) {
       console.error(err)
     } finally {
@@ -159,22 +178,23 @@ export default function DetalheObra() {
     setAdicionandoEtapa(true)
     try {
       const { error } = await supabase.from('obra_etapas').insert({
-        obra_id:      Number(id),
-        empresa_id:   empresaId,
-        nome:         novaEtapaNome.trim(),
-        peso:         Number(novaEtapaPeso || 20),
-        percentual:   0,
-        data_prevista: novaEtapaData || null,
-        status:       'aguardando',
-        ordem:        etapas.length,
+        obra_id:       Number(id),
+        empresa_id:    empresaId,
+        nome:          novaEtapaNome.trim(),
+        peso:          Number(novaEtapaPeso || 20),
+        percentual:    0,
+        data_prevista: novaEtapaData   || null,
+        data_inicio:   novaEtapaInicio || null,
+        status:        'aguardando',
+        ordem:         etapas.length,
       })
       if (error) throw error
       setNovaEtapaNome('')
       setNovaEtapaPeso('20')
       setNovaEtapaData('')
+      setNovaEtapaInicio('')
       setMostrarFormEtapa(false)
       await carregar()
-      await recalcularProgresso()
     } catch (err) {
       alert('Erro ao adicionar etapa')
     } finally {
@@ -183,28 +203,71 @@ export default function DetalheObra() {
   }
 
   async function atualizarEtapa(etapaId: string, campo: string, valor: any) {
-    setSalvandoEtapa(etapaId)
-    try {
-      const updates: any = { [campo]: valor }
-      if (campo === 'percentual' && Number(valor) === 100) {
-        updates.status = 'concluida'
-        updates.data_conclusao = new Date().toISOString().split('T')[0]
-      } else if (campo === 'percentual' && Number(valor) > 0) {
-        updates.status = 'em_andamento'
-      } else if (campo === 'percentual' && Number(valor) === 0) {
-        updates.status = 'aguardando'
-      }
-      await supabase.from('obra_etapas').update(updates).eq('id', etapaId)
-      await carregar()
-      await recalcularProgresso()
-    } finally {
-      setSalvandoEtapa(null)
-    }
+    await supabase.from('obra_etapas').update({ [campo]: valor }).eq('id', etapaId)
+    await carregar()
+    await recalcularProgresso()
   }
 
   async function excluirEtapa(etapaId: string) {
-    if (!confirm('Excluir esta etapa?')) return
+    if (!confirm('Excluir esta etapa e todas as suas medições?')) return
+    await supabase.from('etapa_medicoes').delete().eq('etapa_id', etapaId)
     await supabase.from('obra_etapas').delete().eq('id', etapaId)
+    await carregar()
+    await recalcularProgresso()
+  }
+
+  async function adicionarMedicao(etapaId: string) {
+    if (!medDescricao.trim())  return alert('Descreva o serviço realizado')
+    if (!medPercentual || Number(medPercentual) <= 0) return alert('Informe o % desta medição')
+
+    // Verifica se não vai ultrapassar 100%
+    const medEtapa = medicoes[etapaId] || []
+    const totalAtual = medEtapa.reduce((a: number, m: any) => a + Number(m.percentual), 0)
+    if (totalAtual + Number(medPercentual) > 100) {
+      return alert(`Essa medição ultrapassaria 100%. A etapa já tem ${totalAtual}% registrado.`)
+    }
+
+    setSalvandoMedicao(true)
+    try {
+      const { error } = await supabase.from('etapa_medicoes').insert({
+        etapa_id:   etapaId,
+        obra_id:    Number(id),
+        empresa_id: empresaId,
+        data:       medData,
+        descricao:  medDescricao.trim(),
+        percentual: Number(medPercentual),
+      })
+      if (error) throw error
+
+      // Recalcula % da etapa somando medições
+      const novoTotal = totalAtual + Number(medPercentual)
+      const novoStatus = novoTotal >= 100 ? 'concluida'
+        : novoTotal > 0 ? 'em_andamento' : 'aguardando'
+      const updates: any = { percentual: Math.min(novoTotal, 100), status: novoStatus }
+      if (novoStatus === 'concluida') updates.data_conclusao = medData
+      await supabase.from('obra_etapas').update(updates).eq('id', etapaId)
+
+      setMedDescricao('')
+      setMedPercentual('')
+      setMedData(new Date().toISOString().split('T')[0])
+      setFormMedicao(null)
+      await carregar()
+      await recalcularProgresso()
+    } catch (err) {
+      alert('Erro ao salvar medição')
+    } finally {
+      setSalvandoMedicao(false)
+    }
+  }
+
+  async function excluirMedicao(medicaoId: string, etapaId: string) {
+    if (!confirm('Excluir esta medição?')) return
+    await supabase.from('etapa_medicoes').delete().eq('id', medicaoId)
+    // Recalcula % da etapa
+    const { data: meds } = await supabase.from('etapa_medicoes').select('percentual').eq('etapa_id', etapaId)
+    const novoTotal = (meds || []).reduce((a: number, m: any) => a + Number(m.percentual), 0)
+    const novoStatus = novoTotal >= 100 ? 'concluida' : novoTotal > 0 ? 'em_andamento' : 'aguardando'
+    await supabase.from('obra_etapas').update({ percentual: novoTotal, status: novoStatus, data_conclusao: novoTotal >= 100 ? new Date().toISOString().split('T')[0] : null }).eq('id', etapaId)
     await carregar()
     await recalcularProgresso()
   }
@@ -330,7 +393,7 @@ export default function DetalheObra() {
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>📋 Cronograma Físico</h3>
             <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-              Etapas personalizáveis · % global calculado automaticamente
+              Medições por etapa · % global calculado automaticamente pela média ponderada
             </p>
           </div>
           <button onClick={() => setMostrarFormEtapa(!mostrarFormEtapa)} style={btnNovoDiario}>
@@ -341,7 +404,7 @@ export default function DetalheObra() {
         {/* FORM NOVA ETAPA */}
         {mostrarFormEtapa && (
           <div style={{ ...formDiario, marginBottom: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12 }}>
               <div style={formGrupoD}>
                 <label style={labelSt}>Nome da Etapa *</label>
                 <input value={novaEtapaNome} onChange={e => setNovaEtapaNome(e.target.value)}
@@ -353,7 +416,11 @@ export default function DetalheObra() {
                   placeholder="20" style={inputSt} min="1" max="100" />
               </div>
               <div style={formGrupoD}>
-                <label style={labelSt}>Data Prevista</label>
+                <label style={labelSt}>Data Início</label>
+                <input type="date" value={novaEtapaInicio} onChange={e => setNovaEtapaInicio(e.target.value)} style={inputSt} />
+              </div>
+              <div style={formGrupoD}>
+                <label style={labelSt}>Previsão Término</label>
                 <input type="date" value={novaEtapaData} onChange={e => setNovaEtapaData(e.target.value)} style={inputSt} />
               </div>
             </div>
@@ -421,65 +488,152 @@ export default function DetalheObra() {
           </p>
         )}
 
-        {etapas.map((etapa, i) => {
+        {etapas.map((etapa) => {
           const corStatus = etapa.status === 'concluida' ? '#16a34a'
             : etapa.status === 'em_andamento' ? '#f59e0b'
             : etapa.status === 'atrasada' ? '#dc2626' : '#94a3b8'
           const hoje2 = new Date()
           const prevista = etapa.data_prevista ? new Date(etapa.data_prevista + 'T12:00:00') : null
           const atrasadaEtapa = prevista && prevista < hoje2 && etapa.percentual < 100
+          const medEtapa = medicoes[etapa.id] || []
+          const totalMed = medEtapa.reduce((a: number, m: any) => a + Number(m.percentual), 0)
+          const expandida = etapaExpandida === etapa.id
 
           return (
-            <div key={etapa.id} style={{ ...diarioItem, borderLeft: `4px solid ${corStatus}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+            <div key={etapa.id} style={{ ...diarioItem, borderLeft: `4px solid ${corStatus}`, marginBottom: 12 }}>
+
+              {/* CABEÇALHO DA ETAPA */}
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }}
+                onClick={() => setEtapaExpandida(expandida ? null : etapa.id)}
+              >
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <p style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{etapa.nome}</p>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
-                      background: corStatus + '20', color: corStatus }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: corStatus + '20', color: corStatus }}>
                       {etapa.status === 'concluida' ? '✅ Concluída'
                         : etapa.status === 'em_andamento' ? '🔄 Em andamento'
                         : atrasadaEtapa ? '⚠️ Atrasada' : '⏳ Aguardando'}
                     </span>
                     <span style={{ fontSize: 11, color: '#94a3b8' }}>Peso: {etapa.peso}%</span>
+                    <span style={{ fontSize: 11, color: '#64748b' }}>{medEtapa.length} medição(ões)</span>
                   </div>
-                  {etapa.data_prevista && (
-                    <p style={{ fontSize: 12, color: atrasadaEtapa ? '#dc2626' : '#64748b', marginTop: 2 }}>
-                      {atrasadaEtapa ? '⚠️ ' : ''}Previsto: {new Date(etapa.data_prevista + 'T12:00:00').toLocaleDateString('pt-BR')}
-                      {etapa.data_conclusao && ` · Concluído: ${new Date(etapa.data_conclusao + 'T12:00:00').toLocaleDateString('pt-BR')}`}
-                    </p>
-                  )}
+                  <div style={{ display: 'flex', gap: 16, marginTop: 4, fontSize: 12, color: '#64748b' }}>
+                    {etapa.data_inicio && <span>Início: {new Date(etapa.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR')}</span>}
+                    {etapa.data_prevista && (
+                      <span style={{ color: atrasadaEtapa ? '#dc2626' : '#64748b' }}>
+                        {atrasadaEtapa ? '⚠️ ' : ''}Previsto: {new Date(etapa.data_prevista + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
+                    {etapa.data_conclusao && <span style={{ color: '#16a34a' }}>✅ Concluído: {new Date(etapa.data_conclusao + 'T12:00:00').toLocaleDateString('pt-BR')}</span>}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 20, fontWeight: 900, color: corStatus }}>{etapa.percentual}%</span>
-                  <button onClick={() => excluirEtapa(etapa.id)} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 24, fontWeight: 900, color: corStatus }}>{etapa.percentual}%</span>
+                  <span style={{ color: '#94a3b8', fontSize: 12 }}>{expandida ? '▲' : '▼'}</span>
+                  <button onClick={e => { e.stopPropagation(); excluirEtapa(etapa.id) }}
+                    style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 14 }}>✕</button>
                 </div>
               </div>
 
-              {/* SLIDER */}
-              <input
-                type="range" min="0" max="100" step="5"
-                value={etapa.percentual}
-                onChange={e => atualizarEtapa(etapa.id, 'percentual', Number(e.target.value))}
-                style={{ width: '100%', accentColor: corStatus, cursor: 'pointer' }}
-                disabled={salvandoEtapa === etapa.id}
-              />
-              <div style={{ height: 6, background: '#e2e8f0', borderRadius: 999, marginTop: 4, overflow: 'hidden' }}>
+              {/* BARRA DE PROGRESSO */}
+              <div style={{ height: 8, background: '#e2e8f0', borderRadius: 999, marginTop: 10, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${etapa.percentual}%`, background: corStatus, borderRadius: 999, transition: 'width 0.3s' }} />
               </div>
 
-              {/* DATA PREVISTA INLINE */}
-              <div style={{ display: 'flex', gap: 12, marginTop: 10, alignItems: 'center' }}>
-                <label style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Data prevista:</label>
-                <input type="date"
-                  value={etapa.data_prevista || ''}
-                  onChange={e => atualizarEtapa(etapa.id, 'data_prevista', e.target.value || null)}
-                  style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc' }}
-                />
-                {etapa.observacoes && (
-                  <p style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic' }}>{etapa.observacoes}</p>
-                )}
-              </div>
+              {/* EXPANDIDO — MEDIÇÕES */}
+              {expandida && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
+
+                  {/* DATAS DA ETAPA */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                    <div>
+                      <label style={{ fontSize: 11, color: '#64748b', fontWeight: 600, display: 'block', marginBottom: 4 }}>Data de Início</label>
+                      <input type="date" value={etapa.data_inicio || ''}
+                        onChange={e => atualizarEtapa(etapa.id, 'data_inicio', e.target.value || null)}
+                        style={{ fontSize: 13, padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', width: '100%' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: '#64748b', fontWeight: 600, display: 'block', marginBottom: 4 }}>Previsão de Término</label>
+                      <input type="date" value={etapa.data_prevista || ''}
+                        onChange={e => atualizarEtapa(etapa.id, 'data_prevista', e.target.value || null)}
+                        style={{ fontSize: 13, padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', width: '100%' }} />
+                    </div>
+                  </div>
+
+                  {/* LISTA DE MEDIÇÕES */}
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>
+                    Medições ({medEtapa.length}) · Total: {totalMed}% de 100%
+                  </p>
+
+                  {medEtapa.length === 0 && (
+                    <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>Nenhuma medição lançada ainda.</p>
+                  )}
+
+                  {medEtapa.map((m: any) => (
+                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: 8, marginBottom: 6, border: '1px solid #e2e8f0' }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{m.descricao}</p>
+                        <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                          {new Date(m.data + 'T12:00:00').toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>+{m.percentual}%</span>
+                        <button onClick={() => excluirMedicao(m.id, etapa.id)}
+                          style={{ background: 'transparent', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* FORM NOVA MEDIÇÃO */}
+                  {formMedicao === etapa.id
+                    ? (
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 14, marginTop: 8 }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 10 }}>
+                          Nova Medição · Disponível: {100 - totalMed}%
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                          <div>
+                            <label style={{ fontSize: 11, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 4 }}>Data *</label>
+                            <input type="date" value={medData} onChange={e => setMedData(e.target.value)}
+                              style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', width: '100%' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 11, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 4 }}>% desta medição *</label>
+                            <input type="number" value={medPercentual} onChange={e => setMedPercentual(e.target.value)}
+                              placeholder={`Máx: ${100 - totalMed}%`}
+                              min="1" max={100 - totalMed} step="1"
+                              style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', width: '100%' }} />
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: 10 }}>
+                          <label style={{ fontSize: 11, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 4 }}>Descrição do serviço realizado *</label>
+                          <input value={medDescricao} onChange={e => setMedDescricao(e.target.value)}
+                            placeholder="Ex: Escavação e forma das sapatas concluída"
+                            style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', width: '100%' }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => adicionarMedicao(etapa.id)} disabled={salvandoMedicao}
+                            style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+                            {salvandoMedicao ? 'Salvando...' : '✓ Registrar Medição'}
+                          </button>
+                          <button onClick={() => { setFormMedicao(null); setMedDescricao(''); setMedPercentual('') }}
+                            style={{ background: '#f1f5f9', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )
+                    : totalMed < 100 && (
+                      <button onClick={() => { setFormMedicao(etapa.id); setMedDescricao(''); setMedPercentual('') }}
+                        style={{ background: '#f0fdf4', color: '#16a34a', border: '1px dashed #86efac', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, marginTop: 8 }}>
+                        + Lançar Medição ({100 - totalMed}% disponível)
+                      </button>
+                    )
+                  }
+                </div>
+              )}
             </div>
           )
         })}
