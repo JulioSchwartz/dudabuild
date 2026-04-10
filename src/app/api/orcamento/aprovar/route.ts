@@ -72,18 +72,6 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', orcamento_id)
 
-    // Lança entrada financeira
-    await supabaseAdmin
-      .from('financeiro')
-      .insert({
-        obra_id:    obra.id,
-        empresa_id: orc.empresa_id,
-        tipo:       'entrada',
-        descricao:  'Proposta aprovada pelo cliente',
-        valor:      totalGeral,
-        created_at: new Date().toISOString(),
-      })
-
     return NextResponse.json({ success: true, obra_id: obra.id })
 
   } catch (err) {

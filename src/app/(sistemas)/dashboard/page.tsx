@@ -44,11 +44,9 @@ export default function Dashboard() {
       setObras(obrasData || [])
 
       // Filtra notificações não lidas (últimas 7 dias)
-      const seteDiasAtras = new Date()
-      seteDiasAtras.setDate(seteDiasAtras.getDate() - 7)
-      const lidas = JSON.parse(localStorage.getItem('notif_lidas') || '[]')
+      const lidas: string[] = JSON.parse(localStorage.getItem('dudabuild_notif_lidas') || '[]')
       const novas = (orcData || []).filter(o =>
-        !lidas.includes(o.id) &&
+        !lidas.includes(String(o.id)) &&
         (o.aprovado_em || o.status === 'recusado')
       )
       setNotificacoes(novas)
@@ -60,16 +58,16 @@ export default function Dashboard() {
   }
 
   function marcarLida(id: string) {
-    const lidas = JSON.parse(localStorage.getItem('notif_lidas') || '[]')
-    lidas.push(id)
-    localStorage.setItem('notif_lidas', JSON.stringify(lidas))
-    setNotificacoes(prev => prev.filter(n => n.id !== id))
+    const lidas: string[] = JSON.parse(localStorage.getItem('dudabuild_notif_lidas') || '[]')
+    if (!lidas.includes(String(id))) lidas.push(String(id))
+    localStorage.setItem('dudabuild_notif_lidas', JSON.stringify(lidas))
+    setNotificacoes(prev => prev.filter(n => String(n.id) !== String(id)))
   }
 
   function marcarTodasLidas() {
-    const lidas = JSON.parse(localStorage.getItem('notif_lidas') || '[]')
-    notificacoes.forEach(n => lidas.push(n.id))
-    localStorage.setItem('notif_lidas', JSON.stringify(lidas))
+    const lidas: string[] = JSON.parse(localStorage.getItem('dudabuild_notif_lidas') || '[]')
+    notificacoes.forEach(n => { if (!lidas.includes(String(n.id))) lidas.push(String(n.id)) })
+    localStorage.setItem('dudabuild_notif_lidas', JSON.stringify(lidas))
     setNotificacoes([])
   }
 
