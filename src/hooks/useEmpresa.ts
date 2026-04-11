@@ -1,22 +1,22 @@
 'use client'
- 
+
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
- 
+
 export type PlanoTipo  = 'basico' | 'pro' | 'premium'
 export type StatusTipo = 'active' | 'past_due' | 'canceled' | 'incomplete'
- 
+
 type Limites = {
   orcamentos: number
   obras: number
 }
- 
+
 const LIMITES_POR_PLANO: Record<PlanoTipo, Limites> = {
   basico:  { orcamentos: 5,        obras: 2        },
   pro:     { orcamentos: 10,       obras: 5        },
   premium: { orcamentos: Infinity, obras: Infinity },
 }
- 
+
 export function useEmpresa() {
   const [empresaId,   setEmpresaId]   = useState<string | null>(null)
   const [plano,       setPlano]       = useState<PlanoTipo>('basico')
@@ -26,81 +26,82 @@ export function useEmpresa() {
   const [nomeEmpresa, setNomeEmpresa] = useState('')
   const [loading,     setLoading]     = useState(true)
   const [bloqueado,   setBloqueado]   = useState(false)
- 
+
   useEffect(() => {
     let mounted = true
- 
+
     carregar(mounted)
- 
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
         if (session) {
           carregar(mounted)
         } else {
-          limparEstado()
+          // Ao fazer logout, limpa estado mas NÃO bloqueia
+          // O redirecionamento fica a cargo da página de login
+          limparEstado(false)
           setLoading(false)
         }
       }
     })
- 
+
     return () => {
       mounted = false
       listener.subscription.unsubscribe()
     }
   }, [])
- 
+
   async function carregar(mounted = true) {
     try {
       setLoading(true)
- 
-      // 1️⃣ Verifica sessão ativa
+
       const { data: { session } } = await supabase.auth.getSession()
- 
+
       if (!session) {
-        if (mounted) limparEstado()
+        if (mounted) limparEstado(false)
         return
       }
- 
-      // 2️⃣ Usa RPC com SECURITY DEFINER — ignora RLS, sempre funciona
+
       const { data, error } = await supabase.rpc('get_dados_empresa')
- 
+
       if (error || !data) {
         console.error('Erro RPC get_dados_empresa:', error)
-        if (mounted) limparEstado()
+        if (mounted) limparEstado(false)
         return
       }
- 
+
       if (!mounted) return
- 
+
       const planoAtual  = (data.plano  || 'basico')     as PlanoTipo
       const statusAtual = (data.status || 'incomplete') as StatusTipo
- 
+
       setEmpresaId(data.empresa_id)
       setPlano(planoAtual)
       setStatus(statusAtual)
       setLimites(LIMITES_POR_PLANO[planoAtual] ?? LIMITES_POR_PLANO.basico)
       setNomeUsuario(data.nome_usuario || session.user.email || 'Usuário')
       setNomeEmpresa(data.nome_empresa || 'Minha Empresa')
-      // Bloqueia apenas se cancelado ou inadimplente — 'incomplete' é trial/novo usuário
+      // Bloqueia apenas se cancelado ou inadimplente
       setBloqueado(statusAtual === 'canceled' || statusAtual === 'past_due')
- 
+
     } catch (err) {
       console.error('Erro ao carregar empresa:', err)
     } finally {
       if (mounted) setLoading(false)
     }
   }
- 
-  function limparEstado() {
+
+  // bloqueiarAoSair = false quando é logout (não mostrar tela de bloqueado)
+  function limparEstado(bloquear = false) {
     setEmpresaId(null)
     setPlano('basico')
     setStatus('incomplete')
-    setBloqueado(true)
+    setBloqueado(bloquear)
     setLimites(LIMITES_POR_PLANO.basico)
     setNomeUsuario('')
     setNomeEmpresa('')
   }
- 
+
   return {
     empresaId,
     plano,

@@ -10,10 +10,10 @@ export default function Dashboard() {
   const { empresaId, bloqueado, loading } = useEmpresa()
   const router = useRouter()
 
-  const [dados,         setDados]         = useState<any[]>([])
-  const [obras,         setObras]         = useState<any[]>([])
-  const [notificacoes,  setNotificacoes]  = useState<any[]>([])
-  const [loadingData,   setLoadingData]   = useState(true)
+  const [dados,        setDados]        = useState<any[]>([])
+  const [obras,        setObras]        = useState<any[]>([])
+  const [notificacoes, setNotificacoes] = useState<any[]>([])
+  const [loadingData,  setLoadingData]  = useState(true)
 
   useEffect(() => {
     if (!loading && bloqueado) router.push('/bloqueado')
@@ -30,6 +30,7 @@ export default function Dashboard() {
         { data: finData,   error: errFin },
         { data: obrasData, error: errObras },
         { data: orcData,   error: errOrc },
+        { data: lidasData },
       ] = await Promise.all([
         supabase.from('financeiro').select('*').eq('empresa_id', empresaId),
         supabase.from('obras').select('*').eq('empresa_id', empresaId),
@@ -37,19 +38,22 @@ export default function Dashboard() {
           .in('status', ['aprovado', 'recusado'])
           .order('aprovado_em', { ascending: false })
           .limit(20),
+        supabase.from('notificacoes_lidas').select('orcamento_id').eq('empresa_id', empresaId),
       ])
+
       if (errFin)   throw errFin
       if (errObras) throw errObras
+
       setDados(finData   || [])
       setObras(obrasData || [])
 
-      // Filtra notificações não lidas (últimas 7 dias)
-      const lidas: string[] = JSON.parse(localStorage.getItem('dudabuild_notif_lidas') || '[]')
+      // Filtra notificações não lidas usando banco
+      const lidasIds = new Set((lidasData || []).map((l: any) => l.orcamento_id))
       const novas = (orcData || []).filter(o =>
-        !lidas.includes(String(o.id)) &&
-        (o.aprovado_em || o.status === 'recusado')
+        !lidasIds.has(o.id) && (o.aprovado_em || o.status === 'recusado')
       )
       setNotificacoes(novas)
+
     } catch (err) {
       console.error('Erro dashboard:', err)
     } finally {
@@ -57,17 +61,20 @@ export default function Dashboard() {
     }
   }
 
-  function marcarLida(id: string) {
-    const lidas: string[] = JSON.parse(localStorage.getItem('dudabuild_notif_lidas') || '[]')
-    if (!lidas.includes(String(id))) lidas.push(String(id))
-    localStorage.setItem('dudabuild_notif_lidas', JSON.stringify(lidas))
-    setNotificacoes(prev => prev.filter(n => String(n.id) !== String(id)))
+  async function marcarLida(id: string) {
+    await supabase.from('notificacoes_lidas').upsert({
+      empresa_id: empresaId,
+      orcamento_id: id,
+    }, { onConflict: 'empresa_id,orcamento_id' })
+    setNotificacoes(prev => prev.filter(n => n.id !== id))
   }
 
-  function marcarTodasLidas() {
-    const lidas: string[] = JSON.parse(localStorage.getItem('dudabuild_notif_lidas') || '[]')
-    notificacoes.forEach(n => { if (!lidas.includes(String(n.id))) lidas.push(String(n.id)) })
-    localStorage.setItem('dudabuild_notif_lidas', JSON.stringify(lidas))
+  async function marcarTodasLidas() {
+    const rows = notificacoes.map(n => ({
+      empresa_id: empresaId,
+      orcamento_id: n.id,
+    }))
+    await supabase.from('notificacoes_lidas').upsert(rows, { onConflict: 'empresa_id,orcamento_id' })
     setNotificacoes([])
   }
 
@@ -98,12 +105,12 @@ export default function Dashboard() {
       ? (porObra[key].lucro / porObra[key].receita) * 100 : 0
   })
 
-  const listaObras       = Object.entries(porObra)
-  const topLucro         = [...listaObras].sort((a: any, b: any) => b[1].lucro - a[1].lucro).slice(0, 3)
-  const topCusto         = [...listaObras].sort((a: any, b: any) => b[1].custo - a[1].custo).slice(0, 3)
-  const obrasNegativas   = listaObras.filter(([, d]: any) => d.lucro < 0)
-  const obrasBaixaMargem = listaObras.filter(([, d]: any) => d.margem < 10 && d.margem >= 0 && d.receita > 0)
-  const obrasIds         = new Set(Object.keys(porObra))
+  const listaObras         = Object.entries(porObra)
+  const topLucro           = [...listaObras].sort((a: any, b: any) => b[1].lucro - a[1].lucro).slice(0, 3)
+  const topCusto           = [...listaObras].sort((a: any, b: any) => b[1].custo - a[1].custo).slice(0, 3)
+  const obrasNegativas     = listaObras.filter(([, d]: any) => d.lucro < 0)
+  const obrasBaixaMargem   = listaObras.filter(([, d]: any) => d.margem < 10 && d.margem >= 0 && d.receita > 0)
+  const obrasIds           = new Set(Object.keys(porObra))
   const obrasSemLancamento = obras.filter(o => !obrasIds.has(String(o.id)))
 
   return (
@@ -162,15 +169,13 @@ export default function Dashboard() {
 
       {/* CABEÇALHO */}
       <div style={cabecalho}>
-        <div>
-          <h1 style={titulo}>Dashboard Executivo</h1>
-          <p style={subtitulo}>Visão geral da operação</p>
-        </div>
+        <h1 style={titulo}>Dashboard Executivo</h1>
+        <p style={subtitulo}>Visão geral da operação</p>
         <div style={kpiRow}>
-          <KPI label="Receita Total" valor={format(receita)} cor="#16a34a" />
-          <KPI label="Lucro Total"   valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} />
-          <KPI label="Margem Geral"  valor={margem.toFixed(1) + '%'} cor="#a855f7" />
-          <KPI label="Obras Ativas"  valor={String(obras.filter(o => o.status !== 'concluida').length)} cor="#0ea5e9" />
+          <KPI label="Receita Total"  valor={format(receita)} cor="#16a34a" />
+          <KPI label="Lucro Total"    valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} />
+          <KPI label="Margem Geral"   valor={`${margem.toFixed(1)}%`} cor="#7c3aed" />
+          <KPI label="Obras Ativas"   valor={String(obras.filter(o => o.status !== 'concluida').length)} cor="#0ea5e9" />
         </div>
       </div>
 
@@ -316,9 +321,9 @@ const obraLinha: React.CSSProperties    = { display: 'flex', justifyContent: 'sp
 const btnVer: React.CSSProperties       = { background: 'transparent', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 12px', fontSize: 13, cursor: 'pointer', color: '#2563eb' }
 
 // Notificações
-const notifBox: React.CSSProperties     = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 24, border: '1px solid #e2e8f0' }
-const notifIcone: React.CSSProperties   = { fontSize: 20 }
-const notifBadge: React.CSSProperties   = { background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999 }
+const notifBox: React.CSSProperties      = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 24, border: '1px solid #e2e8f0' }
+const notifIcone: React.CSSProperties    = { fontSize: 20 }
+const notifBadge: React.CSSProperties    = { background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999 }
 const notifItem = (status: string): React.CSSProperties => ({
   display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
   padding: '12px 14px', borderRadius: 10, marginBottom: 8,
@@ -330,5 +335,5 @@ const btnVerOrc = (status: string): React.CSSProperties => ({
   color: '#fff', border: 'none', padding: '6px 12px',
   borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap'
 })
-const btnFecharNotif: React.CSSProperties = { background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 16, padding: '2px 6px' }
-const btnMarcarTodas: React.CSSProperties = { background: 'transparent', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer', color: '#64748b' }
+const btnFecharNotif: React.CSSProperties  = { background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 16, padding: '2px 6px' }
+const btnMarcarTodas: React.CSSProperties  = { background: 'transparent', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer', color: '#64748b' }
