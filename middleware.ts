@@ -6,6 +6,7 @@ const ROTAS_PUBLICAS = [
   '/login',
   '/cadastro',
   '/recuperar-senha',
+  '/nova-senha',
   '/obra-publica',
   '/orcamento-publico',
   '/api/',
@@ -37,11 +38,12 @@ export function middleware(req: NextRequest) {
   if (!ehProtegida) return NextResponse.next()
 
   // Verifica cookie de sessão do Supabase
-  const token = req.cookies.get('sb-access-token')?.value
-    || req.cookies.get('sb-cpyvksnsfihybemvxvap-auth-token')?.value
-    || getCookieByPattern(req, 'sb-')
+  // O Supabase moderno salva em chunks: sb-<project>-auth-token.0, .1, etc.
+  const temSessao = Array.from(req.cookies.getAll()).some(cookie =>
+    cookie.name.startsWith('sb-') && cookie.name.includes('auth-token')
+  )
 
-  if (!token) {
+  if (!temSessao) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('next', pathname)
@@ -55,15 +57,6 @@ export function middleware(req: NextRequest) {
   }
 
   return NextResponse.next()
-}
-
-function getCookieByPattern(req: NextRequest, pattern: string): string | undefined {
-  for (const [key, cookie] of req.cookies) {
-    if (key.startsWith(pattern) && key.includes('auth-token')) {
-      return cookie
-    }
-  }
-  return undefined
 }
 
 export const config = {
