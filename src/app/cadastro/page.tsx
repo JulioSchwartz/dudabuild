@@ -7,9 +7,11 @@ import { useRouter } from 'next/navigation'
 export default function Cadastro() {
   const router = useRouter()
  
-  const [nomeEmpresa, setNomeEmpresa] = useState('')
+  const [nomeEmpresa,  setNomeEmpresa]  = useState('')
+  const [nomeUsuario,  setNomeUsuario]  = useState('')
   const [email,       setEmail]       = useState('')
   const [senha,       setSenha]       = useState('')
+  const [confirmSenha, setConfirmSenha] = useState('')
   const [loading,     setLoading]     = useState(false)
   const [erro,        setErro]        = useState('')
  
@@ -23,6 +25,10 @@ export default function Cadastro() {
     }
     if (senha.length < 6) {
       setErro('A senha deve ter no mínimo 6 caracteres')
+      return
+    }
+    if (senha !== confirmSenha) {
+      setErro('As senhas não coincidem')
       return
     }
  
@@ -56,7 +62,7 @@ export default function Cadastro() {
  
       if (erroUsuario) { setErro('Erro ao vincular usuário.'); return }
  
-      router.push('/planos')
+      router.push('/dashboard')
  
     } catch (err) {
       console.error(err)
@@ -75,6 +81,10 @@ export default function Cadastro() {
         </div>
  
         <form onSubmit={cadastrar}>
+          <label style={label}>Seu Nome *</label>
+          <input placeholder="Ex: João Silva" value={nomeUsuario}
+            onChange={e => setNomeUsuario(e.target.value)} style={input} />
+
           <label style={label}>Nome da Empresa</label>
           <input placeholder="Ex: Construtora Silva" value={nomeEmpresa}
             onChange={e => setNomeEmpresa(e.target.value)} style={input} />
@@ -86,11 +96,18 @@ export default function Cadastro() {
           <label style={label}>Senha * (mín. 6 caracteres)</label>
           <input type="password" placeholder="••••••••" value={senha}
             onChange={e => setSenha(e.target.value)} minLength={6} required style={input} />
- 
+
+          <label style={label}>Confirmar Senha *</label>
+          <input type="password" placeholder="••••••••" value={confirmSenha}
+            onChange={e => setConfirmSenha(e.target.value)} required style={input} />
+
           {erro && <p style={erroStyle}>{erro}</p>}
  
+          <p style={{ fontSize: 11, color: '#475569', textAlign: 'center', marginTop: 14, lineHeight: 1.5 }}>
+            Ao criar sua conta você terá acesso gratuito. A cobrança só começa ao assinar um plano.
+          </p>
           <button type="submit" style={botao} disabled={loading}>
-            {loading ? 'Criando conta...' : 'Criar conta'}
+            {loading ? 'Criando conta...' : '🚀 Criar conta grátis'}
           </button>
         </form>
  

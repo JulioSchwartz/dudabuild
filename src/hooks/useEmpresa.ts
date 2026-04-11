@@ -81,7 +81,8 @@ export function useEmpresa() {
       setLimites(LIMITES_POR_PLANO[planoAtual] ?? LIMITES_POR_PLANO.basico)
       setNomeUsuario(data.nome_usuario || session.user.email || 'Usuário')
       setNomeEmpresa(data.nome_empresa || 'Minha Empresa')
-      setBloqueado(statusAtual !== 'active')
+      // Bloqueia apenas se cancelado ou inadimplente — 'incomplete' é trial/novo usuário
+      setBloqueado(statusAtual === 'canceled' || statusAtual === 'past_due')
  
     } catch (err) {
       console.error('Erro ao carregar empresa:', err)

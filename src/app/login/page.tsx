@@ -86,8 +86,14 @@ export default function Login() {
             </span>
           </div>
  
+          <div style={{ textAlign: 'right', marginTop: 6 }}>
+            <span onClick={() => router.push('/recuperar-senha')} style={linkEsqueci}>
+              Esqueci minha senha
+            </span>
+          </div>
+
           {erro && <p style={erroStyle}>{erro}</p>}
- 
+
           <button type="submit" style={botao} disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
@@ -143,4 +149,5 @@ const botao: React.CSSProperties = {
 const linkCadastro: React.CSSProperties = {
   textAlign: 'center', marginTop: 18, fontSize: 13, color: '#64748b',
 }
-const link: React.CSSProperties = { color: '#38bdf8', cursor: 'pointer' }
+const link: React.CSSProperties        = { color: '#38bdf8', cursor: 'pointer' }
+const linkEsqueci: React.CSSProperties = { color: '#64748b', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }
