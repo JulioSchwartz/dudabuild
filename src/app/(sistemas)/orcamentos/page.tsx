@@ -91,6 +91,20 @@ export default function OrcamentosPage() {
     carregar()
   }
 
+  async function excluir(o: Orcamento) {
+    if (!confirm(`Excluir orçamento de ${o.cliente_nome}?
+
+O histórico será mantido no sistema para controle de limites do plano.`)) return
+    try {
+      await supabase.from('orcamento_itens').delete().eq('orcamento_id', o.id)
+      await supabase.from('orcamentos').delete().eq('id', o.id)
+      carregar()
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao excluir orçamento')
+    }
+  }
+
   function copiarLink(id: string, token: string) {
     navigator.clipboard.writeText(`${window.location.origin}/orcamento-publico/${id}?token=${token}`)
     alert('Link copiado!')
@@ -156,6 +170,7 @@ export default function OrcamentosPage() {
             <CardOrcamento key={o.id} o={o} aprovando={aprovando}
               onAprovar={() => aprovarEGerarObra(o)}
               onRecusar={() => recusar(o.id)}
+              onExcluir={() => excluir(o)}
               onVer={() => router.push(`/orcamentos/${o.id}`)}
               onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
               onLink={() => o.token && copiarLink(o.id, o.token)}
@@ -171,6 +186,7 @@ export default function OrcamentosPage() {
           {aprovadosSemObra.map(o => (
             <CardOrcamento key={o.id} o={o} aprovando={aprovando}
               onAprovar={() => aprovarEGerarObra(o)}
+              onExcluir={() => excluir(o)}
               onVer={() => router.push(`/orcamentos/${o.id}`)}
               onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
               onLink={() => o.token && copiarLink(o.id, o.token)}
@@ -185,6 +201,7 @@ export default function OrcamentosPage() {
         <Secao titulo="🏗️ Obra gerada" qtd={comObra.length} cor="#2563eb">
           {comObra.map(o => (
             <CardOrcamento key={o.id} o={o} aprovando={aprovando}
+              onExcluir={() => excluir(o)}
               onVer={() => router.push(`/orcamentos/${o.id}`)}
               onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
               onLink={() => o.token && copiarLink(o.id, o.token)}
@@ -200,6 +217,7 @@ export default function OrcamentosPage() {
         <Secao titulo="❌ Recusados" qtd={recusados.length} cor="#dc2626">
           {recusados.map(o => (
             <CardOrcamento key={o.id} o={o} aprovando={aprovando}
+              onExcluir={() => excluir(o)}
               onVer={() => router.push(`/orcamentos/${o.id}`)}
               onEditar={() => router.push(`/orcamentos/editar/${o.id}`)}
               onLink={() => o.token && copiarLink(o.id, o.token)}
@@ -231,7 +249,7 @@ function Secao({ titulo, qtd, cor, children }: any) {
 }
 
 /* ── CARD ── */
-function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onVer, onEditar, onLink, onWhats, onVerObra }: any) {
+function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onExcluir, onVer, onEditar, onLink, onWhats, onVerObra }: any) {
   const estaAprovando = aprovando === o.id
   const f = (v: number) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -275,10 +293,11 @@ function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onVer, onEditar, on
 
       {/* Ações secundárias */}
       <div style={acoesSecundarias}>
-        <button onClick={onLink}   style={btnSec}>🔗 Link</button>
-        <button onClick={onVer}    style={btnSec}>👁 Ver</button>
-        <button onClick={onEditar} style={btnSec}>✏️ Editar</button>
-        <button onClick={onWhats}  style={btnWhats}>WhatsApp</button>
+        <button onClick={onLink}    style={btnSec}>🔗 Link</button>
+        <button onClick={onVer}     style={btnSec}>👁 Ver</button>
+        <button onClick={onEditar}  style={btnSec}>✏️ Editar</button>
+        <button onClick={onWhats}   style={btnWhats}>WhatsApp</button>
+        <button onClick={onExcluir} style={btnExcluirOrc} title="Excluir orçamento">🗑 Excluir</button>
       </div>
     </div>
   )
@@ -314,3 +333,4 @@ const alertaLimite: React.CSSProperties = { background: '#fef3c7', padding: 12, 
 const btnUpgrade: React.CSSProperties   = { background: '#f59e0b', color: '#fff', padding: '6px 10px', border: 'none', borderRadius: 6, cursor: 'pointer' }
 const btnGerarObra: React.CSSProperties  = { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '8px 14px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13, width: '100%' }
 const vazioCard: React.CSSProperties    = { textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
+const btnExcluirOrc: React.CSSProperties = { background: '#fee2e2', color: '#dc2626', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600 }
