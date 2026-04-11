@@ -16,7 +16,29 @@ export default function NovaSenha() {
   const [sessaoOk,     setSessaoOk]     = useState(false)
 
   useEffect(() => {
-    // Supabase processa o token da URL automaticamente via onAuthStateChange
+    // Lê o hash da URL manualmente e processa o token
+    const hash = window.location.hash
+    const params = new URLSearchParams(hash.replace('#', ''))
+    const accessToken  = params.get('access_token')
+    const refreshToken = params.get('refresh_token')
+    const type         = params.get('type')
+
+    if (accessToken && type === 'recovery') {
+      // Define a sessão manualmente com o token do link
+      supabase.auth.setSession({
+        access_token:  accessToken,
+        refresh_token: refreshToken ?? '',
+      }).then(({ error }) => {
+        if (error) {
+          setErro('Link inválido ou expirado. Solicite um novo.')
+        } else {
+          setSessaoOk(true)
+        }
+      })
+      return
+    }
+
+    // Fallback: escuta evento caso o Supabase processe automaticamente
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setSessaoOk(true)
     })
@@ -25,8 +47,8 @@ export default function NovaSenha() {
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault()
-    if (senha.length < 6)         { setErro('Senha deve ter no mínimo 6 caracteres'); return }
-    if (senha !== confirmSenha)   { setErro('As senhas não coincidem'); return }
+    if (senha.length < 6)       { setErro('Senha deve ter no mínimo 6 caracteres'); return }
+    if (senha !== confirmSenha) { setErro('As senhas não coincidem'); return }
     setErro('')
     setLoading(true)
 
@@ -34,8 +56,8 @@ export default function NovaSenha() {
       const { error } = await supabase.auth.updateUser({ password: senha })
       if (error) throw error
       setSalvo(true)
-      setTimeout(() => router.push('/dashboard'), 2500)
-    } catch (err: any) {
+      setTimeout(() => router.push('/login'), 2500)
+    } catch {
       setErro('Erro ao atualizar senha. O link pode ter expirado.')
     } finally {
       setLoading(false)
@@ -57,19 +79,33 @@ export default function NovaSenha() {
               Senha atualizada!
             </p>
             <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>
-              Redirecionando para o dashboard...
+              Redirecionando para o login...
             </p>
           </div>
+
         ) : !sessaoOk ? (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <p style={{ color: '#94a3b8', fontSize: 13 }}>Verificando link...</p>
-            <p style={{ color: '#64748b', fontSize: 12, marginTop: 8 }}>
-              Se demorar, volte ao email e clique no link novamente.
-            </p>
-            <button onClick={() => router.push('/recuperar-senha')} style={{ ...botao, marginTop: 20, background: '#334155' }}>
-              Solicitar novo link
-            </button>
+            {erro ? (
+              <>
+                <p style={{ fontSize: 32 }}>❌</p>
+                <p style={erroStyle}>{erro}</p>
+                <button onClick={() => router.push('/recuperar-senha')} style={{ ...botao, marginTop: 20, background: '#334155' }}>
+                  Solicitar novo link
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={{ color: '#94a3b8', fontSize: 13 }}>Verificando link...</p>
+                <p style={{ color: '#64748b', fontSize: 12, marginTop: 8 }}>
+                  Se demorar, volte ao email e clique no link novamente.
+                </p>
+                <button onClick={() => router.push('/recuperar-senha')} style={{ ...botao, marginTop: 20, background: '#334155' }}>
+                  Solicitar novo link
+                </button>
+              </>
+            )}
           </div>
+
         ) : (
           <form onSubmit={salvar}>
             <label style={label}>Nova senha</label>
