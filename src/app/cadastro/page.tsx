@@ -13,6 +13,7 @@ export default function Cadastro() {
   const [senha,       setSenha]       = useState('')
   const [confirmSenha, setConfirmSenha] = useState('')
   const [loading,     setLoading]     = useState(false)
+  const [enviado,     setEnviado]     = useState(false)
   const [erro,        setErro]        = useState('')
  
   async function cadastrar(e: React.FormEvent) {
@@ -62,7 +63,7 @@ export default function Cadastro() {
  
       if (erroUsuario) { setErro('Erro ao vincular usuário.'); return }
  
-      router.push('/dashboard')
+      setEnviado(true)
  
     } catch (err) {
       console.error(err)
@@ -72,11 +73,45 @@ export default function Cadastro() {
     }
   }
  
+  if (enviado) {
+    return (
+      <div style={container}>
+        <div style={card}>
+          <div style={logoArea}>
+            <h1 style={logoTitulo}>&#127959; DudaBuild</h1>
+          </div>
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <p style={{ fontSize: 48 }}>&#128231;</p>
+            <h2 style={{ color: '#fff', fontWeight: 800, marginTop: 12 }}>Confirme seu email</h2>
+            <p style={{ color: '#94a3b8', fontSize: 14, marginTop: 10, lineHeight: 1.7 }}>
+              Enviamos um link de confirmacao para<br />
+              <strong style={{ color: '#38bdf8' }}>{email}</strong>
+            </p>
+            <p style={{ color: '#64748b', fontSize: 13, marginTop: 12, lineHeight: 1.6 }}>
+              Clique no link do email para ativar sua conta e fazer login.
+              Verifique tambem a caixa de spam.
+            </p>
+            <button onClick={() => router.push('/login')}
+              style={{ ...botao, marginTop: 24, background: '#22c55e' }}>
+              Ir para o login
+            </button>
+            <p style={{ color: '#475569', fontSize: 12, marginTop: 14 }}>
+              Nao recebeu?{' '}
+              <span onClick={() => setEnviado(false)} style={{ color: '#38bdf8', cursor: 'pointer' }}>
+                Tentar novamente
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={container}>
       <div style={card}>
         <div style={logoArea}>
-          <h1 style={logoTitulo}>🏗️ DudaBuild</h1>
+          <h1 style={logoTitulo}>&#127959; DudaBuild</h1>
           <p style={logoSub}>Crie sua conta gratuitamente</p>
         </div>
  
