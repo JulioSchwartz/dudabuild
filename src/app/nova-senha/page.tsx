@@ -15,25 +15,53 @@ export default function NovaSenha() {
   const [sessaoOk,     setSessaoOk]     = useState(false)
 
   useEffect(() => {
-    const hash = window.location.hash
-    const params = new URLSearchParams(hash.replace('#', ''))
-    const accessToken  = params.get('access_token')
-    const refreshToken = params.get('refresh_token')
-    const type         = params.get('type')
+    async function processarToken() {
+      // Tenta ler o code da query string (formato novo do Supabase)
+      const params     = new URLSearchParams(window.location.search)
+      const code       = params.get('code')
 
-    if (accessToken && type === 'recovery') {
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken ?? '' })
-        .then(({ error }) => {
-          if (error) setErro('Link inválido ou expirado. Solicite um novo.')
-          else setSessaoOk(true)
+      // Tenta ler o access_token do hash (formato antigo)
+      const hash       = window.location.hash
+      const hashParams = new URLSearchParams(hash.replace('#', ''))
+      const accessToken  = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
+      const type         = hashParams.get('type')
+
+      if (code) {
+        // Formato novo — troca o code por sessão
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) {
+          console.error('Erro exchangeCodeForSession:', error)
+          setErro('Link inválido ou expirado. Solicite um novo.')
+        } else {
+          setSessaoOk(true)
+        }
+        return
+      }
+
+      if (accessToken && type === 'recovery') {
+        // Formato antigo — define sessão direto com o token
+        const { error } = await supabase.auth.setSession({
+          access_token:  accessToken,
+          refresh_token: refreshToken ?? '',
         })
-      return
+        if (error) {
+          console.error('Erro setSession:', error)
+          setErro('Link inválido ou expirado. Solicite um novo.')
+        } else {
+          setSessaoOk(true)
+        }
+        return
+      }
+
+      // Fallback — escuta evento PASSWORD_RECOVERY
+      const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') setSessaoOk(true)
+      })
+      return () => listener.subscription.unsubscribe()
     }
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setSessaoOk(true)
-    })
-    return () => listener.subscription.unsubscribe()
+    processarToken()
   }, [])
 
   async function salvar(e: React.FormEvent) {
@@ -58,7 +86,8 @@ export default function NovaSenha() {
     <div style={container}>
       <div style={card}>
         <div style={logoArea}>
-          <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 240, display: 'block', margin: '0 auto 4px' }} />
+          <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan"
+            style={{ width: 240, display: 'block', margin: '0 auto 4px', mixBlendMode: 'screen' }} />
           <p style={logoSub}>Criar nova senha</p>
         </div>
 
@@ -66,28 +95,36 @@ export default function NovaSenha() {
           <div style={sucessoBox}>
             <p style={{ fontSize: 32, textAlign: 'center' }}>✅</p>
             <p style={{ fontWeight: 700, color: '#fff', textAlign: 'center', marginTop: 8 }}>Senha atualizada!</p>
-            <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>Redirecionando para o login...</p>
+            <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>
+              Redirecionando para o login...
+            </p>
           </div>
+
         ) : !sessaoOk ? (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             {erro ? (
               <>
                 <p style={{ fontSize: 32 }}>❌</p>
                 <p style={erroStyle}>{erro}</p>
-                <button onClick={() => router.push('/recuperar-senha')} style={{ ...botao, background: '#1a1a1a', color: '#fff', marginTop: 20 }}>
+                <button onClick={() => router.push('/recuperar-senha')}
+                  style={{ ...botao, background: '#1a1a1a', color: '#fff', marginTop: 20 }}>
                   Solicitar novo link
                 </button>
               </>
             ) : (
               <>
                 <p style={{ color: '#94a3b8', fontSize: 13 }}>Verificando link...</p>
-                <p style={{ color: '#64748b', fontSize: 12, marginTop: 8 }}>Se demorar, volte ao email e clique no link novamente.</p>
-                <button onClick={() => router.push('/recuperar-senha')} style={{ ...botao, background: '#1a1a1a', color: '#fff', marginTop: 20 }}>
+                <p style={{ color: '#64748b', fontSize: 12, marginTop: 8 }}>
+                  Se demorar, volte ao email e clique no link novamente.
+                </p>
+                <button onClick={() => router.push('/recuperar-senha')}
+                  style={{ ...botao, background: '#1a1a1a', color: '#fff', marginTop: 20 }}>
                   Solicitar novo link
                 </button>
               </>
             )}
           </div>
+
         ) : (
           <form onSubmit={salvar}>
             <label style={label}>Nova senha</label>
@@ -95,7 +132,9 @@ export default function NovaSenha() {
               <input type={mostrar ? 'text' : 'password'} placeholder="••••••••"
                 value={senha} onChange={e => setSenha(e.target.value)}
                 required minLength={6} style={{ ...input, paddingRight: 40 }} />
-              <span onClick={() => setMostrar(!mostrar)} style={olho}>{mostrar ? '🙈' : '👁'}</span>
+              <span onClick={() => setMostrar(!mostrar)} style={olho}>
+                {mostrar ? '🙈' : '👁'}
+              </span>
             </div>
             <label style={{ ...label, marginTop: 14 }}>Confirmar nova senha</label>
             <input type={mostrar ? 'text' : 'password'} placeholder="••••••••"
