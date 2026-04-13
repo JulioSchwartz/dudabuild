@@ -58,7 +58,7 @@ export default function Cadastro() {
       <div style={container}>
         <div style={card}>
           <div style={logoArea}>
-            <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 180, display: 'block', margin: '0 auto' }} />
+            <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 240, display: 'block', margin: '0 auto' }} />
           </div>
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <p style={{ fontSize: 48 }}>📧</p>

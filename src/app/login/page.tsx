@@ -34,7 +34,7 @@ export default function Login() {
     <div style={container}>
       <div style={card}>
         <div style={logoArea}>
-          <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 200, display: 'block', margin: '0 auto 4px' }} />
+          <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 280, display: 'block', margin: '0 auto 4px' }} />
           <p style={logoSub}>Acesse sua conta</p>
         </div>
 

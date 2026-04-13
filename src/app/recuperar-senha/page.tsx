@@ -33,7 +33,7 @@ export default function RecuperarSenha() {
     <div style={container}>
       <div style={card}>
         <div style={logoArea}>
-          <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 180, display: 'block', margin: '0 auto 4px' }} />
+          <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 240, display: 'block', margin: '0 auto 4px' }} />
           <p style={logoSub}>Recuperar senha</p>
         </div>
 
