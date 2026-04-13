@@ -16,7 +16,6 @@ export default function NovaSenha() {
   const [sessaoOk,     setSessaoOk]     = useState(false)
 
   useEffect(() => {
-    // Lê o hash da URL manualmente e processa o token
     const hash = window.location.hash
     const params = new URLSearchParams(hash.replace('#', ''))
     const accessToken  = params.get('access_token')
@@ -24,21 +23,16 @@ export default function NovaSenha() {
     const type         = params.get('type')
 
     if (accessToken && type === 'recovery') {
-      // Define a sessão manualmente com o token do link
       supabase.auth.setSession({
         access_token:  accessToken,
         refresh_token: refreshToken ?? '',
       }).then(({ error }) => {
-        if (error) {
-          setErro('Link inválido ou expirado. Solicite um novo.')
-        } else {
-          setSessaoOk(true)
-        }
+        if (error) setErro('Link inválido ou expirado. Solicite um novo.')
+        else setSessaoOk(true)
       })
       return
     }
 
-    // Fallback: escuta evento caso o Supabase processe automaticamente
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setSessaoOk(true)
     })
@@ -51,7 +45,6 @@ export default function NovaSenha() {
     if (senha !== confirmSenha) { setErro('As senhas não coincidem'); return }
     setErro('')
     setLoading(true)
-
     try {
       const { error } = await supabase.auth.updateUser({ password: senha })
       if (error) throw error
@@ -68,28 +61,25 @@ export default function NovaSenha() {
     <div style={container}>
       <div style={card}>
         <div style={logoArea}>
-          <h1 style={logoTitulo}>🏗️ DudaBuild</h1>
+          <img src="/Logotipo_16_9_-_Zynplan.png" alt="Zynplan" style={{ width: 200, display: 'block', margin: '0 auto 8px' }} />
           <p style={logoSub}>Criar nova senha</p>
         </div>
 
         {salvo ? (
           <div style={sucessoBox}>
             <p style={{ fontSize: 32, textAlign: 'center' }}>✅</p>
-            <p style={{ fontWeight: 700, color: '#fff', textAlign: 'center', marginTop: 8 }}>
-              Senha atualizada!
-            </p>
+            <p style={{ fontWeight: 700, color: '#fff', textAlign: 'center', marginTop: 8 }}>Senha atualizada!</p>
             <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>
               Redirecionando para o login...
             </p>
           </div>
-
         ) : !sessaoOk ? (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             {erro ? (
               <>
                 <p style={{ fontSize: 32 }}>❌</p>
                 <p style={erroStyle}>{erro}</p>
-                <button onClick={() => router.push('/recuperar-senha')} style={{ ...botao, marginTop: 20, background: '#334155' }}>
+                <button onClick={() => router.push('/recuperar-senha')} style={{ ...botao, marginTop: 20, background: '#1e293b', color: '#fff' }}>
                   Solicitar novo link
                 </button>
               </>
@@ -99,42 +89,28 @@ export default function NovaSenha() {
                 <p style={{ color: '#64748b', fontSize: 12, marginTop: 8 }}>
                   Se demorar, volte ao email e clique no link novamente.
                 </p>
-                <button onClick={() => router.push('/recuperar-senha')} style={{ ...botao, marginTop: 20, background: '#334155' }}>
+                <button onClick={() => router.push('/recuperar-senha')} style={{ ...botao, marginTop: 20, background: '#1e293b', color: '#fff' }}>
                   Solicitar novo link
                 </button>
               </>
             )}
           </div>
-
         ) : (
           <form onSubmit={salvar}>
             <label style={label}>Nova senha</label>
             <div style={{ position: 'relative' }}>
-              <input
-                type={mostrar ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={senha}
-                onChange={e => setSenha(e.target.value)}
-                required minLength={6}
-                style={{ ...input, paddingRight: 40 }}
-              />
+              <input type={mostrar ? 'text' : 'password'} placeholder="••••••••"
+                value={senha} onChange={e => setSenha(e.target.value)}
+                required minLength={6} style={{ ...input, paddingRight: 40 }} />
               <span onClick={() => setMostrar(!mostrar)} style={olho}>
                 {mostrar ? '🙈' : '👁'}
               </span>
             </div>
-
             <label style={{ ...label, marginTop: 14 }}>Confirmar nova senha</label>
-            <input
-              type={mostrar ? 'text' : 'password'}
-              placeholder="••••••••"
-              value={confirmSenha}
-              onChange={e => setConfirmSenha(e.target.value)}
-              required
-              style={input}
-            />
-
+            <input type={mostrar ? 'text' : 'password'} placeholder="••••••••"
+              value={confirmSenha} onChange={e => setConfirmSenha(e.target.value)}
+              required style={input} />
             {erro && <p style={erroStyle}>{erro}</p>}
-
             <button type="submit" style={botao} disabled={loading}>
               {loading ? 'Salvando...' : '🔒 Salvar nova senha'}
             </button>
@@ -145,14 +121,13 @@ export default function NovaSenha() {
   )
 }
 
-const container: React.CSSProperties  = { minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0f172a', padding: 20 }
-const card: React.CSSProperties       = { background: '#1e293b', padding: 36, borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }
+const container: React.CSSProperties  = { minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#020617', padding: 20 }
+const card: React.CSSProperties       = { background: '#0f172a', padding: 36, borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.6)', border: '1px solid #1e293b' }
 const logoArea: React.CSSProperties   = { textAlign: 'center', marginBottom: 28 }
-const logoTitulo: React.CSSProperties = { fontSize: 26, fontWeight: 800, color: '#fff' }
-const logoSub: React.CSSProperties    = { fontSize: 13, color: '#94a3b8', marginTop: 4 }
+const logoSub: React.CSSProperties    = { fontSize: 13, color: '#64748b', marginTop: 4 }
 const label: React.CSSProperties      = { display: 'block', fontSize: 12, fontWeight: 600, color: '#94a3b8', marginBottom: 4, marginTop: 14 }
-const input: React.CSSProperties      = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: 14, boxSizing: 'border-box' }
+const input: React.CSSProperties      = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #1e293b', background: '#020617', color: '#f1f5f9', fontSize: 14, boxSizing: 'border-box' }
 const olho: React.CSSProperties       = { position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', fontSize: 16 }
 const erroStyle: React.CSSProperties  = { color: '#f87171', fontSize: 13, marginTop: 10, background: '#450a0a', padding: '8px 12px', borderRadius: 6 }
-const botao: React.CSSProperties      = { width: '100%', padding: 13, marginTop: 20, background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: 'pointer' }
-const sucessoBox: React.CSSProperties = { background: '#0f172a', borderRadius: 12, padding: 24 }
+const botao: React.CSSProperties      = { width: '100%', padding: 13, marginTop: 20, background: 'linear-gradient(135deg, #b8893d, #d4a843)', color: '#000', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: 'pointer' }
+const sucessoBox: React.CSSProperties = { background: '#020617', borderRadius: 12, padding: 24 }
