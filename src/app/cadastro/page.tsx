@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function Cadastro() {
@@ -25,26 +24,25 @@ export default function Cadastro() {
     setLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password: senha })
-      if (error) {
-        setErro(error.message.includes('already registered') ? 'Este email já está cadastrado. Faça login.' : error.message)
+      const res = await fetch('/api/cadastro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email:       email.trim(),
+          password:    senha,
+          nomeEmpresa: nomeEmpresa.trim() || nomeUsuario.trim() || email,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setErro(data.error || 'Erro ao criar conta. Tente novamente.')
         return
       }
-      const user = data.user
-      if (!user) { setErro('Erro ao criar usuário.'); return }
-
-      const { data: empresa, error: erroEmpresa } = await supabase
-        .from('empresas')
-        .insert({ nome: nomeEmpresa.trim() || email, plano: 'basico', status: 'incomplete', trial_expira_em: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() })
-        .select().single()
-      if (erroEmpresa || !empresa) { setErro('Erro ao criar empresa.'); return }
-
-      const { error: erroUsuario } = await supabase
-        .from('usuarios')
-        .insert({ email, user_id: user.id, empresa_id: empresa.id, is_admin: false })
-      if (erroUsuario) { setErro('Erro ao vincular usuário.'); return }
 
       setEnviado(true)
+
     } catch (err) {
       console.error(err)
       setErro('Erro inesperado. Tente novamente.')
@@ -58,7 +56,8 @@ export default function Cadastro() {
       <div style={container}>
         <div style={card}>
           <div style={logoArea}>
-            <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 180, display: 'block', margin: '0 auto' }} />
+            <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan"
+              style={{ width: 180, display: 'block', margin: '0 auto', mixBlendMode: 'screen' }} />
           </div>
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <p style={{ fontSize: 48 }}>📧</p>
@@ -89,7 +88,8 @@ export default function Cadastro() {
     <div style={container}>
       <div style={card}>
         <div style={logoArea}>
-          <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 180, display: 'block', margin: '0 auto 4px' }} />
+          <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan"
+            style={{ width: 180, display: 'block', margin: '0 auto 4px', mixBlendMode: 'screen' }} />
           <p style={logoSub}>Crie sua conta gratuitamente</p>
         </div>
 
