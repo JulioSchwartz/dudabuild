@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 
 export default function RecuperarSenha() {
   const router = useRouter()
-
   const [email,   setEmail]   = useState('')
   const [loading, setLoading] = useState(false)
   const [enviado, setEnviado] = useState(false)
@@ -34,7 +33,7 @@ export default function RecuperarSenha() {
     <div style={container}>
       <div style={card}>
         <div style={logoArea}>
-          <img src="/Logotipo_16_9_-_Zynplan.png" alt="Zynplan" style={{ width: 200, display: 'block', margin: '0 auto 8px' }} />
+          <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 180, display: 'block', margin: '0 auto 4px' }} />
           <p style={logoSub}>Recuperar senha</p>
         </div>
 
@@ -71,15 +70,15 @@ export default function RecuperarSenha() {
   )
 }
 
-const container: React.CSSProperties  = { minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#020617', padding: 20 }
-const card: React.CSSProperties       = { background: '#0f172a', padding: 36, borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.6)', border: '1px solid #1e293b' }
+const container: React.CSSProperties  = { minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000000', padding: 20 }
+const card: React.CSSProperties       = { background: '#0a0a0a', padding: '32px 36px', borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.8)', border: '1px solid #1a1a1a' }
 const logoArea: React.CSSProperties   = { textAlign: 'center', marginBottom: 28 }
-const logoSub: React.CSSProperties    = { fontSize: 13, color: '#64748b', marginTop: 4 }
+const logoSub: React.CSSProperties    = { fontSize: 13, color: '#64748b', marginTop: 8 }
 const label: React.CSSProperties      = { display: 'block', fontSize: 12, fontWeight: 600, color: '#94a3b8', marginBottom: 4, marginTop: 14 }
-const input: React.CSSProperties      = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #1e293b', background: '#020617', color: '#f1f5f9', fontSize: 14, boxSizing: 'border-box' }
+const input: React.CSSProperties      = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #1e293b', background: '#111111', color: '#f1f5f9', fontSize: 14, boxSizing: 'border-box' }
 const erroStyle: React.CSSProperties  = { color: '#f87171', fontSize: 13, marginTop: 10, background: '#450a0a', padding: '8px 12px', borderRadius: 6 }
 const botao: React.CSSProperties      = { width: '100%', padding: 13, marginTop: 20, background: 'linear-gradient(135deg, #b8893d, #d4a843)', color: '#000', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: 'pointer' }
-const btnVoltar: React.CSSProperties  = { width: '100%', padding: 12, marginTop: 20, background: '#1e293b', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }
-const sucessoBox: React.CSSProperties = { background: '#020617', borderRadius: 12, padding: 24, marginBottom: 8 }
+const btnVoltar: React.CSSProperties  = { width: '100%', padding: 12, marginTop: 20, background: '#1a1a1a', color: '#fff', border: '1px solid #1e293b', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }
+const sucessoBox: React.CSSProperties = { background: '#111111', borderRadius: 12, padding: 24, marginBottom: 8 }
 const linkLogin: React.CSSProperties  = { textAlign: 'center', marginTop: 18, fontSize: 13, color: '#64748b' }
 const link: React.CSSProperties       = { color: '#d4a843', cursor: 'pointer' }

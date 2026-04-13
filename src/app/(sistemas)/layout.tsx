@@ -49,7 +49,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
   if (!liberado) {
     return (
       <div style={loadingScreen}>
-        <img src="/Logotipo_-_Zynplan.png" alt="Zynplan" style={{ width: 140, marginBottom: 16 }} />
+        <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 140, marginBottom: 16 }} />
         <div style={loadingSpinner} />
         <p style={{ color: '#64748b', marginTop: 16, fontSize: 13, letterSpacing: '0.05em' }}>
           Carregando...
@@ -68,7 +68,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
         <div>
           {/* Logo */}
           <div style={logoBox}>
-            <img src="/Logotipo_-_Zynplan.png" alt="Zynplan" style={{ width: 130, display: 'block' }} />
+            <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ width: 130, display: 'block' }} />
           </div>
 
           <div style={divider} />
