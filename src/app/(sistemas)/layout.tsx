@@ -5,22 +5,21 @@ import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 
-type Plano = 'basico' | 'pro' | 'premium'
-
 export default function SistemaLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
   const pathname = usePathname()
+
   const {
-    nomeUsuario, nomeEmpresa, plano, bloqueado, loading,
-    diasRestantes, trialExpirado,
+    nomeUsuario, nomeEmpresa, plano,
+    bloqueado, loading, diasRestantes, trialExpirado,
   } = useEmpresa()
 
-  const [liberado, setLiberado] = useState(false)
+  const [pronto, setPronto] = useState(false)
 
   useEffect(() => {
     if (loading) return
     if (bloqueado) { router.push('/bloqueado'); return }
-    setLiberado(true)
+    setPronto(true)
   }, [loading, bloqueado])
 
   async function sair() {
@@ -28,19 +27,20 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
     router.push('/login')
   }
 
-  if (loading || !liberado) {
+  if (loading || !pronto) {
     return (
       <div style={loadingScreen}>
         <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan"
-          style={{ width: 200, marginBottom: 20, mixBlendMode: 'screen' }} />
+          style={{ width: 160, marginBottom: 20, mixBlendMode: 'screen' }} />
         <div style={loadingSpinner} />
         <p style={{ color: '#64748b', marginTop: 16, fontSize: 13 }}>Carregando...</p>
       </div>
     )
   }
 
-  const inicialUsuario = nomeUsuario.charAt(0).toUpperCase()
-  const mostrarBanner  = !trialExpirado && diasRestantes !== null && diasRestantes <= 3
+  const inicialUsuario   = nomeUsuario.charAt(0).toUpperCase()
+  const mostrarBanner    = !trialExpirado && diasRestantes !== null && diasRestantes <= 3
+  const labelUpgrade     = diasRestantes !== null && !trialExpirado ? `⚡ Trial: ${diasRestantes}d` : '⚡ Upgrade'
 
   return (
     <div style={container}>
@@ -56,12 +56,14 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
           <div style={divider} />
 
           <div style={planoBadgeWrap}>
-            <span style={planoBadge(plano as Plano)}>
+            <span style={badgePlano(plano)}>
               {plano === 'premium' ? '⭐ Premium' : plano === 'pro' ? '🚀 Pro' : '🔹 Básico'}
             </span>
             {diasRestantes !== null && !trialExpirado && (
-              <span style={trialBadge(diasRestantes)}>
-                {diasRestantes === 0 ? '⚠️ Trial expira hoje!' : `⏱ Trial: ${diasRestantes}d restantes`}
+              <span style={badgeTrial(diasRestantes)}>
+                {diasRestantes === 0
+                  ? '⚠️ Trial expira hoje!'
+                  : `⏱ Trial: ${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''}`}
               </span>
             )}
             <span style={planoNome}>{nomeEmpresa}</span>
@@ -105,15 +107,15 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
       {/* ── CONTEÚDO ── */}
       <div style={mainWrapper}>
 
-        {/* Banner trial expirando */}
+        {/* Banner trial expirando (últimos 3 dias) */}
         {mostrarBanner && (
           <div style={bannerTrial(diasRestantes!)}>
             <span>
               {diasRestantes === 0
                 ? '⚠️ Seu trial expira hoje! Assine agora para não perder o acesso.'
-                : `⏱ Seu período de trial expira em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}. Aproveite para assinar!`}
+                : `⏱ Seu trial expira em ${diasRestantes} dia${diasRestantes! > 1 ? 's' : ''}. Aproveite para assinar!`}
             </span>
-            <button onClick={() => router.push('/planos')} style={btnBannerTrial}>
+            <button onClick={() => router.push('/planos')} style={btnBanner}>
               Ver planos →
             </button>
           </div>
@@ -129,7 +131,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85' }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
             >
-              ⚡ {diasRestantes !== null && !trialExpirado ? `Trial: ${diasRestantes}d` : 'Upgrade'}
+              {labelUpgrade}
             </button>
             <div style={topbarUser}>
               <div style={topbarAvatar}>{inicialUsuario}</div>
@@ -171,8 +173,18 @@ function MenuItem({ texto, label, rota, ativo, destaque = false }: {
       borderLeft: ativo ? '3px solid #d4a843' : '3px solid transparent',
       fontWeight: ativo ? 600 : 500,
     }}
-      onMouseEnter={e => { if (!ativo) { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLDivElement).style.color = '#e2e8f0' } }}
-      onMouseLeave={e => { if (!ativo) { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = destaque ? '#fbbf24' : '#94a3b8' } }}
+      onMouseEnter={e => {
+        if (!ativo) {
+          (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)'
+          ;(e.currentTarget as HTMLDivElement).style.color = destaque ? '#fde68a' : '#e2e8f0'
+        }
+      }}
+      onMouseLeave={e => {
+        if (!ativo) {
+          (e.currentTarget as HTMLDivElement).style.background = 'transparent'
+          ;(e.currentTarget as HTMLDivElement).style.color = destaque ? '#fbbf24' : '#94a3b8'
+        }
+      }}
     >
       <span style={{ fontSize: 16, minWidth: 20, textAlign: 'center' }}>{texto}</span>
       <span>{label}</span>
@@ -181,21 +193,21 @@ function MenuItem({ texto, label, rota, ativo, destaque = false }: {
 }
 
 /* ── ESTILOS ── */
-const loadingScreen: React.CSSProperties      = { height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#000' }
-const loadingSpinner: React.CSSProperties     = { width: 32, height: 32, border: '3px solid #1e293b', borderTop: '3px solid #d4a843', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }
-const container: React.CSSProperties         = { display: 'flex', height: '100vh', background: '#f1f5f9', overflow: 'hidden' }
-const sidebar: React.CSSProperties           = { width: 256, minWidth: 256, background: '#020617', color: '#fff', padding: '20px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '4px 0 24px rgba(0,0,0,0.35)', zIndex: 10, overflowY: 'auto' }
-const logoBox: React.CSSProperties           = { padding: '4px 8px 12px' }
-const divider: React.CSSProperties           = { height: 1, background: '#0f172a', margin: '10px 0' }
-const planoBadgeWrap: React.CSSProperties    = { padding: '6px 8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }
-const planoBadge = (plano: Plano): React.CSSProperties => ({
+const loadingScreen: React.CSSProperties  = { height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#000' }
+const loadingSpinner: React.CSSProperties = { width: 32, height: 32, border: '3px solid #1e293b', borderTop: '3px solid #d4a843', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }
+const container: React.CSSProperties      = { display: 'flex', height: '100vh', background: '#f1f5f9', overflow: 'hidden' }
+const sidebar: React.CSSProperties        = { width: 256, minWidth: 256, background: '#020617', color: '#fff', padding: '20px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '4px 0 24px rgba(0,0,0,0.35)', zIndex: 10, overflowY: 'auto' }
+const logoBox: React.CSSProperties        = { padding: '4px 8px 12px' }
+const divider: React.CSSProperties        = { height: 1, background: '#0f172a', margin: '10px 0' }
+const planoBadgeWrap: React.CSSProperties = { padding: '6px 8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }
+const badgePlano = (plano: string): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700,
   letterSpacing: '0.04em', padding: '4px 10px', borderRadius: 999, width: 'fit-content',
   background: plano === 'premium' ? 'rgba(212,168,67,0.15)' : plano === 'pro' ? 'rgba(139,92,246,0.15)' : 'rgba(212,168,67,0.1)',
   color:      plano === 'premium' ? '#d4a843' : plano === 'pro' ? '#a78bfa' : '#d4a843',
   border:     `1px solid ${plano === 'premium' ? 'rgba(212,168,67,0.4)' : plano === 'pro' ? 'rgba(139,92,246,0.3)' : 'rgba(212,168,67,0.25)'}`,
 })
-const trialBadge = (dias: number): React.CSSProperties => ({
+const badgeTrial = (dias: number): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 700,
   padding: '3px 10px', borderRadius: 999, width: 'fit-content',
   background: dias <= 1 ? 'rgba(239,68,68,0.15)' : dias <= 3 ? 'rgba(245,158,11,0.15)' : 'rgba(34,197,94,0.1)',
@@ -218,11 +230,11 @@ const bannerTrial = (dias: number): React.CSSProperties => ({
   background: dias === 0 ? '#7f1d1d' : dias <= 1 ? '#78350f' : '#713f12',
   color: '#fff',
 })
-const btnBannerTrial: React.CSSProperties = { background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '5px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }
-const topbar: React.CSSProperties        = { height: 64, background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 28px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', flexShrink: 0 }
-const topbarTitle: React.CSSProperties   = { fontSize: 16, fontWeight: 700, color: '#0f172a' }
-const topbarSub: React.CSSProperties     = { fontSize: 11, color: '#94a3b8', marginTop: 2 }
-const topbarUser: React.CSSProperties    = { display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }
-const topbarAvatar: React.CSSProperties  = { width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #b8893d, #d4a843)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }
-const btnUpgrade: React.CSSProperties    = { background: 'linear-gradient(135deg, #b8893d, #d4a843)', color: '#000', border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'opacity 0.15s' }
-const content: React.CSSProperties       = { flex: 1, overflowY: 'auto', padding: 28, background: '#f8fafc' }
+const btnBanner: React.CSSProperties    = { background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '5px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }
+const topbar: React.CSSProperties       = { height: 64, background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 28px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', flexShrink: 0 }
+const topbarTitle: React.CSSProperties  = { fontSize: 16, fontWeight: 700, color: '#0f172a' }
+const topbarSub: React.CSSProperties    = { fontSize: 11, color: '#94a3b8', marginTop: 2 }
+const topbarUser: React.CSSProperties   = { display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }
+const topbarAvatar: React.CSSProperties = { width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #b8893d, #d4a843)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }
+const btnUpgrade: React.CSSProperties   = { background: 'linear-gradient(135deg, #b8893d, #d4a843)', color: '#000', border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'opacity 0.15s' }
+const content: React.CSSProperties      = { flex: 1, overflowY: 'auto', padding: 28, background: '#f8fafc' }
