@@ -16,37 +16,19 @@ export default function NovaSenha() {
 
   useEffect(() => {
     async function processarToken() {
-      // Tenta ler o code da query string (formato novo do Supabase)
-      const params     = new URLSearchParams(window.location.search)
-      const code       = params.get('code')
-
-      // Tenta ler o access_token do hash (formato antigo)
-      const hash       = window.location.hash
-      const hashParams = new URLSearchParams(hash.replace('#', ''))
-      const accessToken  = hashParams.get('access_token')
-      const refreshToken = hashParams.get('refresh_token')
-      const type         = hashParams.get('type')
-
-      if (code) {
-        // Formato novo — troca o code por sessão
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) {
-          console.error('Erro exchangeCodeForSession:', error)
-          setErro('Link inválido ou expirado. Solicite um novo.')
-        } else {
-          setSessaoOk(true)
-        }
-        return
-      }
+      const hash        = window.location.hash
+      const hashParams  = new URLSearchParams(hash.replace('#', ''))
+      const accessToken = hashParams.get('access_token')
+      const type        = hashParams.get('type')
 
       if (accessToken && type === 'recovery') {
-        // Formato antigo — define sessão direto com o token
-        const { error } = await supabase.auth.setSession({
-          access_token:  accessToken,
-          refresh_token: refreshToken ?? '',
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: accessToken,
+          type: 'recovery',
         })
+
         if (error) {
-          console.error('Erro setSession:', error)
+          console.error('verifyOtp error:', error)
           setErro('Link inválido ou expirado. Solicite um novo.')
         } else {
           setSessaoOk(true)
@@ -54,7 +36,6 @@ export default function NovaSenha() {
         return
       }
 
-      // Fallback — escuta evento PASSWORD_RECOVERY
       const { data: listener } = supabase.auth.onAuthStateChange((event) => {
         if (event === 'PASSWORD_RECOVERY') setSessaoOk(true)
       })
@@ -99,7 +80,6 @@ export default function NovaSenha() {
               Redirecionando para o login...
             </p>
           </div>
-
         ) : !sessaoOk ? (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             {erro ? (
@@ -124,7 +104,6 @@ export default function NovaSenha() {
               </>
             )}
           </div>
-
         ) : (
           <form onSubmit={salvar}>
             <label style={label}>Nova senha</label>
