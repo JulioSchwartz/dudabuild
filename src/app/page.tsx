@@ -12,6 +12,8 @@ export default function LandingPage() {
   const [formEmail, setFormEmail] = useState('')
   const [formTel, setFormTel] = useState('')
   const [formEnviado, setFormEnviado] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [erroForm, setErroForm] = useState("")
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -24,9 +26,26 @@ export default function LandingPage() {
     setMenuAberto(false)
   }
 
-  function enviarLead(e: React.FormEvent) {
+  async function enviarLead(e: React.FormEvent) {
     e.preventDefault()
-    setFormEnviado(true)
+    setErroForm('')
+    setEnviando(true)
+    try {
+      const res = await fetch('/api/contato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: formNome, email: formEmail, tel: formTel }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErroForm(data.error || 'Erro ao enviar. Tente novamente.'); return }
+      setFormEnviado(true)
+      const msg = encodeURIComponent(`Olá! Me chamo ${formNome} e tenho interesse no Zynplan. Vi o formulário no site.`)
+      window.open(`https://wa.me/5549991587646?text=${msg}`, '_blank')
+    } catch {
+      setErroForm('Erro inesperado. Tente novamente.')
+    } finally {
+      setEnviando(false)
+    }
   }
 
   const funcionalidades = [
@@ -487,9 +506,10 @@ export default function LandingPage() {
                     <input value={formTel} onChange={e => setFormTel(e.target.value)} placeholder="(00) 00000-0000"
                       style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: 14, outline: 'none' }} />
                   </div>
-                  <button type="submit" className="btn-primary"
-                    style={{ background: 'linear-gradient(135deg, #d4a843, #f0c040)', color: '#000', padding: '14px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 800, marginTop: 8 }}>
-                    Enviar mensagem →
+                  {erroForm && <p style={{ color: '#ef4444', fontSize: 13 }}>⚠ {erroForm}</p>}
+                  <button type="submit" disabled={enviando} className="btn-primary"
+                    style={{ background: 'linear-gradient(135deg, #d4a843, #f0c040)', color: '#000', padding: '14px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 800, marginTop: 8, opacity: enviando ? 0.7 : 1 }}>
+                    {enviando ? 'Enviando...' : 'Enviar mensagem →'}
                   </button>
                   <button type="button" onClick={() => router.push('/cadastro')}
                     style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', padding: '13px 0', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
