@@ -65,7 +65,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
                                'Mestre de Obra'
 
   // Visibilidade dos itens de menu por perfil
-  const podeVerObras      = perfil !== 'financeiro'
+  const podeVerObras = true
   const podeVerOrcamentos = perfil === 'admin' || perfil === 'engenheiro'
   const podeVerRelatorios = perfil === 'admin' || perfil === 'engenheiro' || perfil === 'financeiro'
   const podeVerEquipe     = perfil === 'admin' && plano === 'premium'
