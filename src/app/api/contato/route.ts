@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     await resend.emails.send({
       from: 'Zynplan <noreply@zynplan.com.br>',
-      to: ['j.ulioschwartz@hotmail.com'],
+      to: ['suportezynplan@gmail.com'],
       subject: `Novo lead: ${nome}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background: #0f172a; color: #fff; border-radius: 12px;">
