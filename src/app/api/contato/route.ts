@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
             <tr><td style="padding: 12px 0; border-bottom: 1px solid #1e293b; color: #94a3b8;">E-mail</td><td style="padding: 12px 0; border-bottom: 1px solid #1e293b; font-weight: 600;">${email}</td></tr>
             <tr><td style="padding: 12px 0; color: #94a3b8;">WhatsApp</td><td style="padding: 12px 0; font-weight: 600;">${tel || 'Não informado'}</td></tr>
           </table>
-          <a href="https://wa.me/5549991587646?text=Ol%C3%A1%20${encodeURIComponent(nome)}%2C%20vi%20seu%20contato%20no%20Zynplan!" 
+          <a href="https://wa.me/55${(tel || '').replace(/\D/g, '')}?text=Ol%C3%A1%20${encodeURIComponent(nome)}%2C%20obrigado%20pelo%20contato%20no%20Zynplan!" 
              style="display: inline-block; margin-top: 24px; background: #25d366; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700;">
             💬 Responder no WhatsApp
           </a>
