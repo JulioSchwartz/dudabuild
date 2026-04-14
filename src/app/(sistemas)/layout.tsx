@@ -10,7 +10,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname()
 
   const {
-    nomeUsuario, nomeEmpresa, plano,
+    nomeUsuario, nomeEmpresa, plano, perfil,
     bloqueado, loading, diasRestantes, trialExpirado,
   } = useEmpresa()
 
@@ -19,8 +19,24 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (loading) return
     if (bloqueado) { router.push('/bloqueado'); return }
+
+    // Guards de perfil — redireciona se tentar acessar página sem permissão
+    const rotasAdminOnly     = ['/equipe', '/planos', '/perfil']
+    const rotasFinanceiroOk  = ['/dashboard', '/financeiro']
+    const rotasMestreOk      = ['/dashboard', '/financeiro', '/obras']
+
+    if (perfil === 'financeiro' && !rotasFinanceiroOk.some(r => pathname.startsWith(r))) {
+      router.push('/financeiro'); return
+    }
+    if (perfil === 'mestre_obra' && !rotasMestreOk.some(r => pathname.startsWith(r))) {
+      router.push('/obras'); return
+    }
+    if (perfil !== 'admin' && rotasAdminOnly.some(r => pathname.startsWith(r))) {
+      router.push('/dashboard'); return
+    }
+
     setPronto(true)
-  }, [loading, bloqueado])
+  }, [loading, bloqueado, perfil, pathname])
 
   async function sair() {
     await supabase.auth.signOut()
@@ -38,9 +54,23 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
     )
   }
 
-  const inicialUsuario   = nomeUsuario.charAt(0).toUpperCase()
-  const mostrarBanner    = !trialExpirado && diasRestantes !== null && diasRestantes <= 3
-  const labelUpgrade     = diasRestantes !== null && !trialExpirado ? `⚡ Trial: ${diasRestantes}d` : '⚡ Upgrade'
+  const inicialUsuario = nomeUsuario.charAt(0).toUpperCase()
+  const mostrarBanner  = !trialExpirado && diasRestantes !== null && diasRestantes <= 3
+  const labelUpgrade   = diasRestantes !== null && !trialExpirado ? `⚡ Trial: ${diasRestantes}d` : '⚡ Upgrade'
+
+  const perfilLabel =
+    perfil === 'admin'       ? 'Administrador'  :
+    perfil === 'engenheiro'  ? 'Engenheiro'     :
+    perfil === 'financeiro'  ? 'Financeiro'     :
+                               'Mestre de Obra'
+
+  // Visibilidade dos itens de menu por perfil
+  const podeVerObras      = perfil !== 'financeiro'
+  const podeVerOrcamentos = perfil === 'admin' || perfil === 'engenheiro'
+  const podeVerRelatorios = perfil === 'admin' || perfil === 'engenheiro' || perfil === 'financeiro'
+  const podeVerEquipe     = perfil === 'admin' && plano === 'premium'
+  const podeVerPerfil     = perfil === 'admin'
+  const podeVerPlanos     = perfil === 'admin'
 
   return (
     <div style={container}>
@@ -73,15 +103,16 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
           <nav>
             <p style={menuLabel}>MENU</p>
-            <MenuItem texto="🏠" label="Dashboard"         rota="/dashboard"  ativo={pathname === '/dashboard'} />
-            <MenuItem texto="🏗️" label="Obras"             rota="/obras"      ativo={pathname.startsWith('/obras')} />
-            <MenuItem texto="💰" label="Financeiro"        rota="/financeiro" ativo={pathname.startsWith('/financeiro')} />
-            <MenuItem texto="🧾" label="Orçamentos"        rota="/orcamentos" ativo={pathname.startsWith('/orcamentos')} />
-            <MenuItem texto="📊" label="Relatórios"        rota="/relatorios" ativo={pathname.startsWith('/relatorios')} />
+            <MenuItem texto="🏠" label="Dashboard"  rota="/dashboard"  ativo={pathname === '/dashboard'} />
+            {podeVerObras      && <MenuItem texto="🏗️" label="Obras"        rota="/obras"      ativo={pathname.startsWith('/obras')} />}
+            <MenuItem          texto="💰" label="Financeiro"  rota="/financeiro" ativo={pathname.startsWith('/financeiro')} />
+            {podeVerOrcamentos && <MenuItem texto="🧾" label="Orçamentos"   rota="/orcamentos" ativo={pathname.startsWith('/orcamentos')} />}
+            {podeVerRelatorios && <MenuItem texto="📊" label="Relatórios"   rota="/relatorios" ativo={pathname.startsWith('/relatorios')} />}
+            {podeVerEquipe     && <MenuItem texto="👥" label="Equipe"       rota="/equipe"     ativo={pathname.startsWith('/equipe')} />}
             <div style={divider} />
             <p style={menuLabel}>CONFIGURAÇÕES</p>
-            <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"  ativo={pathname.startsWith('/perfil')} />
-            <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos" ativo={pathname.startsWith('/planos')} destaque />
+            {podeVerPerfil && <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"  ativo={pathname.startsWith('/perfil')} />}
+            {podeVerPlanos && <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos" ativo={pathname.startsWith('/planos')} destaque />}
           </nav>
         </div>
 
@@ -91,7 +122,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
             <div style={avatar}>{inicialUsuario}</div>
             <div style={{ overflow: 'hidden', flex: 1 }}>
               <p style={userName} title={nomeUsuario}>{nomeUsuario}</p>
-              <p style={userRole}>Administrador</p>
+              <p style={userRole}>{perfilLabel}</p>
             </div>
           </div>
           <button onClick={sair} style={btnSair}
@@ -127,12 +158,14 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
             <p style={topbarSub}>Sistema de Gestão · Zynplan</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={() => router.push('/planos')} style={btnUpgrade}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
-            >
-              {labelUpgrade}
-            </button>
+            {podeVerPlanos && (
+              <button onClick={() => router.push('/planos')} style={btnUpgrade}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
+              >
+                {labelUpgrade}
+              </button>
+            )}
             <div style={topbarUser}>
               <div style={topbarAvatar}>{inicialUsuario}</div>
               <div style={{ lineHeight: 1.3 }}>
@@ -156,6 +189,7 @@ function tituloPagina(pathname: string): string {
   if (pathname.startsWith('/financeiro')) return 'Financeiro'
   if (pathname.startsWith('/orcamentos')) return 'Orçamentos'
   if (pathname.startsWith('/relatorios')) return 'Relatórios'
+  if (pathname.startsWith('/equipe'))     return 'Equipe'
   if (pathname.startsWith('/perfil'))     return 'Perfil da Empresa'
   if (pathname.startsWith('/planos'))     return 'Planos'
   return 'Sistema'

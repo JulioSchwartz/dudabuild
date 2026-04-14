@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 
 export type PlanoTipo  = 'basico' | 'pro' | 'premium'
 export type StatusTipo = 'active' | 'past_due' | 'canceled' | 'incomplete'
+export type PerfilTipo = 'admin' | 'engenheiro' | 'mestre_obra' | 'financeiro'
 
 type Limites = {
   orcamentos: number
@@ -24,6 +25,7 @@ export function useEmpresa() {
   const [limites,       setLimites]       = useState<Limites>(LIMITES_POR_PLANO.basico)
   const [nomeUsuario,   setNomeUsuario]   = useState('')
   const [nomeEmpresa,   setNomeEmpresa]   = useState('')
+  const [perfil,        setPerfil]        = useState<PerfilTipo>('admin')
   const [loading,       setLoading]       = useState(true)
   const [bloqueado,     setBloqueado]     = useState(false)
   const [diasRestantes, setDiasRestantes] = useState<number | null>(null)
@@ -71,6 +73,14 @@ export function useEmpresa() {
       setNomeUsuario(data.nome_usuario || session.user.email || 'Usuário')
       setNomeEmpresa(data.nome_empresa || 'Minha Empresa')
 
+      // Busca perfil do usuário logado
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('perfil')
+        .eq('user_id', session.user.id)
+        .single()
+      setPerfil((usuarioData?.perfil || 'admin') as PerfilTipo)
+
       const ehTrial = statusAtual === 'incomplete'
 
       setDiasRestantes(ehTrial ? dias : null)
@@ -99,6 +109,7 @@ export function useEmpresa() {
     setLimites(LIMITES_POR_PLANO.basico)
     setNomeUsuario('')
     setNomeEmpresa('')
+    setPerfil('admin')
     setDiasRestantes(null)
     setTrialExpirado(false)
   }
@@ -110,6 +121,7 @@ export function useEmpresa() {
     limites,
     nomeUsuario,
     nomeEmpresa,
+    perfil,
     loading,
     bloqueado,
     diasRestantes,
