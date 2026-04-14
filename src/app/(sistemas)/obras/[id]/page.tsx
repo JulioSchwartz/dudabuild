@@ -24,7 +24,7 @@ const CLIMA_OPCOES = ['☀️ Ensolarado', '⛅ Nublado', '🌧️ Chuvoso', '�
 
 export default function DetalheObra() {
 
-  const { empresaId, loading: loadingEmpresa } = useEmpresa()
+  const { empresaId, loading: loadingEmpresa, perfil } = useEmpresa()
   const { id }   = useParams()
   const router   = useRouter()
 
@@ -445,13 +445,21 @@ export default function DetalheObra() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button onClick={() => router.push(`/obras/${id}/fotos`)}    style={btnFotos}>📸 Fotos</button>
-          <button onClick={() => router.push(`/obras/${id}/contrato`)} style={btnContrato}>📄 Contrato</button>
-          <button onClick={() => router.push(`/obras/${id}/editar`)}   style={btnEditar}>✏️ Editar</button>
-          {obra.status !== 'concluida'
-            ? <button onClick={() => setMostrarFinalizar(true)} style={btnFinalizar}>🏁 Finalizar Obra</button>
-            : <span style={badgeConcluida}>✅ Obra Concluída</span>
-          }
+          {perfil !== 'financeiro' && (
+            <button onClick={() => router.push(`/obras/${id}/fotos`)}    style={btnFotos}>📸 Fotos</button>
+          )}
+          {perfil === 'admin' && (
+            <button onClick={() => router.push(`/obras/${id}/contrato`)} style={btnContrato}>📄 Contrato</button>
+          )}
+          {perfil !== 'financeiro' && (
+            <button onClick={() => router.push(`/obras/${id}/editar`)}   style={btnEditar}>✏️ Editar</button>
+          )}
+          {perfil === 'admin' && obra.status !== 'concluida' && (
+            <button onClick={() => setMostrarFinalizar(true)} style={btnFinalizar}>🏁 Finalizar Obra</button>
+          )}
+          {obra.status === 'concluida' && (
+            <span style={badgeConcluida}>✅ Obra Concluída</span>
+          )}
         </div>
       </div>
 
@@ -489,7 +497,7 @@ export default function DetalheObra() {
       </div>
 
       {/* ── CRONOGRAMA FÍSICO ── */}
-      <div style={graficoBox}>
+      {perfil !== 'financeiro' && <div style={graficoBox}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>📋 Cronograma Físico</h3>
@@ -799,7 +807,7 @@ export default function DetalheObra() {
             </span>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* CARDS FINANCEIROS */}
       <div style={grid}>
@@ -827,7 +835,7 @@ export default function DetalheObra() {
       )}
 
       {/* ── DIÁRIO DE OBRA ── */}
-      <div style={graficoBox}>
+      {perfil !== 'financeiro' && <div style={graficoBox}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>📓 Diário de Obra</h3>
@@ -964,7 +972,7 @@ export default function DetalheObra() {
             )}
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* FORMULÁRIO LANÇAMENTO */}
       <div style={formCard}>
@@ -1013,7 +1021,9 @@ export default function DetalheObra() {
               <strong style={{ color: d.tipo === 'entrada' ? '#16a34a' : '#dc2626', fontSize: 15 }}>
                 {d.tipo === 'entrada' ? '+' : '-'} {format(Number(d.valor))}
               </strong>
-              <button onClick={() => excluir(d.id)} style={btnExcluir}>✕</button>
+              {perfil !== 'mestre_obra' && (
+                <button onClick={() => excluir(d.id)} style={btnExcluir}>✕</button>
+              )}
             </div>
           </div>
         ))}
