@@ -22,7 +22,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
     // Guards de perfil — redireciona se tentar acessar página sem permissão
     const rotasAdminOnly     = ['/equipe', '/planos', '/perfil']
-    const rotasFinanceiroOk  = ['/dashboard', '/financeiro']
+    const rotasFinanceiroOk  = ['/dashboard', '/financeiro', '/obras', '/relatorios']
     const rotasMestreOk      = ['/dashboard', '/financeiro', '/obras']
 
     if (perfil === 'financeiro' && !rotasFinanceiroOk.some(r => pathname.startsWith(r))) {
