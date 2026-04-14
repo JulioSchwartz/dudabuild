@@ -44,9 +44,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email, senha e perfil são obrigatórios' }, { status: 400 })
     }
 
-    if (!['engenheiro', 'mestre_obra'].includes(perfil)) {
-      return NextResponse.json({ error: 'Perfil inválido' }, { status: 400 })
-    }
+    if (!['engenheiro', 'mestre_obra', 'financeiro'].includes(perfil)) {
+  return NextResponse.json({ error: 'Perfil inválido' }, { status: 400 })
+}
 
     if (senha.length < 6) {
       return NextResponse.json({ error: 'Senha deve ter no mínimo 6 caracteres' }, { status: 400 })
