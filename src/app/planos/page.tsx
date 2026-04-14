@@ -110,6 +110,20 @@ export default function Planos() {
     <div style={container}>
 
       {/* CABEÇALHO */}
+
+{/* BOTÃO VOLTAR */}
+<button
+  onClick={() => router.push('/dashboard')}
+  style={{
+    display: 'flex', alignItems: 'center', gap: 6,
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: '#64748b', fontSize: 14, fontWeight: 600,
+    marginBottom: 24, padding: '6px 0',
+  }}
+>
+  ← Voltar ao Dashboard
+</button>
+
       <div style={cabecalho}>
         <div style={tagLine}>Planos & Preços</div>
         <h1 style={titulo}>Escolha o plano ideal<br />para sua operação</h1>
