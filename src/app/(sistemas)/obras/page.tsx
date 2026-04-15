@@ -27,7 +27,7 @@ export default function Obras() {
     try {
       const [{ data: obrasData, error: errObras }, { data: finData, error: errFin }] =
         await Promise.all([
-          supabase.from('obras').select('*').eq('empresa_id', empresaId),
+          supabase.from('obras').select('*').eq('empresa_id', empresaId).is('deleted_at', null),
           supabase.from('financeiro').select('*').eq('empresa_id', empresaId),
         ])
       if (errObras) throw errObras
@@ -43,10 +43,10 @@ export default function Obras() {
   }
 
   async function excluir(id: number) {
-    if (!confirm('Excluir obra e todos os lançamentos relacionados?')) return
+    if (!confirm('Excluir obra? Os dados serão mantidos para controle de limites do plano.')) return
     try {
-      await supabase.from('financeiro').delete().eq('obra_id', id)
-      await supabase.from('obras').delete().eq('id', id)
+      // Soft delete — mantém no banco mas marca como deletado
+      await supabase.from('obras').update({ deleted_at: new Date().toISOString() }).eq('id', id)
       carregar()
     } catch (err) {
       alert('Erro ao excluir obra')

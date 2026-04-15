@@ -15,6 +15,7 @@ type Orcamento = {
   token?: string
   descricao?: string
   obra_id?: number | null
+  deleted_at?: string | null
 }
 
 export default function OrcamentosPage() {
@@ -36,6 +37,7 @@ export default function OrcamentosPage() {
         .from('orcamentos')
         .select('*')
         .eq('empresa_id', empresaId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
       if (error) throw error
       setLista(data || [])
@@ -62,14 +64,13 @@ export default function OrcamentosPage() {
           empresa_id:           empresaId,
           orcamento_id:         o.id,
           percentual_concluido: 0,
+          deleted_at:           null,
         })
         .select().single()
 
       if (errObra || !novaObra) throw errObra || new Error('Obra não criada')
 
-      // Vincula obra_id ao orçamento
       await supabase.from('orcamentos').update({ obra_id: novaObra.id }).eq('id', o.id)
-
       await carregar()
 
       const irParaObra = confirm(
@@ -92,12 +93,10 @@ export default function OrcamentosPage() {
   }
 
   async function excluir(o: Orcamento) {
-    if (!confirm(`Excluir orçamento de ${o.cliente_nome}?
-
-O histórico será mantido no sistema para controle de limites do plano.`)) return
+    if (!confirm(`Excluir orçamento de ${o.cliente_nome}?\n\nO histórico será mantido para controle de limites do plano.`)) return
     try {
-      await supabase.from('orcamento_itens').delete().eq('orcamento_id', o.id)
-      await supabase.from('orcamentos').delete().eq('id', o.id)
+      // Soft delete — mantém no banco mas marca como deletado
+      await supabase.from('orcamentos').update({ deleted_at: new Date().toISOString() }).eq('id', o.id)
       carregar()
     } catch (err) {
       console.error(err)
@@ -116,23 +115,27 @@ O histórico será mantido no sistema para controle de limites do plano.`)) retu
     window.open(telefone ? `https://wa.me/${telefone}?text=${encodeURIComponent(texto)}` : `https://wa.me/?text=${encodeURIComponent(texto)}`)
   }
 
+  // Conta orçamentos do mês atual (não deletados)
+  const hoje = new Date()
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString()
+  const orcamentosMes = lista.filter(o => o.created_at >= inicioMes).length
+
   const limite        = limites?.orcamentos
-  const atingiuLimite = limite !== undefined && limite !== Infinity && lista.length >= limite
+  const atingiuLimite = limite !== undefined && limite !== Infinity && orcamentosMes >= limite
 
   if (loadingEmpresa || loading) return <p style={{ padding: 40 }}>Carregando...</p>
 
-  // ── SEPARAR POR SEÇÃO ──
-  const pendentes      = lista.filter(o => (!o.status || o.status === 'pendente'))
+  const pendentes        = lista.filter(o => (!o.status || o.status === 'pendente'))
   const aprovadosSemObra = lista.filter(o => o.status === 'aprovado' && !o.obra_id)
-  const comObra        = lista.filter(o => o.status === 'aprovado' && !!o.obra_id)
-  const recusados      = lista.filter(o => o.status === 'recusado')
+  const comObra          = lista.filter(o => o.status === 'aprovado' && !!o.obra_id)
+  const recusados        = lista.filter(o => o.status === 'recusado')
 
   return (
     <div style={container}>
 
       {atingiuLimite && (
         <div style={alertaLimite}>
-          🚨 Limite do plano atingido
+          🚨 Limite de orçamentos do mês atingido ({orcamentosMes}/{limite})
           <button style={btnUpgrade} onClick={() => router.push('/planos')}>Fazer upgrade</button>
         </div>
       )}
@@ -142,12 +145,13 @@ O histórico será mantido no sistema para controle de limites do plano.`)) retu
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a' }}>📑 Orçamentos</h1>
           <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 2 }}>
             {pendentes.length} pendente(s) · {aprovadosSemObra.length} aprovado(s) · {comObra.length} com obra · {recusados.length} recusado(s)
+            {limite !== Infinity && ` · ${orcamentosMes}/${limite} este mês`}
           </p>
         </div>
         <button
-          style={btnNovo}
+          style={{ ...btnNovo, opacity: atingiuLimite ? 0.6 : 1 }}
           onClick={() => {
-            if (atingiuLimite) { alert('Limite atingido. Faça upgrade para continuar.'); return }
+            if (atingiuLimite) { alert('Limite mensal atingido. Faça upgrade para continuar.'); return }
             router.push('/orcamentos/novo')
           }}
         >
@@ -163,7 +167,6 @@ O histórico será mantido no sistema para controle de limites do plano.`)) retu
         </div>
       )}
 
-      {/* ── PENDENTES ── */}
       {pendentes.length > 0 && (
         <Secao titulo="⏳ Aguardando resposta" qtd={pendentes.length}>
           {pendentes.map(o => (
@@ -180,7 +183,6 @@ O histórico será mantido no sistema para controle de limites do plano.`)) retu
         </Secao>
       )}
 
-      {/* ── APROVADOS SEM OBRA ── */}
       {aprovadosSemObra.length > 0 && (
         <Secao titulo="✅ Aprovados (sem obra)" qtd={aprovadosSemObra.length} cor="#16a34a">
           {aprovadosSemObra.map(o => (
@@ -196,7 +198,6 @@ O histórico será mantido no sistema para controle de limites do plano.`)) retu
         </Secao>
       )}
 
-      {/* ── COM OBRA GERADA ── */}
       {comObra.length > 0 && (
         <Secao titulo="🏗️ Obra gerada" qtd={comObra.length} cor="#2563eb">
           {comObra.map(o => (
@@ -212,7 +213,6 @@ O histórico será mantido no sistema para controle de limites do plano.`)) retu
         </Secao>
       )}
 
-      {/* ── RECUSADOS ── */}
       {recusados.length > 0 && (
         <Secao titulo="❌ Recusados" qtd={recusados.length} cor="#dc2626">
           {recusados.map(o => (
@@ -231,7 +231,6 @@ O histórico será mantido no sistema para controle de limites do plano.`)) retu
   )
 }
 
-/* ── SEÇÃO ── */
 function Secao({ titulo, qtd, cor, children }: any) {
   return (
     <div style={{ marginBottom: 32 }}>
@@ -248,7 +247,6 @@ function Secao({ titulo, qtd, cor, children }: any) {
   )
 }
 
-/* ── CARD ── */
 function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onExcluir, onVer, onEditar, onLink, onWhats, onVerObra }: any) {
   const estaAprovando = aprovando === o.id
   const f = (v: number) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -267,14 +265,10 @@ function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onExcluir, onVer, o
         <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>{new Date(o.created_at).toLocaleDateString('pt-BR')}</p>
       </div>
 
-      {/* Botão Ver Obra — só para orçamentos com obra */}
       {o.obra_id && onVerObra && (
-        <button onClick={onVerObra} style={btnVerObra}>
-          🏗️ Ver Obra →
-        </button>
+        <button onClick={onVerObra} style={btnVerObra}>🏗️ Ver Obra →</button>
       )}
 
-      {/* Botões aprovar/recusar — pendentes */}
       {(!o.status || o.status === 'pendente') && onAprovar && (
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onAprovar} style={btnAprovar} disabled={estaAprovando}>
@@ -284,14 +278,12 @@ function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onExcluir, onVer, o
         </div>
       )}
 
-      {/* Botão gerar obra — aprovados cuja obra foi excluída */}
       {o.status === 'aprovado' && !o.obra_id && onAprovar && (
         <button onClick={onAprovar} style={btnGerarObra} disabled={estaAprovando}>
           {estaAprovando ? '⏳ Gerando...' : '🏗️ Gerar Obra Novamente'}
         </button>
       )}
 
-      {/* Ações secundárias */}
       <div style={acoesSecundarias}>
         <button onClick={onLink}    style={btnSec}>🔗 Link</button>
         <button onClick={onVer}     style={btnSec}>👁 Ver</button>
@@ -303,7 +295,6 @@ function CardOrcamento({ o, aprovando, onAprovar, onRecusar, onExcluir, onVer, o
   )
 }
 
-/* ── HELPERS DE ESTILO ── */
 function badgeStyle(status?: string, temObra?: boolean): React.CSSProperties {
   if (temObra)                 return { background: '#dbeafe', color: '#2563eb', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }
   if (status === 'aprovado')   return { background: '#dcfce7', color: '#16a34a', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }
@@ -319,18 +310,18 @@ function cardStyle(status?: string, temObra?: boolean): React.CSSProperties {
   return { ...base, borderLeft: '4px solid #f59e0b' }
 }
 
-const container: React.CSSProperties    = { padding: 24 }
-const header: React.CSSProperties       = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }
-const grid: React.CSSProperties         = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }
+const container: React.CSSProperties        = { padding: 24 }
+const header: React.CSSProperties           = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }
+const grid: React.CSSProperties             = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }
 const acoesSecundarias: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 10, borderTop: '1px solid #f1f5f9' }
-const btnNovo: React.CSSProperties      = { background: '#2563eb', color: '#fff', padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }
-const btnAprovar: React.CSSProperties   = { flex: 1, background: '#16a34a', color: '#fff', border: 'none', padding: '10px 0', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13 }
-const btnRecusar: React.CSSProperties   = { background: '#fee2e2', color: '#dc2626', border: 'none', padding: '10px 12px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13 }
-const btnVerObra: React.CSSProperties   = { background: '#dbeafe', color: '#2563eb', border: 'none', padding: '8px 14px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13, textAlign: 'left' }
-const btnSec: React.CSSProperties       = { background: '#f1f5f9', color: '#374151', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12 }
-const btnWhats: React.CSSProperties     = { background: '#22c55e', color: '#fff', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12 }
-const alertaLimite: React.CSSProperties = { background: '#fef3c7', padding: 12, borderRadius: 8, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }
-const btnUpgrade: React.CSSProperties   = { background: '#f59e0b', color: '#fff', padding: '6px 10px', border: 'none', borderRadius: 6, cursor: 'pointer' }
-const btnGerarObra: React.CSSProperties  = { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '8px 14px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13, width: '100%' }
-const vazioCard: React.CSSProperties    = { textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
-const btnExcluirOrc: React.CSSProperties = { background: '#fee2e2', color: '#dc2626', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600 }
+const btnNovo: React.CSSProperties          = { background: '#2563eb', color: '#fff', padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }
+const btnAprovar: React.CSSProperties       = { flex: 1, background: '#16a34a', color: '#fff', border: 'none', padding: '10px 0', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13 }
+const btnRecusar: React.CSSProperties       = { background: '#fee2e2', color: '#dc2626', border: 'none', padding: '10px 12px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13 }
+const btnVerObra: React.CSSProperties       = { background: '#dbeafe', color: '#2563eb', border: 'none', padding: '8px 14px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13, textAlign: 'left' }
+const btnSec: React.CSSProperties           = { background: '#f1f5f9', color: '#374151', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12 }
+const btnWhats: React.CSSProperties         = { background: '#22c55e', color: '#fff', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12 }
+const alertaLimite: React.CSSProperties     = { background: '#fef3c7', padding: 12, borderRadius: 8, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, fontSize: 13 }
+const btnUpgrade: React.CSSProperties       = { background: '#f59e0b', color: '#fff', padding: '6px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
+const btnGerarObra: React.CSSProperties     = { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '8px 14px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13, width: '100%' }
+const vazioCard: React.CSSProperties        = { textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
+const btnExcluirOrc: React.CSSProperties    = { background: '#fee2e2', color: '#dc2626', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600 }

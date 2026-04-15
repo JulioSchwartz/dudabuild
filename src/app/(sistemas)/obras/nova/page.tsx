@@ -1,25 +1,50 @@
 'use client'
  
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
  
 export default function NovaObra() {
  
-  const { empresaId } = useEmpresa()
+  const { empresaId, limites, loading: loadingEmpresa } = useEmpresa()
   const router = useRouter()
- 
-  const [nome,                setNome]               = useState('')
-  const [cliente,             setCliente]             = useState('')
-  const [valor,               setValor]               = useState('')
-  const [orcamentoCusto,      setOrcamentoCusto]      = useState('')
-  const [area,                setArea]                = useState('')
-  const [endereco,            setEndereco]            = useState('')
-  const [dataInicio,          setDataInicio]          = useState('')
-  const [dataPrevisao,        setDataPrevisao]        = useState('')
-  const [percentualConcluido, setPercentualConcluido] = useState('0')
-  const [loading,             setLoading]             = useState(false)
+
+  const [verificando,           setVerificando]          = useState(true)
+  const [atingiuLimite,         setAtingiuLimite]        = useState(false)
+  const [nome,                  setNome]                 = useState('')
+  const [cliente,               setCliente]              = useState('')
+  const [valor,                 setValor]                = useState('')
+  const [orcamentoCusto,        setOrcamentoCusto]       = useState('')
+  const [area,                  setArea]                 = useState('')
+  const [endereco,              setEndereco]             = useState('')
+  const [dataInicio,            setDataInicio]           = useState('')
+  const [dataPrevisao,          setDataPrevisao]         = useState('')
+  const [percentualConcluido,   setPercentualConcluido]  = useState('0')
+  const [loading,               setLoading]              = useState(false)
+
+  useEffect(() => {
+    if (loadingEmpresa || !empresaId) return
+    verificarLimite()
+  }, [loadingEmpresa, empresaId])
+
+  async function verificarLimite() {
+    setVerificando(true)
+    try {
+      const { count } = await supabase
+        .from('obras')
+        .select('*', { count: 'exact', head: true })
+        .eq('empresa_id', empresaId)
+        .is('deleted_at', null)
+
+      const limite = limites?.obras
+      if (limite !== undefined && limite !== Infinity && (count || 0) >= limite) {
+        setAtingiuLimite(true)
+      }
+    } finally {
+      setVerificando(false)
+    }
+  }
  
   async function salvar(e: React.FormEvent) {
     e.preventDefault()
@@ -42,6 +67,7 @@ export default function NovaObra() {
       data_previsao:         dataPrevisao || null,
       percentual_concluido:  Number(percentualConcluido || 0),
       empresa_id:            empresaId,
+      deleted_at:            null,
     })
  
     if (error) {
@@ -52,6 +78,35 @@ export default function NovaObra() {
     }
  
     router.push('/obras')
+  }
+
+  if (loadingEmpresa || verificando) return <p style={{ padding: 40 }}>Carregando...</p>
+
+  if (atingiuLimite) {
+    return (
+      <div style={container}>
+        <div style={{ ...card, textAlign: 'center', padding: 48 }}>
+          <p style={{ fontSize: 48, marginBottom: 16 }}>🚧</p>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 12 }}>
+            Limite de obras atingido
+          </h2>
+          <p style={{ color: '#64748b', marginBottom: 28, fontSize: 15 }}>
+            Você atingiu o limite de obras do seu plano atual.<br />
+            Faça upgrade para continuar criando obras.
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <button onClick={() => router.push('/planos')}
+              style={{ background: 'linear-gradient(135deg, #d4a843, #f0c040)', color: '#000', padding: '12px 24px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>
+              Ver planos →
+            </button>
+            <button onClick={() => router.back()}
+              style={{ background: '#f1f5f9', color: '#64748b', padding: '12px 24px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+              Voltar
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
  
   return (
@@ -148,16 +203,16 @@ function BarraProgresso({ perc }: { perc: number }) {
   )
 }
  
-const container: React.CSSProperties = { background: '#f1f5f9', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '40px 20px' }
-const card: React.CSSProperties      = { background: '#fff', padding: 32, borderRadius: 16, width: '100%', maxWidth: 560, boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }
-const btnVoltar: React.CSSProperties = { background: 'transparent', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, padding: 0, marginBottom: 16 }
-const titulo: React.CSSProperties    = { fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 24 }
-const form: React.CSSProperties      = { display: 'flex', flexDirection: 'column', gap: 20 }
-const secaoBox: React.CSSProperties  = { display: 'flex', flexDirection: 'column', gap: 14, background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }
+const container: React.CSSProperties   = { background: '#f1f5f9', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '40px 20px' }
+const card: React.CSSProperties        = { background: '#fff', padding: 32, borderRadius: 16, width: '100%', maxWidth: 560, boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }
+const btnVoltar: React.CSSProperties   = { background: 'transparent', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, padding: 0, marginBottom: 16 }
+const titulo: React.CSSProperties      = { fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 24 }
+const form: React.CSSProperties        = { display: 'flex', flexDirection: 'column', gap: 20 }
+const secaoBox: React.CSSProperties    = { display: 'flex', flexDirection: 'column', gap: 14, background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }
 const secaoTitulo: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }
-const grupo: React.CSSProperties     = { display: 'flex', flexDirection: 'column', gap: 4 }
-const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#374151' }
-const input: React.CSSProperties     = { padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, background: '#fff' }
-const dicaStyle: React.CSSProperties = { fontSize: 11, color: '#94a3b8' }
-const doisCols: React.CSSProperties  = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }
-const botao: React.CSSProperties     = { background: '#2563eb', color: '#fff', padding: 13, borderRadius: 8, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 15 }
+const grupo: React.CSSProperties       = { display: 'flex', flexDirection: 'column', gap: 4 }
+const labelStyle: React.CSSProperties  = { fontSize: 12, fontWeight: 600, color: '#374151' }
+const input: React.CSSProperties       = { padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, background: '#fff' }
+const dicaStyle: React.CSSProperties   = { fontSize: 11, color: '#94a3b8' }
+const doisCols: React.CSSProperties    = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }
+const botao: React.CSSProperties       = { background: '#2563eb', color: '#fff', padding: 13, borderRadius: 8, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 15 }
