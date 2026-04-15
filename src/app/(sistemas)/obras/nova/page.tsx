@@ -32,10 +32,9 @@ export default function NovaObra() {
     setVerificando(true)
     try {
       const { count } = await supabase
-        .from('obras')
-        .select('*', { count: 'exact', head: true })
-        .eq('empresa_id', empresaId)
-        .is('deleted_at', null)
+  .from('obras')
+  .select('*', { count: 'exact', head: true })
+  .eq('empresa_id', empresaId)
 
       const limite = limites?.obras
       if (limite !== undefined && limite !== Infinity && (count || 0) >= limite) {
