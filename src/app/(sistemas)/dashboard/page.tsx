@@ -118,6 +118,12 @@ export default function Dashboard() {
   const obrasIds           = new Set(Object.keys(porObra))
   const obrasSemLancamento = obras.filter(o => !obrasIds.has(String(o.id)))
 
+  // IDs de obras ativas (não deletadas) — só essas podem ser clicadas
+  const obrasAtivasIds = new Set(obras.map(o => String(o.id)))
+  function irParaObra(id: string) {
+    if (obrasAtivasIds.has(id)) router.push(`/obras/${id}`)
+  }
+
   return (
     <div style={{ padding: 24 }}>
 
@@ -189,13 +195,13 @@ export default function Dashboard() {
         <div style={alertaBox}>
           <p style={alertaTitulo}>⚠️ Atenção necessária</p>
           {obrasNegativas.map(([id]) => (
-            <div key={id} style={alertaItem} onClick={() => router.push(`/obras/${id}`)}>
+            <div key={id} style={alertaItem} onClick={() => irParaObra(String(id))}>
               🔴 <strong>{nomeObra[id] || `Obra ${id}`}</strong> está no prejuízo — clique para revisar
             </div>
           ))}
           {obrasBaixaMargem.map(([id, d]: any) => (
             <div key={id} style={{ ...alertaItem, background: '#fefce8', borderColor: '#fef08a' }}
-              onClick={() => router.push(`/obras/${id}`)}>
+              onClick={() => irParaObra(String(id))}>
               🟡 <strong>{nomeObra[id] || `Obra ${id}`}</strong> com margem baixa ({d.margem.toFixed(1)}%)
             </div>
           ))}
@@ -214,11 +220,14 @@ export default function Dashboard() {
           {topLucro.length === 0
             ? <p style={vazio}>Sem dados ainda</p>
             : topLucro.map(([id, d]: any, i) => (
-              <div key={id} style={rankLinha} onClick={() => router.push(`/obras/${id}`)}>
+              <div key={id} style={{ ...rankLinha, cursor: obrasAtivasIds.has(String(id)) ? 'pointer' : 'default', opacity: obrasAtivasIds.has(String(id)) ? 1 : 0.6 }} onClick={() => irParaObra(String(id))}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 20 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
                   <div>
-                    <p style={{ fontWeight: 600, fontSize: 14 }}>{nomeObra[id] || `Obra ${id}`}</p>
+                    <p style={{ fontWeight: 600, fontSize: 14 }}>
+                      {nomeObra[id] || `Obra ${id}`}
+                      {!obrasAtivasIds.has(String(id)) && <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 6, fontWeight: 400 }}>(excluída)</span>}
+                    </p>
                     <p style={{ fontSize: 12, color: '#64748b' }}>Margem: {d.margem.toFixed(1)}%</p>
                   </div>
                 </div>
@@ -233,11 +242,14 @@ export default function Dashboard() {
           {topCusto.length === 0
             ? <p style={vazio}>Sem dados ainda</p>
             : topCusto.map(([id, d]: any, i) => (
-              <div key={id} style={rankLinha} onClick={() => router.push(`/obras/${id}`)}>
+              <div key={id} style={{ ...rankLinha, cursor: obrasAtivasIds.has(String(id)) ? 'pointer' : 'default', opacity: obrasAtivasIds.has(String(id)) ? 1 : 0.6 }} onClick={() => irParaObra(String(id))}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 20 }}>#{i + 1}</span>
                   <div>
-                    <p style={{ fontWeight: 600, fontSize: 14 }}>{nomeObra[id] || `Obra ${id}`}</p>
+                    <p style={{ fontWeight: 600, fontSize: 14 }}>
+                      {nomeObra[id] || `Obra ${id}`}
+                      {!obrasAtivasIds.has(String(id)) && <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 6, fontWeight: 400 }}>(excluída)</span>}
+                    </p>
                     <p style={{ fontSize: 12, color: '#64748b' }}>Receita: {format(d.receita)}</p>
                   </div>
                 </div>
