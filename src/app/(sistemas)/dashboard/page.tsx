@@ -12,6 +12,7 @@ export default function Dashboard() {
 
   const [dados,        setDados]        = useState<any[]>([])
   const [obras,        setObras]        = useState<any[]>([])
+  const [todasObras,   setTodasObras]   = useState<any[]>([])
   const [notificacoes, setNotificacoes] = useState<any[]>([])
   const [loadingData,  setLoadingData]  = useState(true)
 
@@ -27,13 +28,15 @@ export default function Dashboard() {
   async function carregar() {
     try {
       const [
-        { data: finData,   error: errFin },
-        { data: obrasData, error: errObras },
-        { data: orcData,   error: errOrc },
+        { data: finData,       error: errFin },
+        { data: obrasData,     error: errObras },
+        { data: todasObras },
+        { data: orcData,       error: errOrc },
         { data: lidasData },
       ] = await Promise.all([
         supabase.from('financeiro').select('*').eq('empresa_id', empresaId),
         supabase.from('obras').select('*').eq('empresa_id', empresaId).is('deleted_at', null),
+        supabase.from('obras').select('id, nome').eq('empresa_id', empresaId), // todas, incluindo deletadas
         supabase.from('orcamentos').select('*').eq('empresa_id', empresaId)
           .is('deleted_at', null)
           .in('status', ['aprovado', 'recusado'])
@@ -47,6 +50,7 @@ export default function Dashboard() {
 
       setDados(finData   || [])
       setObras(obrasData || [])
+      setTodasObras(todasObras || [])
 
       // Filtra notificações não lidas usando banco
       const lidasIds = new Set((lidasData || []).map((l: any) => l.orcamento_id))
@@ -91,7 +95,7 @@ export default function Dashboard() {
 
   /* ── RESULTADO POR OBRA ── */
   const nomeObra: Record<string, string> = {}
-  obras.forEach(o => { nomeObra[String(o.id)] = o.nome })
+  todasObras.forEach(o => { nomeObra[String(o.id)] = o.nome }) // usa todas incluindo deletadas para exibir nome
 
   const porObra: Record<string, { receita: number; custo: number; lucro: number; margem: number }> = {}
   dados.forEach(d => {
