@@ -18,11 +18,12 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (loading) return
-    if (bloqueado) { router.push('/bloqueado'); return }
+    if (bloqueado && !pathname.startsWith('/planos')) { router.push('/planos'); return }
+    if (bloqueado && pathname.startsWith('/planos')) { setPronto(true); return }
 
     // Guards de perfil — redireciona se tentar acessar página sem permissão
     const rotasAdminOnly     = ['/equipe', '/planos', '/perfil']
-    const rotasFinanceiroOk  = ['/dashboard', '/financeiro', '/obras', '/relatorios']
+    const rotasFinanceiroOk  = ['/dashboard', '/financeiro']
     const rotasMestreOk      = ['/dashboard', '/financeiro', '/obras']
 
     if (perfil === 'financeiro' && !rotasFinanceiroOk.some(r => pathname.startsWith(r))) {
@@ -65,7 +66,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
                                'Mestre de Obra'
 
   // Visibilidade dos itens de menu por perfil
-  const podeVerObras = true
+  const podeVerObras      = perfil !== 'financeiro'
   const podeVerOrcamentos = perfil === 'admin' || perfil === 'engenheiro'
   const podeVerRelatorios = perfil === 'admin' || perfil === 'engenheiro' || perfil === 'financeiro'
   const podeVerEquipe     = perfil === 'admin' && plano === 'premium'
