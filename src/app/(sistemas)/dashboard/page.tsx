@@ -16,7 +16,7 @@ export default function Dashboard() {
   const [loadingData,  setLoadingData]  = useState(true)
 
   useEffect(() => {
-    if (!loading && bloqueado) router.push('/bloqueado')
+    if (!loading && bloqueado) router.push('/planos')
   }, [loading, bloqueado, router])
 
   useEffect(() => {
@@ -33,8 +33,9 @@ export default function Dashboard() {
         { data: lidasData },
       ] = await Promise.all([
         supabase.from('financeiro').select('*').eq('empresa_id', empresaId),
-        supabase.from('obras').select('*').eq('empresa_id', empresaId),
+        supabase.from('obras').select('*').eq('empresa_id', empresaId).is('deleted_at', null),
         supabase.from('orcamentos').select('*').eq('empresa_id', empresaId)
+          .is('deleted_at', null)
           .in('status', ['aprovado', 'recusado'])
           .order('aprovado_em', { ascending: false })
           .limit(20),

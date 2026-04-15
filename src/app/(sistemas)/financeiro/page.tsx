@@ -19,7 +19,7 @@ export default function Financeiro() {
   const [loadingData, setLoadingData] = useState(true)
 
   useEffect(() => {
-    if (!loading && bloqueado) router.push('/bloqueado')
+    if (!loading && bloqueado) router.push('/planos')
   }, [loading, bloqueado, router])
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function Financeiro() {
       const [{ data: finData, error: errFin }, { data: obrasData, error: errObras }] =
         await Promise.all([
           supabase.from('financeiro').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: true }),
-          supabase.from('obras').select('id, nome').eq('empresa_id', empresaId),
+          supabase.from('obras').select('id, nome').eq('empresa_id', empresaId).is('deleted_at', null),
         ])
       if (errFin)   throw errFin
       if (errObras) throw errObras
