@@ -139,6 +139,20 @@ export default function LandingPage() {
           -webkit-text-fill-color: transparent;
           animation: shimmer 3s linear infinite;
         }
+        .nav-desktop { display: flex; }
+        .nav-mobile-btn { display: none; }
+        .nav-mobile-menu { display: none; }
+        .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+        .cta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+        @media (max-width: 768px) {
+          .nav-desktop { display: none !important; }
+          .nav-btns-desktop { display: none !important; }
+          .nav-mobile-btn { display: flex !important; }
+          .nav-mobile-menu { display: flex !important; }
+          .hero-grid { grid-template-columns: 1fr !important; gap: 48px !important; }
+          .hero-mockup { display: none !important; }
+          .cta-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+        }
       `}</style>
 
       {/* NAV */}
@@ -151,12 +165,13 @@ export default function LandingPage() {
         padding: '0 5%',
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan" style={{ height: 36, mixBlendMode: 'screen' }} />
           </div>
 
-          {/* Desktop Nav */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 32, fontSize: 14, fontWeight: 500 }}>
+          {/* Desktop Nav Links */}
+          <div className="nav-desktop" style={{ alignItems: 'center', gap: 32, fontSize: 14, fontWeight: 500 }}>
             {[['funcionalidades', 'Funcionalidades'], ['planos', 'Planos'], ['depoimentos', 'Depoimentos'], ['faq', 'FAQ']].map(([id, label]) => (
               <button key={id} onClick={() => scrollTo(id)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 14, fontWeight: 500, transition: 'color 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.color = '#d4a843')}
@@ -165,7 +180,8 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Desktop Buttons */}
+          <div className="nav-btns-desktop" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button onClick={() => router.push('/login')} className="btn-secondary"
               style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '8px 20px', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 500 }}>
               Entrar
@@ -175,20 +191,56 @@ export default function LandingPage() {
               Testar grátis →
             </button>
           </div>
+
+          {/* Mobile Hamburger */}
+          <button
+            className="nav-mobile-btn"
+            onClick={() => setMenuAberto(!menuAberto)}
+            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', flexDirection: 'column', gap: 5, padding: 8 }}
+          >
+            <span style={{ display: 'block', width: 24, height: 2, background: menuAberto ? '#d4a843' : '#fff', borderRadius: 2, transition: 'all 0.2s', transform: menuAberto ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
+            <span style={{ display: 'block', width: 24, height: 2, background: menuAberto ? '#d4a843' : '#fff', borderRadius: 2, transition: 'all 0.2s', opacity: menuAberto ? 0 : 1 }} />
+            <span style={{ display: 'block', width: 24, height: 2, background: menuAberto ? '#d4a843' : '#fff', borderRadius: 2, transition: 'all 0.2s', transform: menuAberto ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
+          </button>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {menuAberto && (
+          <div className="nav-mobile-menu" style={{
+            display: 'flex', flexDirection: 'column',
+            background: 'rgba(10,10,15,0.98)', backdropFilter: 'blur(20px)',
+            borderTop: '1px solid rgba(212,168,67,0.15)',
+            padding: '16px 5% 24px',
+            gap: 4,
+          }}>
+            {[['funcionalidades', 'Funcionalidades'], ['planos', 'Planos'], ['depoimentos', 'Depoimentos'], ['faq', 'FAQ']].map(([id, label]) => (
+              <button key={id} onClick={() => scrollTo(id)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 16, fontWeight: 500, padding: '14px 0', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.05)', width: '100%' }}>
+                {label}
+              </button>
+            ))}
+            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <button onClick={() => router.push('/login')}
+                style={{ flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '12px 0', borderRadius: 8, cursor: 'pointer', fontSize: 15, fontWeight: 500 }}>
+                Entrar
+              </button>
+              <button onClick={() => router.push('/cadastro')}
+                style={{ flex: 1, background: 'linear-gradient(135deg, #d4a843, #f0c040)', color: '#000', padding: '12px 0', borderRadius: 8, cursor: 'pointer', fontSize: 15, fontWeight: 700, border: 'none' }}>
+                Testar grátis →
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* HERO */}
       <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden', padding: '120px 5% 80px' }}>
-        {/* Background effects */}
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(212,168,67,0.12) 0%, transparent 60%)' }} />
         <div style={{ position: 'absolute', top: '20%', left: '-10%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,168,67,0.05) 0%, transparent 70%)', filter: 'blur(40px)' }} />
         <div style={{ position: 'absolute', bottom: '10%', right: '-5%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(212,168,67,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(212,168,67,0.03) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
 
-        {/* Grid pattern */}
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(212,168,67,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(212,168,67,0.03) 1px, transparent 1px)', backgroundSize: '60px 60px', }} />
-
-        <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+        <div className="hero-grid" style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}>
           <div>
             <div className="fade-up" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.25)', borderRadius: 999, padding: '6px 16px', fontSize: 13, fontWeight: 600, color: '#d4a843', marginBottom: 28 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d4a843', animation: 'pulse 2s infinite' }} />
@@ -226,10 +278,9 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Dashboard mockup */}
-          <div className="float" style={{ position: 'relative' }}>
+          {/* Dashboard mockup — some no mobile */}
+          <div className="hero-mockup float" style={{ position: 'relative' }}>
             <div style={{ background: 'linear-gradient(135deg, rgba(30,30,40,0.9), rgba(15,15,25,0.95))', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 20, padding: 24, boxShadow: '0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,168,67,0.1)', backdropFilter: 'blur(20px)' }}>
-              {/* Topbar mockup */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <div>
                   <p style={{ fontSize: 16, fontWeight: 700 }}>Dashboard Executivo</p>
@@ -238,7 +289,6 @@ export default function LandingPage() {
                 <div style={{ background: 'rgba(212,168,67,0.15)', border: '1px solid rgba(212,168,67,0.3)', borderRadius: 999, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#d4a843' }}>⭐ Premium</div>
               </div>
 
-              {/* KPI Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
                 {[['Receita Total', 'R$ 2,4M', '#22c55e'], ['Lucro Total', 'R$ 546K', '#3b82f6'], ['Obras Ativas', '6', '#d4a843']].map(([label, val, cor]) => (
                   <div key={label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '14px 16px' }}>
@@ -248,7 +298,6 @@ export default function LandingPage() {
                 ))}
               </div>
 
-              {/* Mini chart */}
               <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 12 }}>FLUXO DE CAIXA</p>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 60 }}>
@@ -258,7 +307,6 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Obras list */}
               {[['Residencial Floripa', '78%', '#22c55e'], ['Comercial Centro', '45%', '#f59e0b']].map(([nome, perc, cor]) => (
                 <div key={nome} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: cor, flexShrink: 0 }} />
@@ -271,7 +319,6 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* Floating badges */}
             <div style={{ position: 'absolute', top: -16, right: -16, background: '#22c55e', borderRadius: 12, padding: '8px 14px', fontSize: 12, fontWeight: 700, color: '#fff', boxShadow: '0 8px 24px rgba(34,197,94,0.4)' }}>
               ✓ Orçamento aprovado!
             </div>
@@ -292,7 +339,7 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
             {problemas.map((item, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '20px 24px' }}>
                 <div>
@@ -456,7 +503,7 @@ export default function LandingPage() {
       {/* CTA FINAL + FORMULÁRIO */}
       <section style={{ padding: '100px 5%', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 60% at 50% 50%, rgba(212,168,67,0.08) 0%, transparent 70%)' }} />
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', position: 'relative' }}>
+        <div className="cta-grid" style={{ maxWidth: 1100, margin: '0 auto', position: 'relative' }}>
           <div>
             <p style={{ fontSize: 13, fontWeight: 700, color: '#d4a843', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 20 }}>Comece agora</p>
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 900, lineHeight: 1.15, marginBottom: 24 }}>
