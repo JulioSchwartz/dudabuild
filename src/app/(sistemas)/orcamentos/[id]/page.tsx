@@ -214,6 +214,46 @@ export default function VerOrcamento() {
         </div>
       )}
 
+      {/* BADGE ASSINATURA DIGITAL */}
+      {orc.assinado_em && (
+        <div style={assinadoBox}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <span style={{ fontSize: 22 }}>✍️</span>
+            <div>
+              <p style={{ fontWeight: 700, color: '#166534', fontSize: 15 }}>Assinado Digitalmente pelo Cliente</p>
+              <p style={{ fontSize: 12, color: '#16a34a' }}>Validade jurídica conforme MP 2.200-2/2001</p>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, fontSize: 13 }}>
+            <div style={assinadoCampo}>
+              <p style={assinadoLabel}>Assinante</p>
+              <p style={assinadoValor}>{orc.assinatura_nome}</p>
+            </div>
+            <div style={assinadoCampo}>
+              <p style={assinadoLabel}>CPF</p>
+              <p style={assinadoValor}>
+                {orc.assinatura_cpf?.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+              </p>
+            </div>
+            <div style={assinadoCampo}>
+              <p style={assinadoLabel}>Data/Hora</p>
+              <p style={assinadoValor}>{new Date(orc.assinado_em).toLocaleString('pt-BR')}</p>
+            </div>
+            <div style={assinadoCampo}>
+              <p style={assinadoLabel}>IP registrado</p>
+              <p style={assinadoValor}>{orc.assinatura_ip || '—'}</p>
+            </div>
+          </div>
+          {orc.assinatura_hash && (
+            <div style={{ marginTop: 10, padding: '8px 12px', background: '#dcfce7', borderRadius: 6 }}>
+              <p style={{ fontSize: 10, color: '#166534', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                SHA-256: {orc.assinatura_hash}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* BOTÃO APROVAR */}
       {!jaAprovado && !jaRecusado && (
         <div style={aprovacaoBox}>
@@ -357,3 +397,8 @@ const acoes: React.CSSProperties  = { display: 'flex', gap: 10, flexWrap: 'wrap'
 const btnPdf: React.CSSProperties   = { background: '#0f172a', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }
 const btnSec: React.CSSProperties   = { background: '#f1f5f9', color: '#374151', border: 'none', padding: '12px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }
 const btnWhats: React.CSSProperties = { background: '#22c55e', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }
+
+const assinadoBox: React.CSSProperties    = { background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 12, padding: 20, marginBottom: 20 }
+const assinadoCampo: React.CSSProperties  = { background: '#fff', padding: '10px 14px', borderRadius: 8, border: '1px solid #dcfce7' }
+const assinadoLabel: React.CSSProperties  = { fontSize: 11, color: '#16a34a', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }
+const assinadoValor: React.CSSProperties  = { fontSize: 13, fontWeight: 600, color: '#0f172a' }
