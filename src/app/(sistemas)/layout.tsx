@@ -23,8 +23,8 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
     // Guards de perfil — redireciona se tentar acessar página sem permissão
     const rotasAdminOnly     = ['/equipe', '/planos', '/perfil']
-    const rotasFinanceiroOk  = ['/dashboard', '/financeiro']
-    const rotasMestreOk      = ['/dashboard', '/financeiro', '/obras']
+    const rotasFinanceiroOk  = ['/dashboard', '/financeiro', '/obras', '/contas', '/compras', '/relatorios', '/fornecedores']
+    const rotasMestreOk      = ['/dashboard', '/financeiro', '/obras', '/contas', '/compras']
 
     if (perfil === 'financeiro' && !rotasFinanceiroOk.some(r => pathname.startsWith(r))) {
       router.push('/financeiro'); return
@@ -66,12 +66,15 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
                                'Mestre de Obra'
 
   // Visibilidade dos itens de menu por perfil
-  const podeVerObras      = perfil !== 'financeiro'
-  const podeVerOrcamentos = perfil === 'admin' || perfil === 'engenheiro'
-  const podeVerRelatorios = perfil === 'admin' || perfil === 'engenheiro' || perfil === 'financeiro'
-  const podeVerEquipe     = perfil === 'admin' && plano === 'premium'
-  const podeVerPerfil     = perfil === 'admin'
-  const podeVerPlanos     = perfil === 'admin'
+  const podeVerObras        = true
+  const podeVerOrcamentos   = perfil === 'admin' || perfil === 'engenheiro'
+  const podeVerRelatorios   = perfil === 'admin' || perfil === 'engenheiro' || perfil === 'financeiro'
+  const podeVerEquipe       = perfil === 'admin' && plano === 'premium'
+  const podeVerPerfil       = perfil === 'admin'
+  const podeVerPlanos       = perfil === 'admin'
+  const podeVerContas       = true
+  const podeVerCompras      = true
+  const podeVerFornecedores = perfil === 'admin' || perfil === 'engenheiro' || perfil === 'financeiro'
 
   return (
     <div style={container}>
@@ -104,16 +107,19 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
           <nav>
             <p style={menuLabel}>MENU</p>
-            <MenuItem texto="🏠" label="Dashboard"  rota="/dashboard"  ativo={pathname === '/dashboard'} />
-            {podeVerObras      && <MenuItem texto="🏗️" label="Obras"        rota="/obras"      ativo={pathname.startsWith('/obras')} />}
-            <MenuItem          texto="💰" label="Financeiro"  rota="/financeiro" ativo={pathname.startsWith('/financeiro')} />
-            {podeVerOrcamentos && <MenuItem texto="🧾" label="Orçamentos"   rota="/orcamentos" ativo={pathname.startsWith('/orcamentos')} />}
-            {podeVerRelatorios && <MenuItem texto="📊" label="Relatórios"   rota="/relatorios" ativo={pathname.startsWith('/relatorios')} />}
-            {podeVerEquipe     && <MenuItem texto="👥" label="Equipe"       rota="/equipe"     ativo={pathname.startsWith('/equipe')} />}
+            <MenuItem texto="🏠" label="Dashboard"   rota="/dashboard"   ativo={pathname === '/dashboard'} />
+            {podeVerObras        && <MenuItem texto="🏗️" label="Obras"        rota="/obras"        ativo={pathname.startsWith('/obras')} />}
+            <MenuItem              texto="💰" label="Financeiro"  rota="/financeiro"  ativo={pathname.startsWith('/financeiro')} />
+            {podeVerContas       && <MenuItem texto="💳" label="Contas"       rota="/contas"       ativo={pathname.startsWith('/contas')} />}
+            {podeVerCompras      && <MenuItem texto="🛒" label="Compras"      rota="/compras"      ativo={pathname.startsWith('/compras')} />}
+            {podeVerOrcamentos   && <MenuItem texto="🧾" label="Orçamentos"   rota="/orcamentos"   ativo={pathname.startsWith('/orcamentos')} />}
+            {podeVerRelatorios   && <MenuItem texto="📊" label="Relatórios"   rota="/relatorios"   ativo={pathname.startsWith('/relatorios')} />}
+            {podeVerEquipe       && <MenuItem texto="👥" label="Equipe"       rota="/equipe"       ativo={pathname.startsWith('/equipe')} />}
             <div style={divider} />
             <p style={menuLabel}>CONFIGURAÇÕES</p>
-            {podeVerPerfil && <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"  ativo={pathname.startsWith('/perfil')} />}
-            {podeVerPlanos && <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos" ativo={pathname.startsWith('/planos')} destaque />}
+            {podeVerFornecedores && <MenuItem texto="🏭" label="Fornecedores" rota="/fornecedores" ativo={pathname.startsWith('/fornecedores')} />}
+            {podeVerPerfil       && <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"  ativo={pathname.startsWith('/perfil')} />}
+            {podeVerPlanos       && <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos"  ativo={pathname.startsWith('/planos')} destaque />}
           </nav>
         </div>
 
@@ -185,14 +191,17 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 }
 
 function tituloPagina(pathname: string): string {
-  if (pathname === '/dashboard')          return 'Dashboard'
-  if (pathname.startsWith('/obras'))      return 'Obras'
-  if (pathname.startsWith('/financeiro')) return 'Financeiro'
-  if (pathname.startsWith('/orcamentos')) return 'Orçamentos'
-  if (pathname.startsWith('/relatorios')) return 'Relatórios'
-  if (pathname.startsWith('/equipe'))     return 'Equipe'
-  if (pathname.startsWith('/perfil'))     return 'Perfil da Empresa'
-  if (pathname.startsWith('/planos'))     return 'Planos'
+  if (pathname === '/dashboard')            return 'Dashboard'
+  if (pathname.startsWith('/obras'))        return 'Obras'
+  if (pathname.startsWith('/financeiro'))   return 'Financeiro'
+  if (pathname.startsWith('/contas'))       return 'Contas'
+  if (pathname.startsWith('/compras'))      return 'Compras'
+  if (pathname.startsWith('/fornecedores')) return 'Fornecedores'
+  if (pathname.startsWith('/orcamentos'))   return 'Orçamentos'
+  if (pathname.startsWith('/relatorios'))   return 'Relatórios'
+  if (pathname.startsWith('/equipe'))       return 'Equipe'
+  if (pathname.startsWith('/perfil'))       return 'Perfil da Empresa'
+  if (pathname.startsWith('/planos'))       return 'Planos'
   return 'Sistema'
 }
 
