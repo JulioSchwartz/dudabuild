@@ -4,57 +4,40 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Legend, Cell
-} from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 export default function Financeiro() {
-
   const { empresaId, bloqueado, loading } = useEmpresa()
   const router = useRouter()
-
-  const [dados,  setDados]  = useState<any[]>([])
-  const [obras,  setObras]  = useState<any[]>([])
+  const [dados, setDados]   = useState<any[]>([])
+  const [obras, setObras]   = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
 
-  useEffect(() => {
-    if (!loading && bloqueado) router.push('/planos')
-  }, [loading, bloqueado, router])
-
-  useEffect(() => {
-    if (!empresaId) return
-    carregar()
-  }, [empresaId])
+  useEffect(() => { if (!loading && bloqueado) router.push('/planos') }, [loading, bloqueado, router])
+  useEffect(() => { if (!empresaId) return; carregar() }, [empresaId])
 
   async function carregar() {
     try {
-      const [{ data: finData, error: errFin }, { data: obrasData, error: errObras }] =
-        await Promise.all([
-          supabase.from('financeiro').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: true }),
-          supabase.from('obras').select('id, nome').eq('empresa_id', empresaId).is('deleted_at', null),
-        ])
-      if (errFin)   throw errFin
+      const [{ data: finData, error: errFin }, { data: obrasData, error: errObras }] = await Promise.all([
+        supabase.from('financeiro').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: true }),
+        supabase.from('obras').select('id, nome').eq('empresa_id', empresaId).is('deleted_at', null),
+      ])
+      if (errFin) throw errFin
       if (errObras) throw errObras
       setDados(finData   || [])
       setObras(obrasData || [])
-    } catch (err) {
-      console.error('Erro financeiro:', err)
-    } finally {
-      setLoadingData(false)
-    }
+    } catch (err) { console.error('Erro financeiro:', err) }
+    finally { setLoadingData(false) }
   }
 
   if (loading || loadingData) return <p style={{ padding: 24 }}>Carregando...</p>
 
-  /* ── TOTAIS ── */
   const entradas = dados.filter(d => d.tipo === 'entrada')
   const saidas   = dados.filter(d => d.tipo === 'saida')
   const receita  = soma(entradas)
   const custo    = soma(saidas)
   const lucro    = receita - custo
 
-  /* ── FLUXO DE CAIXA MENSAL COM SALDO ACUMULADO ── */
   const porMes: Record<string, { mes: string; entrada: number; saida: number; saldo: number }> = {}
   dados.forEach(d => {
     if (!d.created_at) return
@@ -70,7 +53,6 @@ export default function Financeiro() {
     return { ...m, saldo: acumulado }
   })
 
-  /* ── BREAKDOWN POR CATEGORIA DE CUSTO ── */
   const porCategoria: Record<string, number> = {}
   saidas.forEach(s => {
     const cat = s.descricao || 'Outros'
@@ -80,7 +62,6 @@ export default function Financeiro() {
     .map(([nome, valor]) => ({ nome, valor, perc: custo > 0 ? (valor / custo) * 100 : 0 }))
     .sort((a, b) => b.valor - a.valor)
 
-  /* ── COMPARATIVO ENTRE OBRAS ── */
   const nomeObra: Record<string, string> = {}
   obras.forEach(o => { nomeObra[String(o.id)] = o.nome })
 
@@ -100,12 +81,22 @@ export default function Financeiro() {
 
   return (
     <div style={{ padding: 24 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .fin-dois-grid { grid-template-columns: 1fr !important; }
+          .fin-saldo-card { flex-direction: column !important; gap: 12px !important; }
+          .fin-saldo-right { text-align: left !important; }
+          .fin-tabela-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .fin-tabela-header,
+          .fin-tabela-linha { grid-template-columns: 80px 1fr 1fr 1fr 1fr !important; font-size: 11px !important; min-width: 480px; }
+        }
+      `}</style>
 
       <h1 style={titulo}>💰 Financeiro</h1>
       <p style={subtitulo}>Fluxo de caixa e análise de custos consolidada</p>
 
-      {/* ── SALDO ATUAL ── */}
-      <div style={saldoCard(lucro)}>
+      {/* SALDO */}
+      <div className="fin-saldo-card" style={saldoCard(lucro)}>
         <div>
           <p style={{ fontSize: 13, color: lucro >= 0 ? '#166534' : '#991b1b', fontWeight: 600 }}>
             {lucro >= 0 ? '✅ Saldo positivo' : '⚠️ Saldo negativo'}
@@ -114,7 +105,7 @@ export default function Financeiro() {
             {lucro >= 0 ? '+' : ''}{format(lucro)}
           </p>
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div className="fin-saldo-right" style={{ textAlign: 'right' }}>
           <p style={{ fontSize: 13, color: '#64748b' }}>Total entradas</p>
           <p style={{ fontSize: 18, fontWeight: 700, color: '#16a34a' }}>{format(receita)}</p>
           <p style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>Total saídas</p>
@@ -122,7 +113,7 @@ export default function Financeiro() {
         </div>
       </div>
 
-      {/* ── FLUXO DE CAIXA MENSAL ── */}
+      {/* FLUXO MENSAL */}
       <div style={secaoCard}>
         <h3 style={secaoTitulo}>📅 Fluxo de Caixa Mensal</h3>
         {fluxo.length === 0
@@ -140,40 +131,41 @@ export default function Financeiro() {
                 </BarChart>
               </ResponsiveContainer>
 
-              {/* TABELA DE SALDO */}
-              <div style={{ marginTop: 16 }}>
-                <div style={tabelaHeader}>
-                  <span>Mês</span>
-                  <span style={{ textAlign: 'right' }}>Entradas</span>
-                  <span style={{ textAlign: 'right' }}>Saídas</span>
-                  <span style={{ textAlign: 'right' }}>Saldo do mês</span>
-                  <span style={{ textAlign: 'right' }}>Saldo acumulado</span>
+              {/* TABELA COM SCROLL HORIZONTAL NO MOBILE */}
+              <div className="fin-tabela-wrap" style={{ marginTop: 16 }}>
+                <div style={{ minWidth: 480 }}>
+                  <div className="fin-tabela-header" style={tabelaHeader}>
+                    <span>Mês</span>
+                    <span style={{ textAlign: 'right' }}>Entradas</span>
+                    <span style={{ textAlign: 'right' }}>Saídas</span>
+                    <span style={{ textAlign: 'right' }}>Saldo do mês</span>
+                    <span style={{ textAlign: 'right' }}>Saldo acumulado</span>
+                  </div>
+                  {fluxo.map(m => {
+                    const saldoMes = m.entrada - m.saida
+                    return (
+                      <div key={m.mes} className="fin-tabela-linha" style={tabelaLinha}>
+                        <span style={{ fontWeight: 600 }}>{m.mes}</span>
+                        <span style={{ textAlign: 'right', color: '#16a34a' }}>{format(m.entrada)}</span>
+                        <span style={{ textAlign: 'right', color: '#dc2626' }}>{format(m.saida)}</span>
+                        <span style={{ textAlign: 'right', color: saldoMes >= 0 ? '#2563eb' : '#dc2626', fontWeight: 600 }}>
+                          {saldoMes >= 0 ? '+' : ''}{format(saldoMes)}
+                        </span>
+                        <span style={{ textAlign: 'right', color: m.saldo >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                          {format(m.saldo)}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
-                {fluxo.map((m, i) => {
-                  const saldoMes = m.entrada - m.saida
-                  return (
-                    <div key={m.mes} style={tabelaLinha}>
-                      <span style={{ fontWeight: 600 }}>{m.mes}</span>
-                      <span style={{ textAlign: 'right', color: '#16a34a' }}>{format(m.entrada)}</span>
-                      <span style={{ textAlign: 'right', color: '#dc2626' }}>{format(m.saida)}</span>
-                      <span style={{ textAlign: 'right', color: saldoMes >= 0 ? '#2563eb' : '#dc2626', fontWeight: 600 }}>
-                        {saldoMes >= 0 ? '+' : ''}{format(saldoMes)}
-                      </span>
-                      <span style={{ textAlign: 'right', color: m.saldo >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
-                        {format(m.saldo)}
-                      </span>
-                    </div>
-                  )
-                })}
               </div>
             </>
           )
         }
       </div>
 
-      <div style={doisGrid}>
-
-        {/* ── BREAKDOWN DE CUSTOS ── */}
+      {/* BREAKDOWN + COMPARATIVO — 2 col desktop, 1 col mobile */}
+      <div className="fin-dois-grid" style={doisGrid}>
         <div style={secaoCard}>
           <h3 style={secaoTitulo}>🔍 Breakdown de Custos</h3>
           {categorias.length === 0
@@ -192,15 +184,12 @@ export default function Financeiro() {
           }
         </div>
 
-        {/* ── COMPARATIVO ENTRE OBRAS ── */}
         <div style={secaoCard}>
           <h3 style={secaoTitulo}>📊 Comparativo por Obra</h3>
           {comparativo.length === 0
             ? <p style={vazio}>Sem dados</p>
-            : comparativo.map((o, i) => (
-              <div
-                key={o.nome}
-                style={obraItem(o.lucro)}
+            : comparativo.map(o => (
+              <div key={o.nome} style={obraItem(o.lucro)}
                 onClick={() => {
                   const obra = obras.find(ob => nomeObra[String(ob.id)] === o.nome)
                   if (obra) router.push(`/obras/${obra.id}`)
@@ -208,9 +197,7 @@ export default function Financeiro() {
               >
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 14 }}>{o.nome}</p>
-                  <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                    Custo: {format(o.custo)}
-                  </p>
+                  <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Custo: {format(o.custo)}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <p style={{ color: o.lucro >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
@@ -224,46 +211,30 @@ export default function Financeiro() {
             ))
           }
         </div>
-
       </div>
-
     </div>
   )
 }
 
-/* ── HELPERS ── */
 function soma(lista: any[]) { return lista.reduce((a, b) => a + Number(b.valor || 0), 0) }
 function format(v: number)  { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 
-/* ── ESTILOS ── */
 const titulo: React.CSSProperties    = { fontSize: 24, fontWeight: 800, color: '#0f172a' }
 const subtitulo: React.CSSProperties = { fontSize: 13, color: '#94a3b8', marginTop: 2, marginBottom: 20 }
 const vazio: React.CSSProperties     = { color: '#94a3b8', fontSize: 13 }
-
 const saldoCard = (lucro: number): React.CSSProperties => ({
   background: lucro >= 0 ? '#f0fdf4' : '#fff1f2',
   border: `1px solid ${lucro >= 0 ? '#bbf7d0' : '#fecdd3'}`,
   borderRadius: 16, padding: '20px 24px', marginBottom: 24,
   display: 'flex', justifyContent: 'space-between', alignItems: 'center'
 })
-
-const secaoCard: React.CSSProperties  = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
+const secaoCard: React.CSSProperties   = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
 const secaoTitulo: React.CSSProperties = { fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 16 }
-const doisGrid: React.CSSProperties   = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }
-
-const tabelaHeader: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
-  padding: '8px 12px', background: '#f8fafc', borderRadius: 8,
-  fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 4
-}
-const tabelaLinha: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
-  padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontSize: 13
-}
-
-const barraFundo: React.CSSProperties       = { height: 8, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden' }
-const barraPreenchida: React.CSSProperties  = { height: '100%', borderRadius: 999, transition: 'width 0.3s' }
-
+const doisGrid: React.CSSProperties    = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }
+const tabelaHeader: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', padding: '8px 12px', background: '#f8fafc', borderRadius: 8, fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 4 }
+const tabelaLinha: React.CSSProperties  = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontSize: 13 }
+const barraFundo: React.CSSProperties      = { height: 8, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden' }
+const barraPreenchida: React.CSSProperties = { height: '100%', borderRadius: 999, transition: 'width 0.3s' }
 const obraItem = (lucro: number): React.CSSProperties => ({
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
   padding: '10px 0', borderBottom: '1px solid #f1f5f9',

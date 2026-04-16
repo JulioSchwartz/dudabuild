@@ -4,13 +4,9 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Legend, LineChart, Line, CartesianGrid
-} from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, CartesianGrid } from 'recharts'
 
 export default function Relatorios() {
-
   const { empresaId, bloqueado, loading: loadingEmpresa } = useEmpresa()
   const router = useRouter()
 
@@ -23,9 +19,7 @@ export default function Relatorios() {
   const [loading,    setLoading]    = useState(true)
   const [abaAtiva,   setAbaAtiva]   = useState<'resumo' | 'lancamentos' | 'categorias'>('resumo')
 
-  useEffect(() => {
-    if (!loadingEmpresa && bloqueado) router.push('/bloqueado')
-  }, [loadingEmpresa, bloqueado, router])
+  useEffect(() => { if (!loadingEmpresa && bloqueado) router.push('/bloqueado') }, [loadingEmpresa, bloqueado, router])
 
   const carregar = useCallback(async () => {
     if (!empresaId) return
@@ -45,30 +39,16 @@ export default function Relatorios() {
       if (error) throw error
       setDados(finData   || [])
       setObras(obrasData || [])
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
   }, [empresaId, inicio, fim, obraFiltro, tipoFiltro])
 
-  useEffect(() => {
-    if (!empresaId) return
-    carregar()
-  }, [empresaId])
+  useEffect(() => { if (!empresaId) return; carregar() }, [empresaId])
 
-  // Limpar filtros e recarregar automaticamente
-  function limparFiltros() {
-    setInicio('')
-    setFim('')
-    setObraFiltro('')
-    setTipoFiltro('')
-  }
+  function limparFiltros() { setInicio(''); setFim(''); setObraFiltro(''); setTipoFiltro('') }
 
   useEffect(() => {
-    if (!inicio && !fim && !obraFiltro && !tipoFiltro && empresaId) {
-      carregar()
-    }
+    if (!inicio && !fim && !obraFiltro && !tipoFiltro && empresaId) carregar()
   }, [inicio, fim, obraFiltro, tipoFiltro])
 
   const entradas = dados.filter(d => d.tipo === 'entrada')
@@ -81,24 +61,20 @@ export default function Relatorios() {
   const nomeObra: Record<string, string> = {}
   obras.forEach(o => { nomeObra[String(o.id)] = o.nome })
 
-  // Comparativo por obra
   const porObra: Record<string, { nome: string; receita: number; custo: number }> = {}
   dados.forEach(d => {
     if (!d.obra_id) return
-    const key   = String(d.obra_id)
-    const valor = Number(d.valor || 0)
+    const key = String(d.obra_id); const valor = Number(d.valor || 0)
     if (!porObra[key]) porObra[key] = { nome: nomeObra[key] || `Obra ${key}`, receita: 0, custo: 0 }
     if (d.tipo === 'entrada') porObra[key].receita += valor
     else                      porObra[key].custo   += valor
   })
   const comparativo = Object.values(porObra)
 
-  // Evolução mensal
   const porMes: Record<string, { mes: string; receita: number; custo: number }> = {}
   dados.forEach(d => {
-    const dataRef = d.data || d.created_at
-    if (!dataRef) return
-    const mesKey = dataRef.slice(0, 7) // YYYY-MM
+    const dataRef = d.data || d.created_at; if (!dataRef) return
+    const mesKey = dataRef.slice(0, 7)
     const mesLabel = new Date(mesKey + '-15').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
     if (!porMes[mesKey]) porMes[mesKey] = { mes: mesLabel, receita: 0, custo: 0 }
     if (d.tipo === 'entrada') porMes[mesKey].receita += Number(d.valor || 0)
@@ -106,7 +82,6 @@ export default function Relatorios() {
   })
   const evolucao = Object.entries(porMes).sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v)
 
-  // Resumo por categoria
   const porCategoria: Record<string, { descricao: string; total: number; tipo: string; count: number }> = {}
   dados.forEach(d => {
     const key = `${d.tipo}::${d.descricao || 'Sem categoria'}`
@@ -121,9 +96,7 @@ export default function Relatorios() {
       ['Data', 'Tipo', 'Categoria', 'Obra', 'Valor'],
       ...dados.map(d => [
         d.data ? new Date(d.data + 'T12:00:00').toLocaleDateString('pt-BR') : new Date(d.created_at).toLocaleDateString('pt-BR'),
-        d.tipo,
-        d.descricao || '',
-        nomeObra[String(d.obra_id)] || '',
+        d.tipo, d.descricao || '', nomeObra[String(d.obra_id)] || '',
         String(Number(d.valor || 0).toFixed(2)).replace('.', ','),
       ])
     ]
@@ -131,9 +104,7 @@ export default function Relatorios() {
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
-    a.href     = url
-    a.download = `relatorio_${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
+    a.href = url; a.download = `relatorio_${new Date().toISOString().split('T')[0]}.csv`; a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -143,9 +114,21 @@ export default function Relatorios() {
 
   return (
     <div style={{ padding: 24 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .rel-cabecalho { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .rel-resumo-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .rel-filtro-row { flex-direction: column !important; }
+          .rel-tabela-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .rel-tabela-header,
+          .rel-tabela-linha,
+          .rel-tabela-total { grid-template-columns: 90px 80px 1fr 1fr 110px !important; font-size: 11px !important; min-width: 440px; }
+          .rel-abas { flex-wrap: wrap !important; }
+        }
+      `}</style>
 
       {/* CABEÇALHO */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+      <div className="rel-cabecalho" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={titulo}>Relatórios</h1>
           <p style={subtitulo}>Análise financeira por período e obra</p>
@@ -158,7 +141,7 @@ export default function Relatorios() {
       {/* FILTROS */}
       <div style={filtroCard}>
         <p style={filtroTitulo}>🔍 Filtros</p>
-        <div style={filtroRow}>
+        <div className="rel-filtro-row" style={filtroRow}>
           <div style={filtroGrupo}>
             <label style={labelStyle}>De</label>
             <input type="date" value={inicio} onChange={e => setInicio(e.target.value)} style={inputStyle} />
@@ -184,15 +167,13 @@ export default function Relatorios() {
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
             <button onClick={carregar} style={btnFiltrar}>Filtrar</button>
-            {filtrando && (
-              <button onClick={limparFiltros} style={btnLimpar}>✕ Limpar</button>
-            )}
+            {filtrando && <button onClick={limparFiltros} style={btnLimpar}>✕ Limpar</button>}
           </div>
         </div>
       </div>
 
-      {/* MÉTRICAS */}
-      <div style={resumoGrid}>
+      {/* MÉTRICAS — 3 col desktop, 2 col mobile */}
+      <div className="rel-resumo-grid" style={resumoGrid}>
         <Metrica label="Receitas"    valor={format(receita)} cor="#16a34a" icone="↑" sub={`${entradas.length} lançamentos`} />
         <Metrica label="Saídas"      valor={format(custo)}   cor="#dc2626" icone="↓" sub={`${saidas.length} lançamentos`} />
         <Metrica label="Resultado"   valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} icone={lucro >= 0 ? '✓' : '!'} sub={lucro >= 0 ? 'Lucro' : 'Prejuízo'} />
@@ -212,7 +193,7 @@ export default function Relatorios() {
       ) : (
         <>
           {/* ABAS */}
-          <div style={abasRow}>
+          <div className="rel-abas" style={abasRow}>
             {(['resumo', 'lancamentos', 'categorias'] as const).map(aba => (
               <button key={aba} onClick={() => setAbaAtiva(aba)} style={abaBtn(abaAtiva === aba)}>
                 {aba === 'resumo' ? '📊 Resumo' : aba === 'lancamentos' ? '📋 Lançamentos' : '🏷️ Categorias'}
@@ -220,7 +201,7 @@ export default function Relatorios() {
             ))}
           </div>
 
-          {/* ABA: RESUMO */}
+          {/* RESUMO */}
           {abaAtiva === 'resumo' && (
             <>
               {evolucao.length > 1 && (
@@ -239,7 +220,6 @@ export default function Relatorios() {
                   </ResponsiveContainer>
                 </div>
               )}
-
               {comparativo.length > 0 && (
                 <div style={secaoCard}>
                   <h3 style={secaoTitulo}>📊 Receita × Custo por Obra</h3>
@@ -258,94 +238,82 @@ export default function Relatorios() {
             </>
           )}
 
-          {/* ABA: LANÇAMENTOS */}
+          {/* LANÇAMENTOS */}
           {abaAtiva === 'lancamentos' && (
             <div style={secaoCard}>
               <h3 style={secaoTitulo}>📋 Lançamentos detalhados ({dados.length})</h3>
-              <div style={tabelaHeader}>
-                <span>Data</span>
-                <span>Tipo</span>
-                <span>Categoria</span>
-                <span>Obra</span>
-                <span style={{ textAlign: 'right' }}>Valor</span>
-              </div>
-              <div style={{ maxHeight: 440, overflowY: 'auto' }}>
-                {dados.map(d => {
-                  const dataExib = d.data
-                    ? new Date(d.data + 'T12:00:00').toLocaleDateString('pt-BR')
-                    : new Date(d.created_at).toLocaleDateString('pt-BR')
-                  return (
-                    <div key={d.id} style={tabelaLinha}>
-                      <span style={{ color: '#64748b', fontSize: 13 }}>{dataExib}</span>
-                      <span>
-                        <span style={{
-                          background: d.tipo === 'entrada' ? '#dcfce7' : '#fee2e2',
-                          color:      d.tipo === 'entrada' ? '#16a34a' : '#dc2626',
-                          padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700
-                        }}>
-                          {d.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'}
-                        </span>
-                      </span>
-                      <span style={{ fontSize: 13 }}>{d.descricao || '—'}</span>
-                      <span style={{ fontSize: 13, color: '#64748b' }}>
-                        {nomeObra[String(d.obra_id)] || '—'}
-                      </span>
-                      <span style={{ textAlign: 'right', fontWeight: 600, color: d.tipo === 'entrada' ? '#16a34a' : '#dc2626' }}>
-                        {d.tipo === 'entrada' ? '+' : '-'}{format(Number(d.valor))}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-              <div style={tabelaTotal}>
-                <span style={{ gridColumn: '1 / 5', fontWeight: 700 }}>Resultado do período</span>
-                <span style={{ textAlign: 'right', fontWeight: 800, fontSize: 16, color: lucro >= 0 ? '#16a34a' : '#dc2626' }}>
-                  {lucro >= 0 ? '+' : ''}{format(lucro)}
-                </span>
+              <div className="rel-tabela-wrap">
+                <div style={{ minWidth: 440 }}>
+                  <div className="rel-tabela-header" style={tabelaHeader}>
+                    <span>Data</span><span>Tipo</span><span>Categoria</span><span>Obra</span>
+                    <span style={{ textAlign: 'right' }}>Valor</span>
+                  </div>
+                  <div style={{ maxHeight: 440, overflowY: 'auto' }}>
+                    {dados.map(d => {
+                      const dataExib = d.data
+                        ? new Date(d.data + 'T12:00:00').toLocaleDateString('pt-BR')
+                        : new Date(d.created_at).toLocaleDateString('pt-BR')
+                      return (
+                        <div key={d.id} className="rel-tabela-linha" style={tabelaLinha}>
+                          <span style={{ color: '#64748b', fontSize: 13 }}>{dataExib}</span>
+                          <span>
+                            <span style={{ background: d.tipo === 'entrada' ? '#dcfce7' : '#fee2e2', color: d.tipo === 'entrada' ? '#16a34a' : '#dc2626', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                              {d.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'}
+                            </span>
+                          </span>
+                          <span style={{ fontSize: 13 }}>{d.descricao || '—'}</span>
+                          <span style={{ fontSize: 13, color: '#64748b' }}>{nomeObra[String(d.obra_id)] || '—'}</span>
+                          <span style={{ textAlign: 'right', fontWeight: 600, color: d.tipo === 'entrada' ? '#16a34a' : '#dc2626' }}>
+                            {d.tipo === 'entrada' ? '+' : '-'}{format(Number(d.valor))}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="rel-tabela-total" style={tabelaTotal}>
+                    <span style={{ gridColumn: '1 / 5', fontWeight: 700 }}>Resultado do período</span>
+                    <span style={{ textAlign: 'right', fontWeight: 800, fontSize: 16, color: lucro >= 0 ? '#16a34a' : '#dc2626' }}>
+                      {lucro >= 0 ? '+' : ''}{format(lucro)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* ABA: CATEGORIAS */}
+          {/* CATEGORIAS */}
           {abaAtiva === 'categorias' && (
             <div style={secaoCard}>
               <h3 style={secaoTitulo}>🏷️ Resumo por Categoria</h3>
               {categorias.length === 0 ? (
                 <p style={{ color: '#94a3b8', fontSize: 13 }}>Nenhuma categoria encontrada</p>
-              ) : (
-                categorias.map((c, i) => (
-                  <div key={i} style={catLinha}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{
-                        background: c.tipo === 'entrada' ? '#dcfce7' : '#fee2e2',
-                        color:      c.tipo === 'entrada' ? '#16a34a' : '#dc2626',
-                        padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700
-                      }}>
-                        {c.tipo === 'entrada' ? '↑' : '↓'}
-                      </span>
-                      <div>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{c.descricao}</p>
-                        <p style={{ fontSize: 12, color: '#94a3b8' }}>{c.count} lançamento{c.count !== 1 ? 's' : ''}</p>
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontWeight: 700, color: c.tipo === 'entrada' ? '#16a34a' : '#dc2626' }}>
-                        {c.tipo === 'entrada' ? '+' : '-'}{format(c.total)}
-                      </p>
-                      {receita > 0 && (
-                        <p style={{ fontSize: 11, color: '#94a3b8' }}>
-                          {((c.total / (c.tipo === 'entrada' ? receita : custo)) * 100).toFixed(1)}% do total
-                        </p>
-                      )}
+              ) : categorias.map((c, i) => (
+                <div key={i} style={catLinha}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ background: c.tipo === 'entrada' ? '#dcfce7' : '#fee2e2', color: c.tipo === 'entrada' ? '#16a34a' : '#dc2626', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                      {c.tipo === 'entrada' ? '↑' : '↓'}
+                    </span>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{c.descricao}</p>
+                      <p style={{ fontSize: 12, color: '#94a3b8' }}>{c.count} lançamento{c.count !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
-                ))
-              )}
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontWeight: 700, color: c.tipo === 'entrada' ? '#16a34a' : '#dc2626' }}>
+                      {c.tipo === 'entrada' ? '+' : '-'}{format(c.total)}
+                    </p>
+                    {receita > 0 && (
+                      <p style={{ fontSize: 11, color: '#94a3b8' }}>
+                        {((c.total / (c.tipo === 'entrada' ? receita : custo)) * 100).toFixed(1)}% do total
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>
       )}
-
     </div>
   )
 }
@@ -366,8 +334,8 @@ function Metrica({ label, valor, cor, icone, sub }: any) {
   )
 }
 
-const titulo: React.CSSProperties    = { fontSize: 24, fontWeight: 800, color: '#0f172a' }
-const subtitulo: React.CSSProperties = { fontSize: 13, color: '#94a3b8', marginTop: 2 }
+const titulo: React.CSSProperties       = { fontSize: 24, fontWeight: 800, color: '#0f172a' }
+const subtitulo: React.CSSProperties    = { fontSize: 13, color: '#94a3b8', marginTop: 2 }
 const filtroCard: React.CSSProperties   = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }
 const filtroTitulo: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: '#64748b', marginBottom: 12 }
 const filtroRow: React.CSSProperties    = { display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }

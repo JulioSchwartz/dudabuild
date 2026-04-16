@@ -6,54 +6,34 @@ import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 
 type Membro = {
-  id: number
-  email: string
+  id: number; email: string
   perfil: 'admin' | 'engenheiro' | 'mestre_obra' | 'financeiro'
-  is_admin: boolean
-  criado_em: string
-  user_id: string
+  is_admin: boolean; criado_em: string; user_id: string
 }
 
-const PERFIL_LABEL: Record<string, string> = {
-  admin:       'Administrador',
-  engenheiro:  'Engenheiro',
-  mestre_obra: 'Mestre de Obra',
-  financeiro:  'Financeiro',
-}
-
-const PERFIL_COR: Record<string, string> = {
-  admin:       '#d4a843',
-  engenheiro:  '#3b82f6',
-  mestre_obra: '#10b981',
-  financeiro:  '#8b5cf6',
-}
+const PERFIL_LABEL: Record<string, string> = { admin: 'Administrador', engenheiro: 'Engenheiro', mestre_obra: 'Mestre de Obra', financeiro: 'Financeiro' }
+const PERFIL_COR:   Record<string, string> = { admin: '#d4a843', engenheiro: '#3b82f6', mestre_obra: '#10b981', financeiro: '#8b5cf6' }
 
 export default function Equipe() {
   const router = useRouter()
   const { plano, loading: loadingEmpresa } = useEmpresa()
 
-  const [membros, setMembros]           = useState<Membro[]>([])
+  const [membros,      setMembros]      = useState<Membro[]>([])
   const [loadingLista, setLoadingLista] = useState(true)
-  const [salvando, setSalvando]         = useState(false)
-  const [erro, setErro]                 = useState('')
-  const [sucesso, setSucesso]           = useState('')
-
-  // Form novo membro
-  const [email, setEmail]   = useState('')
-  const [senha, setSenha]   = useState('')
-  const [perfil, setPerfil] = useState<'engenheiro' | 'mestre_obra' | 'financeiro'>('engenheiro')
-
-  // Redefinir senha
-  const [senhaMembroId,     setSenhaMembroId]     = useState<number | null>(null)
-  const [senhaUserAuthId,   setSenhaUserAuthId]   = useState<string | null>(null)
-  const [novaSenha,         setNovaSenha]         = useState('')
-  const [mostrarNovaSenha,  setMostrarNovaSenha]  = useState(false)
-  const [salvandoSenha,     setSalvandoSenha]     = useState(false)
-  const [erroSenha,         setErroSenha]         = useState('')
-  const [sucessoSenha,      setSucessoSenha]      = useState('')
-
-  // Excluir membro
-  const [removendo, setRemovendo] = useState<number | null>(null)
+  const [salvando,     setSalvando]     = useState(false)
+  const [erro,         setErro]         = useState('')
+  const [sucesso,      setSucesso]      = useState('')
+  const [email,        setEmail]        = useState('')
+  const [senha,        setSenha]        = useState('')
+  const [perfil,       setPerfil]       = useState<'engenheiro' | 'mestre_obra' | 'financeiro'>('engenheiro')
+  const [senhaMembroId,    setSenhaMembroId]    = useState<number | null>(null)
+  const [senhaUserAuthId,  setSenhaUserAuthId]  = useState<string | null>(null)
+  const [novaSenha,        setNovaSenha]        = useState('')
+  const [mostrarNovaSenha, setMostrarNovaSenha] = useState(false)
+  const [salvandoSenha,    setSalvandoSenha]    = useState(false)
+  const [erroSenha,        setErroSenha]        = useState('')
+  const [sucessoSenha,     setSucessoSenha]     = useState('')
+  const [removendo,        setRemovendo]        = useState<number | null>(null)
 
   const carregarEquipe = useCallback(async () => {
     setLoadingLista(true)
@@ -62,13 +42,8 @@ export default function Equipe() {
     setLoadingLista(false)
   }, [])
 
-  useEffect(() => {
-    if (!loadingEmpresa) carregarEquipe()
-  }, [loadingEmpresa, carregarEquipe])
-
-  useEffect(() => {
-    if (!loadingEmpresa && plano !== 'premium') router.push('/planos')
-  }, [loadingEmpresa, plano, router])
+  useEffect(() => { if (!loadingEmpresa) carregarEquipe() }, [loadingEmpresa, carregarEquipe])
+  useEffect(() => { if (!loadingEmpresa && plano !== 'premium') router.push('/planos') }, [loadingEmpresa, plano, router])
 
   async function criarMembro() {
     setErro(''); setSucesso('')
@@ -81,72 +56,53 @@ export default function Equipe() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ email, senha, perfil }),
       })
-      const data = await res.json()
-      if (!res.ok) { setErro(data.error || 'Erro ao criar usuário.'); return }
-      setSucesso(`Usuário ${email} criado com sucesso!`)
-      setEmail(''); setSenha(''); setPerfil('engenheiro')
+      const json = await res.json()
+      if (!res.ok) { setErro(json.error || 'Erro ao criar membro.'); return }
+      setSucesso('Membro adicionado com sucesso!')
+      setEmail(''); setSenha('')
       carregarEquipe()
-    } catch {
-      setErro('Erro inesperado. Tente novamente.')
-    } finally {
-      setSalvando(false)
-    }
+    } catch { setErro('Erro inesperado.') }
+    finally { setSalvando(false) }
   }
 
-  async function removerMembro(membro: Membro) {
-    if (!confirm(`Remover ${membro.email} da equipe? Esta ação não pode ser desfeita.`)) return
-    setRemovendo(membro.id)
+  async function removerMembro(m: Membro) {
+    if (!confirm(`Remover ${m.email}?`)) return
+    setRemovendo(m.id)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/equipe/remover', {
-        method: 'DELETE',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ membroId: membro.id, userAuthId: membro.user_id }),
+        body: JSON.stringify({ usuarioId: m.id, userAuthId: m.user_id }),
       })
-      const data = await res.json()
-      if (!res.ok) { alert(data.error || 'Erro ao remover membro.'); return }
+      if (!res.ok) { alert('Erro ao remover.'); return }
       carregarEquipe()
-    } catch {
-      alert('Erro inesperado. Tente novamente.')
-    } finally {
-      setRemovendo(null)
-    }
+    } catch { alert('Erro inesperado.') }
+    finally { setRemovendo(null) }
   }
 
   async function redefinirSenha() {
     setErroSenha(''); setSucessoSenha('')
-    if (!novaSenha) { setErroSenha('Digite a nova senha.'); return }
-    if (novaSenha.length < 6) { setErroSenha('Mínimo 6 caracteres.'); return }
+    if (!novaSenha || novaSenha.length < 6) { setErroSenha('Mínimo 6 caracteres.'); return }
     setSalvandoSenha(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/equipe/senha', {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ membroId: senhaMembroId, userAuthId: senhaUserAuthId, novaSenha }),
+        body: JSON.stringify({ userAuthId: senhaUserAuthId, novaSenha }),
       })
-      const data = await res.json()
-      if (!res.ok) { setErroSenha(data.error || 'Erro ao redefinir senha.'); return }
+      const json = await res.json()
+      if (!res.ok) { setErroSenha(json.error || 'Erro.'); return }
       setSucessoSenha('Senha redefinida com sucesso!')
       setNovaSenha('')
-      setTimeout(() => {
-        setSenhaMembroId(null); setSenhaUserAuthId(null)
-        setSucessoSenha(''); setMostrarNovaSenha(false)
-      }, 2000)
-    } catch {
-      setErroSenha('Erro inesperado. Tente novamente.')
-    } finally {
-      setSalvandoSenha(false)
-    }
+    } catch { setErroSenha('Erro inesperado.') }
+    finally { setSalvandoSenha(false) }
   }
 
-  function abrirRedefinirSenha(membro: Membro) {
-    setSenhaMembroId(membro.id)
-    setSenhaUserAuthId(membro.user_id)
-    setNovaSenha('')
-    setErroSenha('')
-    setSucessoSenha('')
-    setMostrarNovaSenha(false)
+  function abrirRedefinirSenha(m: Membro) {
+    setSenhaMembroId(m.id); setSenhaUserAuthId(m.user_id)
+    setNovaSenha(''); setErroSenha(''); setSucessoSenha(''); setMostrarNovaSenha(false)
   }
 
   if (loadingEmpresa) return <p style={{ padding: 40, textAlign: 'center' }}>Carregando...</p>
@@ -154,17 +110,25 @@ export default function Equipe() {
 
   return (
     <div style={container}>
+      <style>{`
+        @media (max-width: 768px) {
+          .eq-grid2 { grid-template-columns: 1fr !important; }
+          .eq-membro-card { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+          .eq-membro-acoes { width: 100% !important; justify-content: flex-end !important; }
+          .eq-senha-form-row { flex-direction: column !important; }
+        }
+      `}</style>
 
-      {/* CABEÇALHO */}
       <div style={{ marginBottom: 32 }}>
         <h1 style={titulo}>Equipe</h1>
         <p style={subtitulo}>Gerencie os membros da sua empresa</p>
       </div>
 
-      {/* FORMULÁRIO NOVO MEMBRO */}
+      {/* FORM NOVO MEMBRO */}
       <div style={card}>
         <h2 style={cardTitulo}>Adicionar membro</h2>
-        <div style={grid2}>
+        {/* E-mail e Senha — 2 col desktop, 1 col mobile */}
+        <div className="eq-grid2" style={grid2}>
           <div style={campo}>
             <label style={label}>E-mail</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
@@ -209,10 +173,9 @@ export default function Equipe() {
         </button>
       </div>
 
-      {/* LISTA DE MEMBROS */}
+      {/* LISTA */}
       <div style={{ ...card, marginTop: 24 }}>
         <h2 style={cardTitulo}>Membros da equipe</h2>
-
         {loadingLista ? (
           <p style={{ color: '#94a3b8', fontSize: 14 }}>Carregando...</p>
         ) : membros.length === 0 ? (
@@ -221,15 +184,9 @@ export default function Equipe() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {membros.map(m => (
               <div key={m.id}>
-                <div style={membroCard}>
-                  {/* INFO */}
+                <div className="eq-membro-card" style={membroCard}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: '50%',
-                      background: PERFIL_COR[m.perfil] + '20',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 16, fontWeight: 700, color: PERFIL_COR[m.perfil],
-                    }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: PERFIL_COR[m.perfil] + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: PERFIL_COR[m.perfil] }}>
                       {m.email[0].toUpperCase()}
                     </div>
                     <div>
@@ -240,34 +197,16 @@ export default function Equipe() {
                     </div>
                   </div>
 
-                  {/* AÇÕES */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{
-                      padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700,
-                      background: PERFIL_COR[m.perfil] + '15', color: PERFIL_COR[m.perfil],
-                    }}>
+                  <div className="eq-membro-acoes" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: PERFIL_COR[m.perfil] + '15', color: PERFIL_COR[m.perfil] }}>
                       {PERFIL_LABEL[m.perfil]}
                     </span>
-
-                    {/* Botões só para não-admin */}
                     {!m.is_admin && (
                       <>
-                        <button
-                          onClick={() => senhaMembroId === m.id
-                            ? (setSenhaMembroId(null), setSenhaUserAuthId(null))
-                            : abrirRedefinirSenha(m)
-                          }
-                          title="Redefinir senha"
-                          style={btnAcao('#3b82f6')}
-                        >
-                          🔑
-                        </button>
-                        <button
-                          onClick={() => removerMembro(m)}
-                          disabled={removendo === m.id}
-                          title="Remover membro"
-                          style={btnAcao('#ef4444')}
-                        >
+                        <button onClick={() => senhaMembroId === m.id ? (setSenhaMembroId(null), setSenhaUserAuthId(null)) : abrirRedefinirSenha(m)}
+                          title="Redefinir senha" style={btnAcao('#3b82f6')}>🔑</button>
+                        <button onClick={() => removerMembro(m)} disabled={removendo === m.id}
+                          title="Remover membro" style={btnAcao('#ef4444')}>
                           {removendo === m.id ? '...' : '✕'}
                         </button>
                       </>
@@ -275,27 +214,20 @@ export default function Equipe() {
                   </div>
                 </div>
 
-                {/* FORM REDEFINIR SENHA — inline abaixo do card */}
                 {senhaMembroId === m.id && (
                   <div style={senhaForm}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
                       🔑 Redefinir senha de <span style={{ color: '#3b82f6' }}>{m.email}</span>
                     </p>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                    <div className="eq-senha-form-row" style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                       <div style={{ ...campo, flex: 1 }}>
                         <label style={label}>Nova senha</label>
                         <div style={{ position: 'relative' }}>
-                          <input
-                            type={mostrarNovaSenha ? 'text' : 'password'}
-                            value={novaSenha}
-                            onChange={e => setNovaSenha(e.target.value)}
-                            placeholder="Mínimo 6 caracteres"
-                            style={{ ...input, paddingRight: 40 }}
-                          />
-                          <button
-                            onClick={() => setMostrarNovaSenha(!mostrarNovaSenha)}
-                            style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8' }}
-                          >
+                          <input type={mostrarNovaSenha ? 'text' : 'password'} value={novaSenha}
+                            onChange={e => setNovaSenha(e.target.value)} placeholder="Mínimo 6 caracteres"
+                            style={{ ...input, paddingRight: 40 }} />
+                          <button onClick={() => setMostrarNovaSenha(!mostrarNovaSenha)}
+                            style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8' }}>
                             {mostrarNovaSenha ? '🙈' : '👁'}
                           </button>
                         </div>
@@ -304,12 +236,11 @@ export default function Equipe() {
                         style={{ ...btnPrimario, opacity: salvandoSenha ? 0.7 : 1, whiteSpace: 'nowrap' }}>
                         {salvandoSenha ? 'Salvando...' : 'Salvar senha'}
                       </button>
-                      <button onClick={() => { setSenhaMembroId(null); setSenhaUserAuthId(null) }}
-                        style={btnCancelar}>
+                      <button onClick={() => { setSenhaMembroId(null); setSenhaUserAuthId(null) }} style={btnCancelar}>
                         Cancelar
                       </button>
                     </div>
-                    {erroSenha   && <p style={{ color: '#ef4444', fontSize: 13, marginTop: 8 }}>⚠ {erroSenha}</p>}
+                    {erroSenha    && <p style={{ color: '#ef4444', fontSize: 13, marginTop: 8 }}>⚠ {erroSenha}</p>}
                     {sucessoSenha && <p style={{ color: '#22c55e', fontSize: 13, marginTop: 8 }}>✓ {sucessoSenha}</p>}
                   </div>
                 )}
@@ -318,12 +249,10 @@ export default function Equipe() {
           </div>
         )}
       </div>
-
     </div>
   )
 }
 
-/* ── ESTILOS ── */
 const container: React.CSSProperties       = { padding: '32px 24px', maxWidth: 800, margin: '0 auto' }
 const titulo: React.CSSProperties          = { fontSize: 24, fontWeight: 900, color: '#0f172a', margin: 0 }
 const subtitulo: React.CSSProperties       = { fontSize: 14, color: '#64748b', marginTop: 4 }

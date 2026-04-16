@@ -36,7 +36,7 @@ export default function Dashboard() {
       ] = await Promise.all([
         supabase.from('financeiro').select('*').eq('empresa_id', empresaId),
         supabase.from('obras').select('*').eq('empresa_id', empresaId).is('deleted_at', null),
-        supabase.from('obras').select('id, nome').eq('empresa_id', empresaId), // todas, incluindo deletadas
+        supabase.from('obras').select('id, nome').eq('empresa_id', empresaId),
         supabase.from('orcamentos').select('*').eq('empresa_id', empresaId)
           .is('deleted_at', null)
           .in('status', ['aprovado', 'recusado'])
@@ -52,7 +52,6 @@ export default function Dashboard() {
       setObras(obrasData || [])
       setTodasObras(todasObras || [])
 
-      // Filtra notificações não lidas usando banco
       const lidasIds = new Set((lidasData || []).map((l: any) => l.orcamento_id))
       const novas = (orcData || []).filter(o =>
         !lidasIds.has(o.id) && (o.aprovado_em || o.status === 'recusado')
@@ -85,7 +84,6 @@ export default function Dashboard() {
 
   if (loading || loadingData) return <p style={{ padding: 24 }}>Carregando...</p>
 
-  /* ── TOTAIS ── */
   const entradas = dados.filter(d => d.tipo === 'entrada')
   const saidas   = dados.filter(d => d.tipo === 'saida')
   const receita  = soma(entradas)
@@ -93,9 +91,8 @@ export default function Dashboard() {
   const lucro    = receita - custo
   const margem   = receita > 0 ? (lucro / receita) * 100 : 0
 
-  /* ── RESULTADO POR OBRA ── */
   const nomeObra: Record<string, string> = {}
-  todasObras.forEach(o => { nomeObra[String(o.id)] = o.nome }) // usa todas incluindo deletadas para exibir nome
+  todasObras.forEach(o => { nomeObra[String(o.id)] = o.nome })
 
   const porObra: Record<string, { receita: number; custo: number; lucro: number; margem: number }> = {}
   dados.forEach(d => {
@@ -117,38 +114,40 @@ export default function Dashboard() {
   const obrasBaixaMargem   = listaObras.filter(([, d]: any) => d.margem < 10 && d.margem >= 0 && d.receita > 0)
   const obrasIds           = new Set(Object.keys(porObra))
   const obrasSemLancamento = obras.filter(o => !obrasIds.has(String(o.id)))
+  const obrasAtivasIds     = new Set(obras.map(o => String(o.id)))
 
-  // IDs de obras ativas (não deletadas) — só essas podem ser clicadas
-  const obrasAtivasIds = new Set(obras.map(o => String(o.id)))
   function irParaObra(id: string) {
     if (obrasAtivasIds.has(id)) router.push(`/obras/${id}`)
   }
 
   return (
     <div style={{ padding: 24 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .dash-dois-grid { grid-template-columns: 1fr !important; }
+          .dash-kpi-row { gap: 8px !important; }
+          .dash-kpi-box { min-width: 0 !important; flex: 1 1 calc(50% - 8px) !important; padding: 10px 12px !important; }
+          .dash-notif-item { flex-direction: column !important; gap: 10px !important; }
+          .dash-notif-btns { width: 100% !important; justify-content: flex-end !important; }
+        }
+      `}</style>
 
-      {/* ── NOTIFICAÇÕES DE ORÇAMENTOS ── */}
+      {/* NOTIFICAÇÕES */}
       {notificacoes.length > 0 && (
         <div style={notifBox}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={notifIcone}>🔔</span>
-              <p style={{ fontWeight: 700, color: '#0f172a', fontSize: 15 }}>
-                Novidades nos Orçamentos
-              </p>
+              <p style={{ fontWeight: 700, color: '#0f172a', fontSize: 15 }}>Novidades nos Orçamentos</p>
               <span style={notifBadge}>{notificacoes.length}</span>
             </div>
-            <button onClick={marcarTodasLidas} style={btnMarcarTodas}>
-              Marcar todas como lidas
-            </button>
+            <button onClick={marcarTodasLidas} style={btnMarcarTodas}>Marcar todas como lidas</button>
           </div>
 
           {notificacoes.map(n => (
-            <div key={n.id} style={notifItem(n.status)}>
+            <div key={n.id} className="dash-notif-item" style={notifItem(n.status)}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flex: 1 }}>
-                <span style={{ fontSize: 20 }}>
-                  {n.status === 'aprovado' ? '✅' : '❌'}
-                </span>
+                <span style={{ fontSize: 20 }}>{n.status === 'aprovado' ? '✅' : '❌'}</span>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>
                     {n.status === 'aprovado' ? 'Orçamento aprovado!' : 'Orçamento recusado'}
@@ -164,11 +163,8 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button
-                  onClick={() => router.push(`/orcamentos/${n.id}`)}
-                  style={btnVerOrc(n.status)}
-                >
+              <div className="dash-notif-btns" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={() => router.push(`/orcamentos/${n.id}`)} style={btnVerOrc(n.status)}>
                   Ver orçamento →
                 </button>
                 <button onClick={() => marcarLida(n.id)} style={btnFecharNotif}>✕</button>
@@ -182,15 +178,15 @@ export default function Dashboard() {
       <div style={cabecalho}>
         <h1 style={titulo}>Dashboard Executivo</h1>
         <p style={subtitulo}>Visão geral da operação</p>
-        <div style={kpiRow}>
-          <KPI label="Receita Total"  valor={format(receita)} cor="#16a34a" />
-          <KPI label="Lucro Total"    valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} />
-          <KPI label="Margem Geral"   valor={`${margem.toFixed(1)}%`} cor="#7c3aed" />
-          <KPI label="Obras Ativas"   valor={String(obras.filter(o => o.status !== 'concluida').length)} cor="#0ea5e9" />
+        <div className="dash-kpi-row" style={kpiRow}>
+          <KPI label="Receita Total" valor={format(receita)} cor="#16a34a" />
+          <KPI label="Lucro Total"   valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} />
+          <KPI label="Margem Geral"  valor={`${margem.toFixed(1)}%`} cor="#7c3aed" />
+          <KPI label="Obras Ativas"  valor={String(obras.filter(o => o.status !== 'concluida').length)} cor="#0ea5e9" />
         </div>
       </div>
 
-      {/* ALERTAS FINANCEIROS */}
+      {/* ALERTAS */}
       {(obrasNegativas.length > 0 || obrasBaixaMargem.length > 0 || (margem < 10 && margem > 0)) && (
         <div style={alertaBox}>
           <p style={alertaTitulo}>⚠️ Atenção necessária</p>
@@ -200,8 +196,7 @@ export default function Dashboard() {
             </div>
           ))}
           {obrasBaixaMargem.map(([id, d]: any) => (
-            <div key={id} style={{ ...alertaItem, background: '#fefce8', borderColor: '#fef08a' }}
-              onClick={() => irParaObra(String(id))}>
+            <div key={id} style={{ ...alertaItem, background: '#fefce8', borderColor: '#fef08a' }} onClick={() => irParaObra(String(id))}>
               🟡 <strong>{nomeObra[id] || `Obra ${id}`}</strong> com margem baixa ({d.margem.toFixed(1)}%)
             </div>
           ))}
@@ -213,8 +208,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* RANKINGS */}
-      <div style={doisGrid}>
+      {/* RANKINGS — 2 colunas no desktop, 1 no mobile */}
+      <div className="dash-dois-grid" style={doisGrid}>
         <div style={rankCard}>
           <h3 style={rankTitulo}>🏆 Obras mais lucrativas</h3>
           {topLucro.length === 0
@@ -224,10 +219,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 20 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
                   <div>
-                    <p style={{ fontWeight: 600, fontSize: 14 }}>
-                      {nomeObra[id] || `Obra ${id}`}
-                      {!obrasAtivasIds.has(String(id)) && <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 6, fontWeight: 400 }}>(excluída)</span>}
-                    </p>
+                    <p style={{ fontWeight: 600, fontSize: 14 }}>{nomeObra[id] || `Obra ${id}`}</p>
                     <p style={{ fontSize: 12, color: '#64748b' }}>Margem: {d.margem.toFixed(1)}%</p>
                   </div>
                 </div>
@@ -246,10 +238,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 20 }}>#{i + 1}</span>
                   <div>
-                    <p style={{ fontWeight: 600, fontSize: 14 }}>
-                      {nomeObra[id] || `Obra ${id}`}
-                      {!obrasAtivasIds.has(String(id)) && <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 6, fontWeight: 400 }}>(excluída)</span>}
-                    </p>
+                    <p style={{ fontWeight: 600, fontSize: 14 }}>{nomeObra[id] || `Obra ${id}`}</p>
                     <p style={{ fontSize: 12, color: '#64748b' }}>Receita: {format(d.receita)}</p>
                   </div>
                 </div>
@@ -277,21 +266,17 @@ export default function Dashboard() {
             return (
               <div key={o.id} style={obraLinha} onClick={() => router.push(`/obras/${o.id}`)}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <p style={{ fontWeight: 600 }}>{o.nome}</p>
                     {o.status === 'concluida' && (
-                      <span style={{ fontSize: 11, background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: 999, fontWeight: 700 }}>
-                        ✅ Concluída
-                      </span>
+                      <span style={{ fontSize: 11, background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: 999, fontWeight: 700 }}>✅ Concluída</span>
                     )}
                   </div>
                   <p style={{ fontSize: 12, color: '#64748b' }}>{o.cliente || '—'}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   {d
-                    ? <p style={{ color: d.lucro >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
-                        {d.lucro >= 0 ? '+' : ''}{format(d.lucro)}
-                      </p>
+                    ? <p style={{ color: d.lucro >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>{d.lucro >= 0 ? '+' : ''}{format(d.lucro)}</p>
                     : <p style={{ color: '#94a3b8', fontSize: 13 }}>Sem lançamentos</p>
                   }
                   {d && <p style={{ fontSize: 12, color: '#94a3b8' }}>Margem: {d.margem.toFixed(1)}%</p>}
@@ -301,25 +286,22 @@ export default function Dashboard() {
           })
         }
       </div>
-
     </div>
   )
 }
 
-/* ── HELPERS ── */
 function soma(lista: any[]) { return lista.reduce((a, b) => a + Number(b.valor || 0), 0) }
 function format(v: number)  { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 
 function KPI({ label, valor, cor }: { label: string; valor: string; cor: string }) {
   return (
-    <div style={kpiBox}>
+    <div className="dash-kpi-box" style={kpiBox}>
       <p style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
       <p style={{ fontSize: 22, fontWeight: 800, color: cor, marginTop: 2 }}>{valor}</p>
     </div>
   )
 }
 
-/* ── ESTILOS ── */
 const cabecalho: React.CSSProperties    = { marginBottom: 24 }
 const titulo: React.CSSProperties       = { fontSize: 24, fontWeight: 800, color: '#0f172a' }
 const subtitulo: React.CSSProperties    = { fontSize: 13, color: '#94a3b8', marginTop: 2, marginBottom: 16 }
@@ -331,13 +313,11 @@ const alertaItem: React.CSSProperties   = { background: '#fff1f2', border: '1px 
 const doisGrid: React.CSSProperties     = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }
 const rankCard: React.CSSProperties     = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
 const rankTitulo: React.CSSProperties   = { fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 14 }
-const rankLinha: React.CSSProperties    = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }
+const rankLinha: React.CSSProperties    = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }
 const vazio: React.CSSProperties        = { color: '#94a3b8', fontSize: 13, padding: '8px 0' }
 const listaCard: React.CSSProperties    = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
 const obraLinha: React.CSSProperties    = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }
 const btnVer: React.CSSProperties       = { background: 'transparent', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 12px', fontSize: 13, cursor: 'pointer', color: '#2563eb' }
-
-// Notificações
 const notifBox: React.CSSProperties      = { background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 24, border: '1px solid #e2e8f0' }
 const notifIcone: React.CSSProperties    = { fontSize: 20 }
 const notifBadge: React.CSSProperties    = { background: '#ef4444', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999 }
