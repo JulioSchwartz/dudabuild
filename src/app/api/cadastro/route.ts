@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -74,6 +75,46 @@ export async function POST(req: Request) {
       type: 'signup',
       email,
     })
+
+    // 5. Notifica você sobre o novo cadastro
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY!)
+      await resend.emails.send({
+        from: 'Zynplan <noreply@zynplan.com.br>',
+        to: ['suportezynplan@gmail.com'],
+        subject: `🎉 Novo cadastro: ${nomeEmpresa || email}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background: #0f172a; color: #fff; border-radius: 12px;">
+            <h2 style="color: #d4a843; margin-bottom: 24px;">🎉 Novo cadastro na Zynplan!</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; color: #94a3b8; width: 140px;">Empresa</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; font-weight: 600;">${nomeEmpresa || '—'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; color: #94a3b8;">E-mail</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; font-weight: 600;">${email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; color: #94a3b8;">Plano</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; font-weight: 600;">Trial Premium (14 dias)</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; color: #94a3b8;">Data</td>
+                <td style="padding: 12px 0; font-weight: 600;">${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
+              </tr>
+            </table>
+            <a href="https://wa.me/55${email}?text=Ol%C3%A1%2C%20seja%20bem-vindo%20%C3%A0%20Zynplan!%20Sou%20o%20J%C3%BAlio%2C%20fundador%20da%20plataforma.%20Posso%20te%20ajudar%20com%20alguma%20d%C3%BAvida%3F"
+               style="display: inline-block; margin-top: 24px; background: #d4a843; color: #000; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700;">
+              Ver painel Zynplan →
+            </a>
+          </div>
+        `,
+      })
+    } catch (emailErr) {
+      // Não falha o cadastro se o email de notificação falhar
+      console.error('Erro ao enviar notificação de cadastro:', emailErr)
+    }
 
     return NextResponse.json({ success: true })
 
