@@ -117,7 +117,7 @@ export default function Relatorios() {
       <style>{`
         @media (max-width: 768px) {
           .rel-cabecalho { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
-          .rel-resumo-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .rel-resumo-grid { grid-template-columns: 1fr !important; }
           .rel-filtro-row { flex-direction: column !important; }
           .rel-tabela-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
           .rel-tabela-header,

@@ -10,18 +10,18 @@ export default function NovaObra() {
   const { empresaId, limites, loading: loadingEmpresa } = useEmpresa()
   const router = useRouter()
 
-  const [verificando,           setVerificando]          = useState(true)
-  const [atingiuLimite,         setAtingiuLimite]        = useState(false)
-  const [nome,                  setNome]                 = useState('')
-  const [cliente,               setCliente]              = useState('')
-  const [valor,                 setValor]                = useState('')
-  const [orcamentoCusto,        setOrcamentoCusto]       = useState('')
-  const [area,                  setArea]                 = useState('')
-  const [endereco,              setEndereco]             = useState('')
-  const [dataInicio,            setDataInicio]           = useState('')
-  const [dataPrevisao,          setDataPrevisao]         = useState('')
-  const [percentualConcluido,   setPercentualConcluido]  = useState('0')
-  const [loading,               setLoading]              = useState(false)
+  const [verificando,         setVerificando]        = useState(true)
+  const [atingiuLimite,       setAtingiuLimite]      = useState(false)
+  const [nome,                setNome]               = useState('')
+  const [cliente,             setCliente]            = useState('')
+  const [valor,               setValor]              = useState('')
+  const [orcamentoCusto,      setOrcamentoCusto]     = useState('')
+  const [area,                setArea]               = useState('')
+  const [endereco,            setEndereco]           = useState('')
+  const [dataInicio,          setDataInicio]         = useState('')
+  const [dataPrevisao,        setDataPrevisao]       = useState('')
+  const [percentualConcluido, setPercentualConcluido] = useState('0')
+  const [loading,             setLoading]            = useState(false)
 
   useEffect(() => {
     if (loadingEmpresa || !empresaId) return
@@ -32,10 +32,9 @@ export default function NovaObra() {
     setVerificando(true)
     try {
       const { count } = await supabase
-  .from('obras')
-  .select('*', { count: 'exact', head: true })
-  .eq('empresa_id', empresaId)
-
+        .from('obras')
+        .select('*', { count: 'exact', head: true })
+        .eq('empresa_id', empresaId)
       const limite = limites?.obras
       if (limite !== undefined && limite !== Infinity && (count || 0) >= limite) {
         setAtingiuLimite(true)
@@ -47,35 +46,20 @@ export default function NovaObra() {
  
   async function salvar(e: React.FormEvent) {
     e.preventDefault()
- 
-    if (!empresaId)                    return alert('Erro: empresa não identificada')
-    if (!nome.trim())                  return alert('Informe o nome da obra')
-    if (!cliente.trim())               return alert('Informe o nome do cliente')
-    if (!valor || Number(valor) <= 0)  return alert('Informe um valor de contrato válido')
- 
+    if (!empresaId)                   return alert('Erro: empresa não identificada')
+    if (!nome.trim())                 return alert('Informe o nome da obra')
+    if (!cliente.trim())              return alert('Informe o nome do cliente')
+    if (!valor || Number(valor) <= 0) return alert('Informe um valor de contrato válido')
     setLoading(true)
- 
     const { error } = await supabase.from('obras').insert({
-      nome:                  nome.trim(),
-      cliente:               cliente.trim(),
-      valor:                 Number(valor),
-      orcamento_custo:       orcamentoCusto ? Number(orcamentoCusto) : null,
-      area:                  area ? Number(area) : null,
-      endereco:              endereco.trim() || null,
-      data_inicio:           dataInicio || null,
-      data_previsao:         dataPrevisao || null,
-      percentual_concluido:  Number(percentualConcluido || 0),
-      empresa_id:            empresaId,
-      deleted_at:            null,
+      nome: nome.trim(), cliente: cliente.trim(), valor: Number(valor),
+      orcamento_custo: orcamentoCusto ? Number(orcamentoCusto) : null,
+      area: area ? Number(area) : null, endereco: endereco.trim() || null,
+      data_inicio: dataInicio || null, data_previsao: dataPrevisao || null,
+      percentual_concluido: Number(percentualConcluido || 0),
+      empresa_id: empresaId, deleted_at: null,
     })
- 
-    if (error) {
-      console.error(error)
-      alert('Erro ao salvar obra')
-      setLoading(false)
-      return
-    }
- 
+    if (error) { console.error(error); alert('Erro ao salvar obra'); setLoading(false); return }
     router.push('/obras')
   }
 
@@ -86,12 +70,9 @@ export default function NovaObra() {
       <div style={container}>
         <div style={{ ...card, textAlign: 'center', padding: 48 }}>
           <p style={{ fontSize: 48, marginBottom: 16 }}>🚧</p>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 12 }}>
-            Limite de obras atingido
-          </h2>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 12 }}>Limite de obras atingido</h2>
           <p style={{ color: '#64748b', marginBottom: 28, fontSize: 15 }}>
-            Você atingiu o limite de obras do seu plano atual.<br />
-            Faça upgrade para continuar criando obras.
+            Você atingiu o limite de obras do seu plano atual.<br />Faça upgrade para continuar criando obras.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button onClick={() => router.push('/planos')}
@@ -110,13 +91,18 @@ export default function NovaObra() {
  
   return (
     <div style={container}>
+      <style>{`
+        @media (max-width: 768px) {
+          .nova-obra-datas { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
       <div style={card}>
- 
         <button onClick={() => router.back()} style={btnVoltar}>← Voltar</button>
         <h1 style={titulo}>🏗️ Nova Obra</h1>
  
         <form onSubmit={salvar} style={form}>
- 
+
           <Secao titulo="Informações Básicas">
             <Campo label="Nome da Obra *">
               <input value={nome} onChange={e => setNome(e.target.value)}
@@ -148,7 +134,8 @@ export default function NovaObra() {
           </Secao>
  
           <Secao titulo="Cronograma">
-            <div style={doisCols}>
+            {/* 2 colunas no desktop, 1 no mobile */}
+            <div className="nova-obra-datas" style={doisCols}>
               <Campo label="Data de Início">
                 <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} style={input} />
               </Campo>
@@ -167,7 +154,6 @@ export default function NovaObra() {
           <button type="submit" style={botao} disabled={loading}>
             {loading ? 'Salvando...' : 'Salvar Obra'}
           </button>
- 
         </form>
       </div>
     </div>

@@ -126,7 +126,7 @@ export default function Dashboard() {
         @media (max-width: 768px) {
           .dash-dois-grid { grid-template-columns: 1fr !important; }
           .dash-kpi-row { gap: 8px !important; }
-          .dash-kpi-box { min-width: 0 !important; flex: 1 1 calc(50% - 8px) !important; padding: 10px 12px !important; }
+          .dash-kpi-box { min-width: 0 !important; flex: 1 1 100% !important; padding: 10px 12px !important; }
           .dash-notif-item { flex-direction: column !important; gap: 10px !important; }
           .dash-notif-btns { width: 100% !important; justify-content: flex-end !important; }
         }
