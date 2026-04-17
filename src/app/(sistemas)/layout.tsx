@@ -58,11 +58,15 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
       return
     }
     setPushSuportado(true)
-    navigator.serviceWorker.ready.then(reg => {
-      reg.pushManager.getSubscription().then(sub => {
-        setPushAtivo(!!sub)
+    // Registra o push service worker dedicado
+    navigator.serviceWorker.register('/push-sw.js', { scope: '/' })
+      .then(reg => {
+        console.log('[PWA] push-sw.js registrado', reg.scope)
+        reg.pushManager.getSubscription().then(sub => {
+          setPushAtivo(!!sub)
+        })
       })
-    })
+      .catch(err => console.warn('[PWA] Erro push-sw.js:', err))
   }, [])
 
   useEffect(() => { setSidebarAberta(false) }, [pathname])
@@ -80,7 +84,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
         return
       }
 
-      const registro = await navigator.serviceWorker.ready
+      const registro = await navigator.serviceWorker.getRegistration('/push-sw.js') || await navigator.serviceWorker.ready
       const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
 
       const subscription = await registro.pushManager.subscribe({
@@ -127,7 +131,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
   async function desativarNotificacoes() {
     try {
-      const registro = await navigator.serviceWorker.ready
+      const registro = await navigator.serviceWorker.getRegistration('/push-sw.js') || await navigator.serviceWorker.ready
       const sub = await registro.pushManager.getSubscription()
       if (sub) await sub.unsubscribe()
 
