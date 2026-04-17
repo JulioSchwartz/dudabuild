@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, CartesianGrid } from 'recharts'
@@ -19,37 +19,74 @@ export default function Relatorios() {
   const [loading,    setLoading]    = useState(true)
   const [abaAtiva,   setAbaAtiva]   = useState<'resumo' | 'lancamentos' | 'categorias'>('resumo')
 
+  // Refs para sempre ter os valores mais recentes nos filtros
+  const inicioRef     = useRef(inicio)
+  const fimRef        = useRef(fim)
+  const obraFiltroRef = useRef(obraFiltro)
+  const tipoFiltroRef = useRef(tipoFiltro)
+  const empresaIdRef  = useRef(empresaId)
+
+  useEffect(() => { inicioRef.current     = inicio },     [inicio])
+  useEffect(() => { fimRef.current        = fim },        [fim])
+  useEffect(() => { obraFiltroRef.current = obraFiltro }, [obraFiltro])
+  useEffect(() => { tipoFiltroRef.current = tipoFiltro }, [tipoFiltro])
+  useEffect(() => { empresaIdRef.current  = empresaId },  [empresaId])
+
   useEffect(() => { if (!loadingEmpresa && bloqueado) router.push('/bloqueado') }, [loadingEmpresa, bloqueado, router])
 
-  const carregar = useCallback(async () => {
+  // Carrega obras separadamente — uma vez ao montar, sempre completo
+  useEffect(() => {
     if (!empresaId) return
+    supabase
+      .from('obras')
+      .select('id, nome')
+      .eq('empresa_id', empresaId)
+      .is('deleted_at', null)
+      .order('nome', { ascending: true })
+      .then(({ data }) => setObras(data || []))
+  }, [empresaId])
+
+  // Carrega dados financeiros com os filtros atuais (usa refs para sempre pegar valor fresco)
+  async function carregar() {
+    const eid = empresaIdRef.current
+    if (!eid) return
     setLoading(true)
     try {
-      const [{ data: finData, error }, { data: obrasData }] = await Promise.all([
-        (() => {
-          let q = supabase.from('financeiro').select('*').eq('empresa_id', empresaId)
-          if (inicio) q = q.gte('data', inicio)
-          if (fim)    q = q.lte('data', fim)
-          if (obraFiltro) q = q.eq('obra_id', obraFiltro)
-          if (tipoFiltro) q = q.eq('tipo', tipoFiltro)
-          return q.order('data', { ascending: false })
-        })(),
-        supabase.from('obras').select('id, nome').eq('empresa_id', empresaId),
-      ])
+      let q = supabase.from('financeiro').select('*').eq('empresa_id', eid)
+      if (inicioRef.current)     q = q.gte('data', inicioRef.current)
+      if (fimRef.current)        q = q.lte('data', fimRef.current)
+      if (obraFiltroRef.current) q = q.eq('obra_id', obraFiltroRef.current)
+      if (tipoFiltroRef.current) q = q.eq('tipo', tipoFiltroRef.current)
+      q = q.order('data', { ascending: false })
+      const { data, error } = await q
       if (error) throw error
-      setDados(finData   || [])
-      setObras(obrasData || [])
+      setDados(data || [])
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
-  }, [empresaId, inicio, fim, obraFiltro, tipoFiltro])
+  }
 
-  useEffect(() => { if (!empresaId) return; carregar() }, [empresaId])
-
-  function limparFiltros() { setInicio(''); setFim(''); setObraFiltro(''); setTipoFiltro('') }
-
+  // Carrega ao montar
   useEffect(() => {
-    if (!inicio && !fim && !obraFiltro && !tipoFiltro && empresaId) carregar()
-  }, [inicio, fim, obraFiltro, tipoFiltro])
+    if (!empresaId) return
+    carregar()
+  }, [empresaId])
+
+  function filtrar() {
+    carregar()
+  }
+
+  function limparFiltros() {
+    setInicio('')
+    setFim('')
+    setObraFiltro('')
+    setTipoFiltro('')
+    // Zera refs e recarrega
+    inicioRef.current     = ''
+    fimRef.current        = ''
+    obraFiltroRef.current = ''
+    tipoFiltroRef.current = ''
+    carregar()
+  }
 
   const entradas = dados.filter(d => d.tipo === 'entrada')
   const saidas   = dados.filter(d => d.tipo === 'saida')
@@ -108,7 +145,7 @@ export default function Relatorios() {
     URL.revokeObjectURL(url)
   }
 
-  if (loadingEmpresa || loading) return <p style={{ padding: 24 }}>Carregando...</p>
+  if (loadingEmpresa) return <p style={{ padding: 24 }}>Carregando...</p>
 
   const filtrando = inicio || fim || obraFiltro || tipoFiltro
 
@@ -169,151 +206,157 @@ export default function Relatorios() {
             </select>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-            <button onClick={carregar} style={btnFiltrar}>Filtrar</button>
+            <button onClick={filtrar} style={btnFiltrar}>Filtrar</button>
             {filtrando && <button onClick={limparFiltros} style={btnLimpar}>✕ Limpar</button>}
           </div>
         </div>
       </div>
 
-      {/* MÉTRICAS — 3 col desktop, 2 col mobile */}
-      <div className="rel-resumo-grid" style={resumoGrid}>
-        <Metrica label="Receitas"    valor={format(receita)} cor="#16a34a" icone="↑" sub={`${entradas.length} lançamentos`} />
-        <Metrica label="Saídas"      valor={format(custo)}   cor="#dc2626" icone="↓" sub={`${saidas.length} lançamentos`} />
-        <Metrica label="Resultado"   valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} icone={lucro >= 0 ? '✓' : '!'} sub={lucro >= 0 ? 'Lucro' : 'Prejuízo'} />
-        <Metrica label="Margem"      valor={margem.toFixed(1) + '%'} cor="#a855f7" icone="%" sub="Margem líquida" />
-        <Metrica label="Lançamentos" valor={String(dados.length)} cor="#0ea5e9" icone="#" sub="Total no período" />
-        <Metrica label="Obras"       valor={String(Object.keys(porObra).length)} cor="#f59e0b" icone="🏗" sub="Com lançamentos" />
-      </div>
-
-      {dados.length === 0 ? (
-        <div style={vazioCard}>
-          <p style={{ fontSize: 32 }}>📭</p>
-          <p style={{ fontWeight: 600, color: '#0f172a', marginTop: 8 }}>Nenhum lançamento encontrado</p>
-          <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>
-            {filtrando ? 'Tente ajustar os filtros acima' : 'Lance entradas e saídas dentro das obras'}
-          </p>
-        </div>
+      {/* MÉTRICAS */}
+      {loading ? (
+        <p style={{ color: '#94a3b8', padding: '20px 0' }}>Carregando dados...</p>
       ) : (
         <>
-          {/* ABAS */}
-          <div className="rel-abas" style={abasRow}>
-            {(['resumo', 'lancamentos', 'categorias'] as const).map(aba => (
-              <button key={aba} onClick={() => setAbaAtiva(aba)} style={abaBtn(abaAtiva === aba)}>
-                {aba === 'resumo' ? '📊 Resumo' : aba === 'lancamentos' ? '📋 Lançamentos' : '🏷️ Categorias'}
-              </button>
-            ))}
+          <div className="rel-resumo-grid" style={resumoGrid}>
+            <Metrica label="Receitas"    valor={format(receita)} cor="#16a34a" icone="↑" sub={`${entradas.length} lançamentos`} />
+            <Metrica label="Saídas"      valor={format(custo)}   cor="#dc2626" icone="↓" sub={`${saidas.length} lançamentos`} />
+            <Metrica label="Resultado"   valor={format(lucro)}   cor={lucro >= 0 ? '#2563eb' : '#dc2626'} icone={lucro >= 0 ? '✓' : '!'} sub={lucro >= 0 ? 'Lucro' : 'Prejuízo'} />
+            <Metrica label="Margem"      valor={margem.toFixed(1) + '%'} cor="#a855f7" icone="%" sub="Margem líquida" />
+            <Metrica label="Lançamentos" valor={String(dados.length)} cor="#0ea5e9" icone="#" sub="Total no período" />
+            <Metrica label="Obras"       valor={String(Object.keys(porObra).length)} cor="#f59e0b" icone="🏗" sub="Com lançamentos" />
           </div>
 
-          {/* RESUMO */}
-          {abaAtiva === 'resumo' && (
+          {dados.length === 0 ? (
+            <div style={vazioCard}>
+              <p style={{ fontSize: 32 }}>📭</p>
+              <p style={{ fontWeight: 600, color: '#0f172a', marginTop: 8 }}>Nenhum lançamento encontrado</p>
+              <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>
+                {filtrando ? 'Tente ajustar os filtros acima' : 'Lance entradas e saídas dentro das obras'}
+              </p>
+            </div>
+          ) : (
             <>
-              {evolucao.length > 1 && (
+              {/* ABAS */}
+              <div className="rel-abas" style={abasRow}>
+                {(['resumo', 'lancamentos', 'categorias'] as const).map(aba => (
+                  <button key={aba} onClick={() => setAbaAtiva(aba)} style={abaBtn(abaAtiva === aba)}>
+                    {aba === 'resumo' ? '📊 Resumo' : aba === 'lancamentos' ? '📋 Lançamentos' : '🏷️ Categorias'}
+                  </button>
+                ))}
+              </div>
+
+              {/* RESUMO */}
+              {abaAtiva === 'resumo' && (
+                <>
+                  {evolucao.length > 1 && (
+                    <div style={secaoCard}>
+                      <h3 style={secaoTitulo}>📈 Evolução Mensal</h3>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <LineChart data={evolucao}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                          <XAxis dataKey="mes" fontSize={12} />
+                          <YAxis fontSize={11} tickFormatter={v => 'R$' + (v / 1000).toFixed(0) + 'k'} />
+                          <Tooltip formatter={(v: any) => format(v)} />
+                          <Legend />
+                          <Line type="monotone" dataKey="receita" name="Receita" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
+                          <Line type="monotone" dataKey="custo"   name="Custo"   stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                  {comparativo.length > 0 && (
+                    <div style={secaoCard}>
+                      <h3 style={secaoTitulo}>📊 Receita × Custo por Obra</h3>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <BarChart data={comparativo} barGap={4}>
+                          <XAxis dataKey="nome" fontSize={12} />
+                          <YAxis fontSize={11} tickFormatter={v => 'R$' + (v / 1000).toFixed(0) + 'k'} />
+                          <Tooltip formatter={(v: any) => format(v)} />
+                          <Legend />
+                          <Bar dataKey="receita" name="Receita" fill="#22c55e" radius={[4,4,0,0]} />
+                          <Bar dataKey="custo"   name="Custo"   fill="#ef4444" radius={[4,4,0,0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* LANÇAMENTOS */}
+              {abaAtiva === 'lancamentos' && (
                 <div style={secaoCard}>
-                  <h3 style={secaoTitulo}>📈 Evolução Mensal</h3>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <LineChart data={evolucao}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="mes" fontSize={12} />
-                      <YAxis fontSize={11} tickFormatter={v => 'R$' + (v / 1000).toFixed(0) + 'k'} />
-                      <Tooltip formatter={(v: any) => format(v)} />
-                      <Legend />
-                      <Line type="monotone" dataKey="receita" name="Receita" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
-                      <Line type="monotone" dataKey="custo"   name="Custo"   stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <h3 style={secaoTitulo}>📋 Lançamentos detalhados ({dados.length})</h3>
+                  <div className="rel-tabela-wrap">
+                    <div style={{ minWidth: 440 }}>
+                      <div className="rel-tabela-header" style={tabelaHeader}>
+                        <span>Data</span><span>Tipo</span><span>Categoria</span><span>Obra</span>
+                        <span style={{ textAlign: 'right' }}>Valor</span>
+                      </div>
+                      <div style={{ maxHeight: 440, overflowY: 'auto' }}>
+                        {dados.map(d => {
+                          const dataExib = d.data
+                            ? new Date(d.data + 'T12:00:00').toLocaleDateString('pt-BR')
+                            : new Date(d.created_at).toLocaleDateString('pt-BR')
+                          return (
+                            <div key={d.id} className="rel-tabela-linha" style={tabelaLinha}>
+                              <span style={{ color: '#64748b', fontSize: 13 }}>{dataExib}</span>
+                              <span>
+                                <span style={{ background: d.tipo === 'entrada' ? '#dcfce7' : '#fee2e2', color: d.tipo === 'entrada' ? '#16a34a' : '#dc2626', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                                  {d.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'}
+                                </span>
+                              </span>
+                              <span style={{ fontSize: 13 }}>{d.descricao || '—'}</span>
+                              <span style={{ fontSize: 13, color: '#64748b' }}>{nomeObra[String(d.obra_id)] || '—'}</span>
+                              <span style={{ textAlign: 'right', fontWeight: 600, color: d.tipo === 'entrada' ? '#16a34a' : '#dc2626' }}>
+                                {d.tipo === 'entrada' ? '+' : '-'}{format(Number(d.valor))}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className="rel-tabela-total" style={tabelaTotal}>
+                        <span style={{ gridColumn: '1 / 5', fontWeight: 700 }}>Resultado do período</span>
+                        <span style={{ textAlign: 'right', fontWeight: 800, fontSize: 16, color: lucro >= 0 ? '#16a34a' : '#dc2626' }}>
+                          {lucro >= 0 ? '+' : ''}{format(lucro)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
-              {comparativo.length > 0 && (
+
+              {/* CATEGORIAS */}
+              {abaAtiva === 'categorias' && (
                 <div style={secaoCard}>
-                  <h3 style={secaoTitulo}>📊 Receita × Custo por Obra</h3>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <BarChart data={comparativo} barGap={4}>
-                      <XAxis dataKey="nome" fontSize={12} />
-                      <YAxis fontSize={11} tickFormatter={v => 'R$' + (v / 1000).toFixed(0) + 'k'} />
-                      <Tooltip formatter={(v: any) => format(v)} />
-                      <Legend />
-                      <Bar dataKey="receita" name="Receita" fill="#22c55e" radius={[4,4,0,0]} />
-                      <Bar dataKey="custo"   name="Custo"   fill="#ef4444" radius={[4,4,0,0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <h3 style={secaoTitulo}>🏷️ Resumo por Categoria</h3>
+                  {categorias.length === 0 ? (
+                    <p style={{ color: '#94a3b8', fontSize: 13 }}>Nenhuma categoria encontrada</p>
+                  ) : categorias.map((c, i) => (
+                    <div key={i} style={catLinha}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ background: c.tipo === 'entrada' ? '#dcfce7' : '#fee2e2', color: c.tipo === 'entrada' ? '#16a34a' : '#dc2626', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                          {c.tipo === 'entrada' ? '↑' : '↓'}
+                        </span>
+                        <div>
+                          <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{c.descricao}</p>
+                          <p style={{ fontSize: 12, color: '#94a3b8' }}>{c.count} lançamento{c.count !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{ fontWeight: 700, color: c.tipo === 'entrada' ? '#16a34a' : '#dc2626' }}>
+                          {c.tipo === 'entrada' ? '+' : '-'}{format(c.total)}
+                        </p>
+                        {receita > 0 && (
+                          <p style={{ fontSize: 11, color: '#94a3b8' }}>
+                            {((c.total / (c.tipo === 'entrada' ? receita : custo)) * 100).toFixed(1)}% do total
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </>
-          )}
-
-          {/* LANÇAMENTOS */}
-          {abaAtiva === 'lancamentos' && (
-            <div style={secaoCard}>
-              <h3 style={secaoTitulo}>📋 Lançamentos detalhados ({dados.length})</h3>
-              <div className="rel-tabela-wrap">
-                <div style={{ minWidth: 440 }}>
-                  <div className="rel-tabela-header" style={tabelaHeader}>
-                    <span>Data</span><span>Tipo</span><span>Categoria</span><span>Obra</span>
-                    <span style={{ textAlign: 'right' }}>Valor</span>
-                  </div>
-                  <div style={{ maxHeight: 440, overflowY: 'auto' }}>
-                    {dados.map(d => {
-                      const dataExib = d.data
-                        ? new Date(d.data + 'T12:00:00').toLocaleDateString('pt-BR')
-                        : new Date(d.created_at).toLocaleDateString('pt-BR')
-                      return (
-                        <div key={d.id} className="rel-tabela-linha" style={tabelaLinha}>
-                          <span style={{ color: '#64748b', fontSize: 13 }}>{dataExib}</span>
-                          <span>
-                            <span style={{ background: d.tipo === 'entrada' ? '#dcfce7' : '#fee2e2', color: d.tipo === 'entrada' ? '#16a34a' : '#dc2626', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-                              {d.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'}
-                            </span>
-                          </span>
-                          <span style={{ fontSize: 13 }}>{d.descricao || '—'}</span>
-                          <span style={{ fontSize: 13, color: '#64748b' }}>{nomeObra[String(d.obra_id)] || '—'}</span>
-                          <span style={{ textAlign: 'right', fontWeight: 600, color: d.tipo === 'entrada' ? '#16a34a' : '#dc2626' }}>
-                            {d.tipo === 'entrada' ? '+' : '-'}{format(Number(d.valor))}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div className="rel-tabela-total" style={tabelaTotal}>
-                    <span style={{ gridColumn: '1 / 5', fontWeight: 700 }}>Resultado do período</span>
-                    <span style={{ textAlign: 'right', fontWeight: 800, fontSize: 16, color: lucro >= 0 ? '#16a34a' : '#dc2626' }}>
-                      {lucro >= 0 ? '+' : ''}{format(lucro)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* CATEGORIAS */}
-          {abaAtiva === 'categorias' && (
-            <div style={secaoCard}>
-              <h3 style={secaoTitulo}>🏷️ Resumo por Categoria</h3>
-              {categorias.length === 0 ? (
-                <p style={{ color: '#94a3b8', fontSize: 13 }}>Nenhuma categoria encontrada</p>
-              ) : categorias.map((c, i) => (
-                <div key={i} style={catLinha}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ background: c.tipo === 'entrada' ? '#dcfce7' : '#fee2e2', color: c.tipo === 'entrada' ? '#16a34a' : '#dc2626', padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-                      {c.tipo === 'entrada' ? '↑' : '↓'}
-                    </span>
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{c.descricao}</p>
-                      <p style={{ fontSize: 12, color: '#94a3b8' }}>{c.count} lançamento{c.count !== 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontWeight: 700, color: c.tipo === 'entrada' ? '#16a34a' : '#dc2626' }}>
-                      {c.tipo === 'entrada' ? '+' : '-'}{format(c.total)}
-                    </p>
-                    {receita > 0 && (
-                      <p style={{ fontSize: 11, color: '#94a3b8' }}>
-                        {((c.total / (c.tipo === 'entrada' ? receita : custo)) * 100).toFixed(1)}% do total
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
           )}
         </>
       )}
