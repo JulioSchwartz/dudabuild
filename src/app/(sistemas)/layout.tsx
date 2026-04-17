@@ -8,7 +8,8 @@ import { useEmpresa } from '@/hooks/useEmpresa'
 // ── HELPER: registra push subscription no servidor ──
 async function registrarPushSubscription(empresaId: string, usuarioId: number) {
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setPushSuportado(false); return }
+    setPushSuportado(true)
 
     const registro = await navigator.serviceWorker.ready
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
@@ -52,7 +53,8 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
   const [pronto, setPronto]               = useState(false)
   const [sidebarAberta, setSidebarAberta] = useState(false)
-  const [pushAtivo, setPushAtivo]         = useState(false)
+  const [pushAtivo, setPushAtivo] = useState(false)
+  const [pushSuportado, setPushSuportado] = useState(false)
 
   useEffect(() => {
     if (loading) return
@@ -78,7 +80,8 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
   // Verifica se push já está ativo
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setPushSuportado(false); return }
+    setPushSuportado(true)
     navigator.serviceWorker.ready.then(reg => {
       reg.pushManager.getSubscription().then(sub => {
         setPushAtivo(!!sub)
@@ -223,7 +226,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
           <div>
             {/* Botão de notificações push */}
-            {'Notification' in window && (
+            {pushSuportado && (
               <button
                 onClick={pushAtivo ? undefined : ativarNotificacoes}
                 style={{
