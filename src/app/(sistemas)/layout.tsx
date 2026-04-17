@@ -5,41 +5,13 @@ import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 
-// ── HELPER: registra push subscription no servidor ──
-async function registrarPushSubscription(empresaId: string, usuarioId: number) {
-  try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setPushSuportado(false); return }
-    setPushSuportado(true)
-
-    const registro = await navigator.serviceWorker.ready
-    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-
-    // Converte a chave VAPID de base64 para Uint8Array
-    const padding   = '='.repeat((4 - publicKey.length % 4) % 4)
-    const base64    = (publicKey + padding).replace(/-/g, '+').replace(/_/g, '/')
-    const rawData   = atob(base64)
-    const outputKey = new Uint8Array(rawData.length)
-    for (let i = 0; i < rawData.length; ++i) outputKey[i] = rawData.charCodeAt(i)
-
-    const subscription = await registro.pushManager.subscribe({
-      userVisibleOnly:      true,
-      applicationServerKey: outputKey,
-    })
-
-    await fetch('/api/push/subscribe', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        subscription: subscription.toJSON(),
-        empresa_id:   empresaId,
-        usuario_id:   usuarioId,
-      }),
-    })
-
-    console.log('[PWA] Push subscription registrada')
-  } catch (err) {
-    console.warn('[PWA] Erro ao registrar push subscription:', err)
-  }
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = atob(base64)
+  const output  = new Uint8Array(rawData.length)
+  for (let i = 0; i < rawData.length; ++i) output[i] = rawData.charCodeAt(i)
+  return output
 }
 
 export default function SistemaLayout({ children }: { children: React.ReactNode }) {
@@ -51,10 +23,10 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
     bloqueado, loading, diasRestantes, trialExpirado,
   } = useEmpresa()
 
-  const [pronto, setPronto]               = useState(false)
-  const [sidebarAberta, setSidebarAberta] = useState(false)
-  const [pushAtivo, setPushAtivo] = useState(false)
-  const [pushSuportado, setPushSuportado] = useState(false)
+  const [pronto,         setPronto]         = useState(false)
+  const [sidebarAberta,  setSidebarAberta]  = useState(false)
+  const [pushAtivo,      setPushAtivo]      = useState(false)
+  const [pushSuportado,  setPushSuportado]  = useState(false)
 
   useEffect(() => {
     if (loading) return
@@ -78,9 +50,13 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
     setPronto(true)
   }, [loading, bloqueado, perfil, pathname])
 
-  // Verifica se push já está ativo
+  // Verifica suporte e status do push
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setPushSuportado(false); return }
+    if (typeof window === 'undefined') return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setPushSuportado(false)
+      return
+    }
     setPushSuportado(true)
     navigator.serviceWorker.ready.then(reg => {
       reg.pushManager.getSubscription().then(sub => {
@@ -89,7 +65,6 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
     })
   }, [])
 
-  // Fecha sidebar ao trocar de página no mobile
   useEffect(() => { setSidebarAberta(false) }, [pathname])
 
   async function sair() {
@@ -98,27 +73,80 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
   }
 
   async function ativarNotificacoes() {
-    const permissao = await Notification.requestPermission()
-    if (permissao !== 'granted') {
-      alert('Permissão de notificações negada. Habilite nas configurações do navegador.')
-      return
+    try {
+      const permissao = await Notification.requestPermission()
+      if (permissao !== 'granted') {
+        alert('Permissão de notificações negada. Habilite nas configurações do navegador.')
+        return
+      }
+
+      const registro = await navigator.serviceWorker.ready
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+
+      const subscription = await registro.pushManager.subscribe({
+        userVisibleOnly:      true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      })
+
+      // Busca dados do usuário
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { alert('Usuário não encontrado'); return }
+
+      const { data: usuario } = await supabase
+        .from('usuarios')
+        .select('id, empresa_id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!usuario) { alert('Dados do usuário não encontrados'); return }
+
+      const res = await fetch('/api/push/subscribe', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          subscription: subscription.toJSON(),
+          empresa_id:   usuario.empresa_id,
+          usuario_id:   usuario.id,
+        }),
+      })
+
+      const json = await res.json()
+      console.log('[PWA] Resposta subscribe:', json)
+
+      if (res.ok) {
+        setPushAtivo(true)
+        alert('✅ Notificações ativadas! Você receberá alertas de contas a vencer.')
+      } else {
+        alert('Erro ao ativar notificações: ' + (json.error || 'desconhecido'))
+      }
+    } catch (err) {
+      console.error('[PWA] Erro ao ativar notificações:', err)
+      alert('Erro ao ativar notificações. Verifique o console.')
     }
+  }
 
-    // Busca dados do usuário para registrar subscription
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+  async function desativarNotificacoes() {
+    try {
+      const registro = await navigator.serviceWorker.ready
+      const sub = await registro.pushManager.getSubscription()
+      if (sub) await sub.unsubscribe()
 
-    const { data: usuario } = await supabase
-      .from('usuarios')
-      .select('id, empresa_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!usuario) return
-
-    await registrarPushSubscription(usuario.empresa_id, usuario.id)
-    setPushAtivo(true)
-    alert('✅ Notificações ativadas! Você receberá alertas de contas a vencer.')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: usuario } = await supabase
+          .from('usuarios').select('id').eq('user_id', user.id).single()
+        if (usuario) {
+          await fetch('/api/push/subscribe', {
+            method:  'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ usuario_id: usuario.id }),
+          })
+        }
+      }
+      setPushAtivo(false)
+    } catch (err) {
+      console.error('[PWA] Erro ao desativar:', err)
+    }
   }
 
   if (loading || !pronto) {
@@ -156,9 +184,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
     <div style={container}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        .sidebar-wrapper {
-          width: 256px; min-width: 256px; flex-shrink: 0;
-        }
+        .sidebar-wrapper { width: 256px; min-width: 256px; flex-shrink: 0; }
         .overlay { display: none; }
         .hamburger { display: none !important; }
         @media (max-width: 768px) {
@@ -174,10 +200,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
         }
       `}</style>
 
-      {/* Overlay mobile */}
-      {sidebarAberta && (
-        <div className="overlay" onClick={() => setSidebarAberta(false)} />
-      )}
+      {sidebarAberta && <div className="overlay" onClick={() => setSidebarAberta(false)} />}
 
       {/* SIDEBAR */}
       <div className={`sidebar-wrapper${sidebarAberta ? ' aberta' : ''}`}>
@@ -187,25 +210,19 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
               <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan"
                 style={{ width: 200, display: 'block', mixBlendMode: 'screen' }} />
             </div>
-
             <div style={divider} />
-
             <div style={planoBadgeWrap}>
               <span style={badgePlano(plano)}>
                 {plano === 'premium' ? '⭐ Premium' : plano === 'pro' ? '🚀 Pro' : '🔹 Básico'}
               </span>
               {diasRestantes !== null && !trialExpirado && (
                 <span style={badgeTrial(diasRestantes)}>
-                  {diasRestantes === 0
-                    ? '⚠️ Trial expira hoje!'
-                    : `⏱ Trial: ${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''}`}
+                  {diasRestantes === 0 ? '⚠️ Trial expira hoje!' : `⏱ Trial: ${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''}`}
                 </span>
               )}
               <span style={planoNome}>{nomeEmpresa}</span>
             </div>
-
             <div style={divider} />
-
             <nav>
               <p style={menuLabel}>MENU</p>
               <MenuItem texto="🏠" label="Dashboard"  rota="/dashboard"  ativo={pathname === '/dashboard'} />
@@ -218,9 +235,9 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
               {podeVerEquipe     && <MenuItem texto="👥" label="Equipe"      rota="/equipe"      ativo={pathname.startsWith('/equipe')} />}
               <div style={divider} />
               <p style={menuLabel}>CONFIGURAÇÕES</p>
-              {podeVerFornecedores && <MenuItem texto="🏭" label="Fornecedores"    rota="/fornecedores" ativo={pathname.startsWith('/fornecedores')} />}
-              {podeVerPerfil       && <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"    ativo={pathname.startsWith('/perfil')} />}
-              {podeVerPlanos       && <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos"    ativo={pathname.startsWith('/planos')} destaque />}
+              {podeVerFornecedores && <MenuItem texto="🏭" label="Fornecedores"     rota="/fornecedores" ativo={pathname.startsWith('/fornecedores')} />}
+              {podeVerPerfil       && <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"      ativo={pathname.startsWith('/perfil')} />}
+              {podeVerPlanos       && <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos"      ativo={pathname.startsWith('/planos')} destaque />}
             </nav>
           </div>
 
@@ -228,12 +245,13 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
             {/* Botão de notificações push */}
             {pushSuportado && (
               <button
-                onClick={pushAtivo ? undefined : ativarNotificacoes}
+                onClick={pushAtivo ? desativarNotificacoes : ativarNotificacoes}
                 style={{
-                  width: '100%', background: pushAtivo ? 'rgba(34,197,94,0.1)' : 'rgba(212,168,67,0.1)',
+                  width: '100%',
+                  background: pushAtivo ? 'rgba(34,197,94,0.1)' : 'rgba(212,168,67,0.1)',
                   border: `1px solid ${pushAtivo ? 'rgba(34,197,94,0.3)' : 'rgba(212,168,67,0.3)'}`,
                   color: pushAtivo ? '#4ade80' : '#d4a843',
-                  padding: '9px 14px', borderRadius: 8, cursor: pushAtivo ? 'default' : 'pointer',
+                  padding: '9px 14px', borderRadius: 8, cursor: 'pointer',
                   fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center',
                   justifyContent: 'center', gap: 8, marginBottom: 8,
                 }}
@@ -275,7 +293,6 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
         )}
 
         <header style={topbar}>
-          {/* Hamburger mobile */}
           <button className="hamburger" onClick={() => setSidebarAberta(!sidebarAberta)}
             style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', flexDirection: 'column', gap: 5, padding: '8px', marginRight: 8, flexShrink: 0 }}>
             <span style={{ display: 'block', width: 22, height: 2, background: '#0f172a', borderRadius: 2, transition: 'all 0.2s', transform: sidebarAberta ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
