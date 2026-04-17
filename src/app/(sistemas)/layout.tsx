@@ -5,6 +5,42 @@ import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useEmpresa } from '@/hooks/useEmpresa'
 
+// ── HELPER: registra push subscription no servidor ──
+async function registrarPushSubscription(empresaId: string, usuarioId: number) {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+
+    const registro = await navigator.serviceWorker.ready
+    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+
+    // Converte a chave VAPID de base64 para Uint8Array
+    const padding   = '='.repeat((4 - publicKey.length % 4) % 4)
+    const base64    = (publicKey + padding).replace(/-/g, '+').replace(/_/g, '/')
+    const rawData   = atob(base64)
+    const outputKey = new Uint8Array(rawData.length)
+    for (let i = 0; i < rawData.length; ++i) outputKey[i] = rawData.charCodeAt(i)
+
+    const subscription = await registro.pushManager.subscribe({
+      userVisibleOnly:      true,
+      applicationServerKey: outputKey,
+    })
+
+    await fetch('/api/push/subscribe', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        subscription: subscription.toJSON(),
+        empresa_id:   empresaId,
+        usuario_id:   usuarioId,
+      }),
+    })
+
+    console.log('[PWA] Push subscription registrada')
+  } catch (err) {
+    console.warn('[PWA] Erro ao registrar push subscription:', err)
+  }
+}
+
 export default function SistemaLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
   const pathname = usePathname()
@@ -14,17 +50,18 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
     bloqueado, loading, diasRestantes, trialExpirado,
   } = useEmpresa()
 
-  const [pronto, setPronto]           = useState(false)
+  const [pronto, setPronto]               = useState(false)
   const [sidebarAberta, setSidebarAberta] = useState(false)
+  const [pushAtivo, setPushAtivo]         = useState(false)
 
   useEffect(() => {
     if (loading) return
     if (bloqueado && !pathname.startsWith('/planos')) { router.push('/planos'); return }
     if (bloqueado && pathname.startsWith('/planos')) { setPronto(true); return }
 
-    const rotasAdminOnly     = ['/equipe', '/planos', '/perfil']
-    const rotasFinanceiroOk  = ['/dashboard', '/financeiro', '/obras', '/contas', '/compras', '/relatorios', '/fornecedores']
-    const rotasMestreOk      = ['/dashboard', '/financeiro', '/obras', '/contas', '/compras']
+    const rotasAdminOnly    = ['/equipe', '/planos', '/perfil']
+    const rotasFinanceiroOk = ['/dashboard', '/financeiro', '/obras', '/contas', '/compras', '/relatorios', '/fornecedores']
+    const rotasMestreOk     = ['/dashboard', '/financeiro', '/obras', '/contas', '/compras']
 
     if (perfil === 'financeiro' && !rotasFinanceiroOk.some(r => pathname.startsWith(r))) {
       router.push('/financeiro'); return
@@ -39,14 +76,46 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
     setPronto(true)
   }, [loading, bloqueado, perfil, pathname])
 
-  // Fecha sidebar ao trocar de página no mobile
+  // Verifica se push já está ativo
   useEffect(() => {
-    setSidebarAberta(false)
-  }, [pathname])
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    navigator.serviceWorker.ready.then(reg => {
+      reg.pushManager.getSubscription().then(sub => {
+        setPushAtivo(!!sub)
+      })
+    })
+  }, [])
+
+  // Fecha sidebar ao trocar de página no mobile
+  useEffect(() => { setSidebarAberta(false) }, [pathname])
 
   async function sair() {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  async function ativarNotificacoes() {
+    const permissao = await Notification.requestPermission()
+    if (permissao !== 'granted') {
+      alert('Permissão de notificações negada. Habilite nas configurações do navegador.')
+      return
+    }
+
+    // Busca dados do usuário para registrar subscription
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('id, empresa_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!usuario) return
+
+    await registrarPushSubscription(usuario.empresa_id, usuario.id)
+    setPushAtivo(true)
+    alert('✅ Notificações ativadas! Você receberá alertas de contas a vencer.')
   }
 
   if (loading || !pronto) {
@@ -65,10 +134,10 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
   const labelUpgrade   = diasRestantes !== null && !trialExpirado ? `⚡ Trial: ${diasRestantes}d` : '⚡ Upgrade'
 
   const perfilLabel =
-    perfil === 'admin'       ? 'Administrador'  :
-    perfil === 'engenheiro'  ? 'Engenheiro'     :
-    perfil === 'financeiro'  ? 'Financeiro'     :
-                               'Mestre de Obra'
+    perfil === 'admin'      ? 'Administrador' :
+    perfil === 'engenheiro' ? 'Engenheiro'    :
+    perfil === 'financeiro' ? 'Financeiro'    :
+                              'Mestre de Obra'
 
   const podeVerObras        = true
   const podeVerOrcamentos   = perfil === 'admin' || perfil === 'engenheiro'
@@ -82,38 +151,21 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
   return (
     <div style={container}>
-
-      {/* ── CSS RESPONSIVO ── */}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .sidebar-wrapper {
-          width: 256px;
-          min-width: 256px;
-          flex-shrink: 0;
+          width: 256px; min-width: 256px; flex-shrink: 0;
         }
         .overlay { display: none; }
         .hamburger { display: none !important; }
         @media (max-width: 768px) {
           .sidebar-wrapper {
-            position: fixed !important;
-            top: 0; left: 0; bottom: 0;
-            z-index: 200;
-            transform: translateX(-100%);
-            transition: transform 0.25s ease;
-            width: 272px !important;
-            min-width: unset !important;
+            position: fixed !important; top: 0; left: 0; bottom: 0;
+            z-index: 200; transform: translateX(-100%);
+            transition: transform 0.25s ease; width: 272px !important; min-width: unset !important;
           }
-          .sidebar-wrapper.aberta {
-            transform: translateX(0);
-          }
-          .overlay {
-            display: block;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 199;
-            backdrop-filter: blur(2px);
-          }
+          .sidebar-wrapper.aberta { transform: translateX(0); }
+          .overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; backdrop-filter: blur(2px); }
           .hamburger { display: flex !important; }
           .topbar-user-info { display: none !important; }
         }
@@ -124,7 +176,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
         <div className="overlay" onClick={() => setSidebarAberta(false)} />
       )}
 
-      {/* ── SIDEBAR ── */}
+      {/* SIDEBAR */}
       <div className={`sidebar-wrapper${sidebarAberta ? ' aberta' : ''}`}>
         <aside style={sidebar}>
           <div>
@@ -153,23 +205,40 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
             <nav>
               <p style={menuLabel}>MENU</p>
-              <MenuItem texto="🏠" label="Dashboard"   rota="/dashboard"   ativo={pathname === '/dashboard'} />
-              {podeVerObras        && <MenuItem texto="🏗️" label="Obras"        rota="/obras"        ativo={pathname.startsWith('/obras')} />}
-              <MenuItem              texto="💰" label="Financeiro"  rota="/financeiro"  ativo={pathname.startsWith('/financeiro')} />
-              {podeVerContas       && <MenuItem texto="💳" label="Contas"       rota="/contas"       ativo={pathname.startsWith('/contas')} />}
-              {podeVerCompras      && <MenuItem texto="🛒" label="Compras"      rota="/compras"      ativo={pathname.startsWith('/compras')} />}
-              {podeVerOrcamentos   && <MenuItem texto="🧾" label="Orçamentos"   rota="/orcamentos"   ativo={pathname.startsWith('/orcamentos')} />}
-              {podeVerRelatorios   && <MenuItem texto="📊" label="Relatórios"   rota="/relatorios"   ativo={pathname.startsWith('/relatorios')} />}
-              {podeVerEquipe       && <MenuItem texto="👥" label="Equipe"       rota="/equipe"       ativo={pathname.startsWith('/equipe')} />}
+              <MenuItem texto="🏠" label="Dashboard"  rota="/dashboard"  ativo={pathname === '/dashboard'} />
+              {podeVerObras      && <MenuItem texto="🏗️" label="Obras"       rota="/obras"       ativo={pathname.startsWith('/obras')} />}
+              <MenuItem            texto="💰" label="Financeiro" rota="/financeiro" ativo={pathname.startsWith('/financeiro')} />
+              {podeVerContas     && <MenuItem texto="💳" label="Contas"      rota="/contas"      ativo={pathname.startsWith('/contas')} />}
+              {podeVerCompras    && <MenuItem texto="🛒" label="Compras"     rota="/compras"     ativo={pathname.startsWith('/compras')} />}
+              {podeVerOrcamentos && <MenuItem texto="🧾" label="Orçamentos"  rota="/orcamentos"  ativo={pathname.startsWith('/orcamentos')} />}
+              {podeVerRelatorios && <MenuItem texto="📊" label="Relatórios"  rota="/relatorios"  ativo={pathname.startsWith('/relatorios')} />}
+              {podeVerEquipe     && <MenuItem texto="👥" label="Equipe"      rota="/equipe"      ativo={pathname.startsWith('/equipe')} />}
               <div style={divider} />
               <p style={menuLabel}>CONFIGURAÇÕES</p>
-              {podeVerFornecedores && <MenuItem texto="🏭" label="Fornecedores" rota="/fornecedores" ativo={pathname.startsWith('/fornecedores')} />}
-              {podeVerPerfil       && <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"  ativo={pathname.startsWith('/perfil')} />}
-              {podeVerPlanos       && <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos"  ativo={pathname.startsWith('/planos')} destaque />}
+              {podeVerFornecedores && <MenuItem texto="🏭" label="Fornecedores"    rota="/fornecedores" ativo={pathname.startsWith('/fornecedores')} />}
+              {podeVerPerfil       && <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"    ativo={pathname.startsWith('/perfil')} />}
+              {podeVerPlanos       && <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos"    ativo={pathname.startsWith('/planos')} destaque />}
             </nav>
           </div>
 
           <div>
+            {/* Botão de notificações push */}
+            {'Notification' in window && (
+              <button
+                onClick={pushAtivo ? undefined : ativarNotificacoes}
+                style={{
+                  width: '100%', background: pushAtivo ? 'rgba(34,197,94,0.1)' : 'rgba(212,168,67,0.1)',
+                  border: `1px solid ${pushAtivo ? 'rgba(34,197,94,0.3)' : 'rgba(212,168,67,0.3)'}`,
+                  color: pushAtivo ? '#4ade80' : '#d4a843',
+                  padding: '9px 14px', borderRadius: 8, cursor: pushAtivo ? 'default' : 'pointer',
+                  fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', gap: 8, marginBottom: 8,
+                }}
+              >
+                {pushAtivo ? '🔔 Notificações ativas' : '🔕 Ativar notificações'}
+              </button>
+            )}
+
             <div style={divider} />
             <div style={userInfo}>
               <div style={avatar}>{inicialUsuario}</div>
@@ -189,10 +258,8 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
         </aside>
       </div>
 
-      {/* ── CONTEÚDO ── */}
+      {/* CONTEÚDO */}
       <div style={mainWrapper}>
-
-        {/* Banner trial expirando (últimos 3 dias) */}
         {mostrarBanner && (
           <div style={bannerTrial(diasRestantes!)}>
             <span>
@@ -200,24 +267,14 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
                 ? '⚠️ Seu trial expira hoje! Assine agora para não perder o acesso.'
                 : `⏱ Seu trial expira em ${diasRestantes} dia${diasRestantes! > 1 ? 's' : ''}. Aproveite para assinar!`}
             </span>
-            <button onClick={() => router.push('/planos')} style={btnBanner}>
-              Ver planos →
-            </button>
+            <button onClick={() => router.push('/planos')} style={btnBanner}>Ver planos →</button>
           </div>
         )}
 
         <header style={topbar}>
           {/* Hamburger mobile */}
-          <button
-            className="hamburger"
-            onClick={() => setSidebarAberta(!sidebarAberta)}
-            style={{
-              display: 'none',
-              background: 'none', border: 'none', cursor: 'pointer',
-              flexDirection: 'column', gap: 5, padding: '8px', marginRight: 8,
-              flexShrink: 0,
-            }}
-          >
+          <button className="hamburger" onClick={() => setSidebarAberta(!sidebarAberta)}
+            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', flexDirection: 'column', gap: 5, padding: '8px', marginRight: 8, flexShrink: 0 }}>
             <span style={{ display: 'block', width: 22, height: 2, background: '#0f172a', borderRadius: 2, transition: 'all 0.2s', transform: sidebarAberta ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
             <span style={{ display: 'block', width: 22, height: 2, background: '#0f172a', borderRadius: 2, opacity: sidebarAberta ? 0 : 1, transition: 'all 0.2s' }} />
             <span style={{ display: 'block', width: 22, height: 2, background: '#0f172a', borderRadius: 2, transition: 'all 0.2s', transform: sidebarAberta ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
@@ -232,8 +289,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
             {podeVerPlanos && (
               <button onClick={() => router.push('/planos')} style={btnUpgrade}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
-              >
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}>
                 {labelUpgrade}
               </button>
             )}
@@ -249,7 +305,6 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 
         <main style={content}>{children}</main>
       </div>
-
     </div>
   )
 }
@@ -281,18 +336,8 @@ function MenuItem({ texto, label, rota, ativo, destaque = false }: {
       borderLeft: ativo ? '3px solid #d4a843' : '3px solid transparent',
       fontWeight: ativo ? 600 : 500,
     }}
-      onMouseEnter={e => {
-        if (!ativo) {
-          (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)'
-          ;(e.currentTarget as HTMLDivElement).style.color = destaque ? '#fde68a' : '#e2e8f0'
-        }
-      }}
-      onMouseLeave={e => {
-        if (!ativo) {
-          (e.currentTarget as HTMLDivElement).style.background = 'transparent'
-          ;(e.currentTarget as HTMLDivElement).style.color = destaque ? '#fbbf24' : '#94a3b8'
-        }
-      }}
+      onMouseEnter={e => { if (!ativo) { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLDivElement).style.color = destaque ? '#fde68a' : '#e2e8f0' } }}
+      onMouseLeave={e => { if (!ativo) { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = destaque ? '#fbbf24' : '#94a3b8' } }}
     >
       <span style={{ fontSize: 16, minWidth: 20, textAlign: 'center' }}>{texto}</span>
       <span>{label}</span>
@@ -335,8 +380,7 @@ const mainWrapper: React.CSSProperties = { flex: 1, display: 'flex', flexDirecti
 const bannerTrial = (dias: number): React.CSSProperties => ({
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
   padding: '10px 24px', fontSize: 13, fontWeight: 600, flexShrink: 0,
-  background: dias === 0 ? '#7f1d1d' : dias <= 1 ? '#78350f' : '#713f12',
-  color: '#fff',
+  background: dias === 0 ? '#7f1d1d' : dias <= 1 ? '#78350f' : '#713f12', color: '#fff',
 })
 const btnBanner: React.CSSProperties    = { background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '5px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }
 const topbar: React.CSSProperties       = { height: 64, background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', flexShrink: 0 }
