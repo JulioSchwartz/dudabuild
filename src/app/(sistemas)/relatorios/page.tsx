@@ -53,11 +53,11 @@ export default function Relatorios() {
     setLoading(true)
     try {
       let q = supabase.from('financeiro').select('*').eq('empresa_id', eid)
-      if (inicioRef.current)     q = q.gte('data', inicioRef.current)
-      if (fimRef.current)        q = q.lte('data', fimRef.current)
+      if (inicioRef.current)     q = q.gte('created_at', inicioRef.current)
+      if (fimRef.current)        q = q.lte('created_at', fimRef.current + 'T23:59:59')
       if (obraFiltroRef.current) q = q.eq('obra_id', obraFiltroRef.current)
       if (tipoFiltroRef.current) q = q.eq('tipo', tipoFiltroRef.current)
-      q = q.order('data', { ascending: false })
+      q = q.order('created_at', { ascending: false })
       const { data, error } = await q
       if (error) throw error
       setDados(data || [])
@@ -132,8 +132,10 @@ export default function Relatorios() {
     const linhas = [
       ['Data', 'Tipo', 'Categoria', 'Obra', 'Valor'],
       ...dados.map(d => [
-        d.data ? new Date(d.data + 'T12:00:00').toLocaleDateString('pt-BR') : new Date(d.created_at).toLocaleDateString('pt-BR'),
-        d.tipo, d.descricao || '', nomeObra[String(d.obra_id)] || '',
+        new Date(d.created_at).toLocaleDateString('pt-BR'),
+        d.tipo,
+        d.descricao || '',
+        nomeObra[String(d.obra_id)] || '',
         String(Number(d.valor || 0).toFixed(2)).replace('.', ','),
       ])
     ]
@@ -294,9 +296,7 @@ export default function Relatorios() {
                       </div>
                       <div style={{ maxHeight: 440, overflowY: 'auto' }}>
                         {dados.map(d => {
-                          const dataExib = d.data
-                            ? new Date(d.data + 'T12:00:00').toLocaleDateString('pt-BR')
-                            : new Date(d.created_at).toLocaleDateString('pt-BR')
+                          const dataExib = new Date(d.created_at).toLocaleDateString('pt-BR')
                           return (
                             <div key={d.id} className="rel-tabela-linha" style={tabelaLinha}>
                               <span style={{ color: '#64748b', fontSize: 13 }}>{dataExib}</span>
