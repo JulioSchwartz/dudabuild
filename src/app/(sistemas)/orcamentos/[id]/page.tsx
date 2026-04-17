@@ -191,9 +191,24 @@ export default function VerOrcamento() {
 
   return (
     <div style={container}>
+      <style>{`
+        @media (max-width: 768px) {
+          .orc-cabecalho { flex-direction: column !important; gap: 8px !important; }
+          .orc-resumo-grid { grid-template-columns: 1fr 1fr !important; }
+          .orc-tabela-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .orc-tabela-header,
+          .orc-tabela-linha,
+          .orc-tabela-rodape { grid-template-columns: 60px 2fr 50px 40px 90px 90px 90px 90px !important; font-size: 11px !important; min-width: 560px; }
+          .orc-acoes { flex-direction: column !important; }
+          .orc-acoes button { width: 100% !important; }
+          .orc-aprovacao-box { flex-direction: column !important; }
+          .orc-aprovacao-btns { width: 100% !important; }
+          .orc-aprovacao-btns button { flex: 1 !important; }
+        }
+      `}</style>
 
       {/* CABEÇALHO */}
-      <div style={cabecalho}>
+      <div className="orc-cabecalho" style={cabecalho}>
         <div>
           <button onClick={() => router.back()} style={btnVoltar}>← Voltar</button>
           <h1 style={titulo}>{orc.cliente_nome}</h1>
@@ -275,7 +290,7 @@ export default function VerOrcamento() {
       )}
 
       {/* RESUMO FINANCEIRO */}
-      <div style={resumoGrid}>
+      <div className="orc-resumo-grid" style={resumoGrid}>
         <Metrica label="Total Geral"   valor={format(tgeral)} cor="#16a34a" grande />
         <Metrica label="Materiais"     valor={format(tmat)}   cor="#3b82f6" />
         <Metrica label="Mão de Obra"   valor={format(tmo)}    cor="#f59e0b" />
@@ -292,7 +307,9 @@ export default function VerOrcamento() {
             </p>
           : (
             <>
-              <div style={tabelaHeader}>
+              <div className="orc-tabela-wrap">
+              <div style={{ minWidth: 560 }}>
+              <div className="orc-tabela-header" style={tabelaHeader}>
                 <span>Cód</span>
                 <span style={{ flex: 3 }}>Descrição</span>
                 <span style={{ textAlign: 'center' }}>Un</span>
@@ -304,7 +321,7 @@ export default function VerOrcamento() {
               </div>
 
               {itens.map((item, i) => (
-                <div key={i} style={tabelaLinha}>
+                <div key={i} className="orc-tabela-linha" style={tabelaLinha}>
                   <span style={{ color: '#94a3b8', fontSize: 12 }}>{item.codigo || '—'}</span>
                   <span style={{ flex: 3, fontWeight: 500 }}>{item.descricao || '—'}</span>
                   <span style={{ textAlign: 'center', color: '#64748b' }}>{item.unidade || '—'}</span>
@@ -316,19 +333,21 @@ export default function VerOrcamento() {
                 </div>
               ))}
 
-              <div style={tabelaRodape}>
+              <div className="orc-tabela-rodape" style={tabelaRodape}>
                 <span style={{ gridColumn: '1 / 8', fontWeight: 700 }}>Total Geral</span>
                 <span style={{ textAlign: 'right', fontWeight: 900, fontSize: 16, color: '#16a34a' }}>
                   {format(tgeral)}
                 </span>
               </div>
+              </div>{/* minWidth */}
+              </div>{/* orc-tabela-wrap */}
             </>
           )
         }
       </div>
 
       {/* AÇÕES */}
-      <div style={acoes}>
+      <div className="orc-acoes" style={acoes}>
         <button onClick={gerarPDF}       style={btnPdf}>📄 Baixar PDF</button>
         <button onClick={copiarLink}     style={btnSec}>🔗 Copiar Link</button>
         <button onClick={enviarWhatsApp} style={btnWhats}>WhatsApp</button>

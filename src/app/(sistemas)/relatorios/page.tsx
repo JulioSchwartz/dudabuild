@@ -118,7 +118,10 @@ export default function Relatorios() {
         @media (max-width: 768px) {
           .rel-cabecalho { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
           .rel-resumo-grid { grid-template-columns: 1fr !important; }
-          .rel-filtro-row { flex-direction: column !important; }
+          .rel-filtro-row { flex-direction: column !important; align-items: stretch !important; }
+          .rel-filtro-row > * { width: 100% !important; }
+          .rel-filtro-row input,
+          .rel-filtro-row select { width: 100% !important; box-sizing: border-box !important; }
           .rel-tabela-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
           .rel-tabela-header,
           .rel-tabela-linha,

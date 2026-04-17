@@ -377,6 +377,15 @@ export default function DetalheObra() {
 
   return (
     <div style={{ padding: 24 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .obra-etapa-datas { grid-template-columns: 1fr !important; }
+          .obra-medicao-grid1 { grid-template-columns: 1fr !important; }
+          .obra-medicao-grid2 { grid-template-columns: 1fr !important; }
+          .obra-etapa-header { flex-direction: column !important; gap: 8px !important; }
+          .obra-etapa-header-right { align-self: flex-end !important; }
+        }
+      `}</style>
 
       {/* BANNER OBRA CONCLUÍDA */}
       {obra.status === 'concluida' && (
@@ -655,7 +664,7 @@ export default function DetalheObra() {
                 <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
 
                   {/* DATAS DA ETAPA */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <div className="obra-etapa-datas" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                     <div>
                       <label style={{ fontSize: 11, color: '#64748b', fontWeight: 600, display: 'block', marginBottom: 4 }}>Data de Início</label>
                       <input type="date" value={etapa.data_inicio || ''}
@@ -714,7 +723,7 @@ export default function DetalheObra() {
                         <p style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 10 }}>
                           Nova Medição · Disponível: {100 - totalMed}%
                         </p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                        <div className="obra-medicao-grid1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                           <div>
                             <label style={{ fontSize: 11, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 4 }}>Data *</label>
                             <input type="date" value={medData} onChange={e => setMedData(e.target.value)}
@@ -728,7 +737,7 @@ export default function DetalheObra() {
                               style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', width: '100%' }} />
                           </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                        <div className="obra-medicao-grid2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                           <div>
                             <label style={{ fontSize: 11, color: '#374151', fontWeight: 600, display: 'block', marginBottom: 4 }}>
                               Descrição do serviço <span style={{ color: '#94a3b8' }}>(opcional)</span>
