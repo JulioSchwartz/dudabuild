@@ -240,6 +240,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
               <div style={divider} />
               <p style={menuLabel}>CONFIGURAÇÕES</p>
               {podeVerFornecedores && <MenuItem texto="🏭" label="Fornecedores"     rota="/fornecedores" ativo={pathname.startsWith('/fornecedores')} />}
+	      {podeVerFornecedores && <MenuItem texto="📋" label="Composições" rota="/composicoes" ativo={pathname.startsWith('/composicoes')} />}
               {podeVerPerfil       && <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"      ativo={pathname.startsWith('/perfil')} />}
               {podeVerPlanos       && <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos"      ativo={pathname.startsWith('/planos')} destaque />}
             </nav>
