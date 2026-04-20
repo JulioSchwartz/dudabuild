@@ -384,6 +384,11 @@ export default function DetalheObra() {
           .obra-medicao-grid2 { grid-template-columns: 1fr !important; }
           .obra-etapa-header { flex-direction: column !important; gap: 8px !important; }
           .obra-etapa-header-right { align-self: flex-end !important; }
+          .obra-nova-etapa-grid { grid-template-columns: 1fr 1fr !important; }
+          .obra-nome-etapa { grid-column: 1 / -1 !important; }
+        }
+        @media (max-width: 480px) {
+          .obra-nova-etapa-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -522,8 +527,8 @@ export default function DetalheObra() {
         {/* FORM NOVA ETAPA */}
         {mostrarFormEtapa && (
           <div style={{ ...formDiario, marginBottom: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12 }}>
-              <div style={formGrupoD}>
+            <div className="obra-nova-etapa-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+              <div style={{ ...formGrupoD, gridColumn: 'span 1' }} className="obra-nome-etapa">
                 <label style={labelSt}>Nome da Etapa *</label>
                 <input value={novaEtapaNome} onChange={e => setNovaEtapaNome(e.target.value)}
                   placeholder="Ex: Fundação, Estrutura..." style={inputSt} />
@@ -664,7 +669,7 @@ export default function DetalheObra() {
                 <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
 
                   {/* DATAS DA ETAPA */}
-                  <div className="obra-etapa-datas" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <div className="obra-etapa-datas" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 14 }}>
                     <div>
                       <label style={{ fontSize: 11, color: '#64748b', fontWeight: 600, display: 'block', marginBottom: 4 }}>Data de Início</label>
                       <input type="date" value={etapa.data_inicio || ''}
