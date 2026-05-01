@@ -8,6 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend
 } from 'recharts'
+import * as XLSX from 'xlsx'
 
 const CATEGORIAS_ENTRADA = [
   'Pagamento Inicial / Sinal', 'Parcela Cliente', 'Parcela Final',
@@ -77,6 +78,19 @@ export default function DetalheObra() {
   const [medFoto,         setMedFoto]         = useState<File | null>(null)
   const [medFotoPreview,  setMedFotoPreview]  = useState<string | null>(null)
 
+  // Orçamento Executivo
+  const [orcExec,           setOrcExec]           = useState<any[]>([])
+  const [orcExecEtapaAtiva, setOrcExecEtapaAtiva] = useState<string>('Todas')
+  const [orcExecExpandida,  setOrcExecExpandida]  = useState<string | null>(null)
+  const [importandoOrc,     setImportandoOrc]     = useState(false)
+  const [salvandoOrcItem,   setSalvandoOrcItem]   = useState(false)
+  const [mostrarFormOrc,    setMostrarFormOrc]    = useState(false)
+  const [orcForm, setOrcForm] = useState({
+    etapa: '', codigo: '', descricao: '', unidade: 'm00b2',
+    quantidade: '', custo_material: '', custo_mao_obra: '',
+    custo_equipamento: '', bdi: '25', observacoes: '',
+  })
+
   useEffect(() => {
     if (loadingEmpresa) return
     if (!empresaId) { router.push('/login'); return }
@@ -106,6 +120,15 @@ export default function DetalheObra() {
         medPorEtapa[m.etapa_id].push(m)
       })
       setMedicoes(medPorEtapa)
+
+      // Orçamento Executivo
+      const { data: orcExecData } = await supabase
+        .from('orcamento_executivo')
+        .select('*')
+        .eq('obra_id', Number(id))
+        .eq('empresa_id', empresaId)
+        .order('ordem', { ascending: true })
+      setOrcExec(orcExecData || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -319,13 +342,101 @@ export default function DetalheObra() {
   async function recalcularProgresso() {
     const { data } = await supabase.from('obra_etapas').select('peso, percentual').eq('obra_id', Number(id)).eq('empresa_id', empresaId)
     if (!data || data.length === 0) return
-    // ✅ Sempre divide por 100 (não pelo total de pesos cadastrados)
-    // Ex: Fundação 100% × peso 20 ÷ 100 = 20% global
-    // Assim, etapas ainda não cadastradas contribuem com 0% corretamente
     const percGlobal = data.reduce((a: number, e: any) => a + (Number(e.percentual || 0) * Number(e.peso || 0) / 100), 0)
     const novoPerc = Math.min(Math.round(percGlobal), 100)
     await supabase.from('obras').update({ percentual_concluido: novoPerc }).eq('id', Number(id))
     setObra((prev: any) => prev ? { ...prev, percentual_concluido: novoPerc } : prev)
+  }
+
+  // ── ORÇAMENTO EXECUTIVO ──
+  async function salvarItemOrc() {
+    if (!orcForm.etapa.trim() || !orcForm.descricao.trim() || !orcForm.unidade || !orcForm.quantidade)
+      return alert('Preencha Etapa, Descrição, Unidade e Quantidade')
+    setSalvandoOrcItem(true)
+    try {
+      const { error } = await supabase.from('orcamento_executivo').insert({
+        obra_id: Number(id), empresa_id: empresaId,
+        etapa: orcForm.etapa.trim(), codigo: orcForm.codigo.trim() || null,
+        descricao: orcForm.descricao.trim(), unidade: orcForm.unidade,
+        quantidade: Number(orcForm.quantidade) || 0,
+        custo_material: Number(orcForm.custo_material) || 0,
+        custo_mao_obra: Number(orcForm.custo_mao_obra) || 0,
+        custo_equipamento: Number(orcForm.custo_equipamento) || 0,
+        bdi: Number(orcForm.bdi) || 0,
+        observacoes: orcForm.observacoes.trim() || null,
+        ordem: orcExec.length,
+      })
+      if (error) throw error
+      setOrcForm({ etapa: '', codigo: '', descricao: '', unidade: 'm²', quantidade: '', custo_material: '', custo_mao_obra: '', custo_equipamento: '', bdi: '25', observacoes: '' })
+      setMostrarFormOrc(false)
+      await carregar()
+    } catch { alert('Erro ao salvar item') }
+    finally { setSalvandoOrcItem(false) }
+  }
+
+  async function excluirItemOrc(itemId: string) {
+    if (!confirm('Excluir este item do orçamento?')) return
+    await supabase.from('orcamento_executivo').delete().eq('id', itemId)
+    await carregar()
+  }
+
+  async function atualizarRealizadoOrc(itemId: string, qtd: number, custo: number) {
+    await supabase.from('orcamento_executivo').update({ qtd_realizada: qtd, custo_realizado: custo }).eq('id', itemId)
+    await carregar()
+  }
+
+  async function importarXLSCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportandoOrc(true)
+    try {
+      const buffer = await file.arrayBuffer()
+      const wb = XLSX.read(buffer, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' })
+      const CAMPO_MAP: Record<string, string> = {
+        'ETAPA *': 'etapa', 'etapa': 'etapa', 'CÓDIGO': 'codigo', 'codigo': 'codigo',
+        'DESCRIÇÃO *': 'descricao', 'DESCRIÇÃO DO ITEM *': 'descricao', 'descricao': 'descricao',
+        'UNID *': 'unidade', 'unidade': 'unidade', 'QTDE *': 'quantidade', 'quantidade': 'quantidade',
+        'MATERIAL R$': 'custo_material', 'MATERIAL (R$)': 'custo_material', 'custo_material': 'custo_material',
+        'MÃO OBRA R$': 'custo_mao_obra', 'MÃO DE OBRA (R$)': 'custo_mao_obra', 'custo_mao_obra': 'custo_mao_obra',
+        'EQUIPAM. R$': 'custo_equipamento', 'EQUIP. (R$)': 'custo_equipamento', 'custo_equipamento': 'custo_equipamento',
+        'BDI %': 'bdi', 'bdi': 'bdi', 'QTDE REALIZ.': 'qtd_realizada', 'qtd_realizada': 'qtd_realizada',
+        'OBSERVAÇÕES': 'observacoes', 'observacoes': 'observacoes',
+      }
+      let importados = 0, erros = 0
+      for (let i = 0; i < rows.length; i++) {
+        const raw = rows[i]
+        const row: any = {}
+        for (const [k, v] of Object.entries(raw)) {
+          const campo = CAMPO_MAP[k.toString().trim()] || k
+          row[campo] = v
+        }
+        if (!row.etapa || !row.descricao) continue
+        if (row.etapa.toString().toUpperCase().includes('TOTAL')) continue
+        try {
+          await supabase.from('orcamento_executivo').insert({
+            obra_id: Number(id), empresa_id: empresaId,
+            etapa: row.etapa?.toString().trim() || 'Geral',
+            codigo: row.codigo?.toString().trim() || null,
+            descricao: row.descricao?.toString().trim(),
+            unidade: row.unidade?.toString().trim() || 'un',
+            quantidade: Number(row.quantidade) || 0,
+            custo_material: Number(row.custo_material) || 0,
+            custo_mao_obra: Number(row.custo_mao_obra) || 0,
+            custo_equipamento: Number(row.custo_equipamento) || 0,
+            bdi: Number(row.bdi) || 0,
+            qtd_realizada: Number(row.qtd_realizada) || 0,
+            observacoes: row.observacoes?.toString().trim() || null,
+            ordem: i,
+          })
+          importados++
+        } catch { erros++ }
+      }
+      alert(`✅ Importação concluída!\n${importados} item(s) importado(s)${erros > 0 ? `\n⚠️ ${erros} erro(s)` : ''}`)
+      await carregar()
+    } catch { alert('Erro ao processar arquivo. Verifique o formato.') }
+    finally { setImportandoOrc(false); e.target.value = '' }
   }
 
   if (loadingEmpresa || loadingData) return <p style={{ padding: 24 }}>Carregando...</p>
@@ -1061,12 +1172,282 @@ export default function DetalheObra() {
         </div>
       )}
 
+      {/* ── ORÇAMENTO EXECUTIVO ── */}
+      {perfil !== 'mestre_obra' && <OrcamentoExecutivo
+        id={id} empresaId={empresaId} perfil={perfil}
+        orcExec={orcExec}
+        orcExecEtapaAtiva={orcExecEtapaAtiva} setOrcExecEtapaAtiva={setOrcExecEtapaAtiva}
+        orcExecExpandida={orcExecExpandida}    setOrcExecExpandida={setOrcExecExpandida}
+        importandoOrc={importandoOrc}
+        salvandoOrcItem={salvandoOrcItem}
+        mostrarFormOrc={mostrarFormOrc}        setMostrarFormOrc={setMostrarFormOrc}
+        orcForm={orcForm}                      setOrcForm={setOrcForm}
+        salvarItemOrc={salvarItemOrc}
+        excluirItemOrc={excluirItemOrc}
+        atualizarRealizadoOrc={atualizarRealizadoOrc}
+        importarXLSCSV={importarXLSCSV}
+      />}
+
     </div>
   )
 }
 
 /* ── HELPERS ── */
 function format(v: number) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+
+/* ── ORÇAMENTO EXECUTIVO ── */
+function OrcamentoExecutivo({ id, empresaId, perfil, orcExec, orcExecEtapaAtiva, setOrcExecEtapaAtiva, orcExecExpandida, setOrcExecExpandida, importandoOrc, salvandoOrcItem, mostrarFormOrc, setMostrarFormOrc, orcForm, setOrcForm, salvarItemOrc, excluirItemOrc, atualizarRealizadoOrc, importarXLSCSV }: any) {
+  const fmt = (v: number) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  const fmtN = (v: number) => Number(v || 0).toFixed(2).replace('.', ',')
+
+  const etapas = [...new Set(orcExec.map((i: any) => i.etapa))] as string[]
+  const etapasComTodas = ['Todas', ...etapas]
+  const itens = orcExecEtapaAtiva === 'Todas' ? orcExec : orcExec.filter((i: any) => i.etapa === orcExecEtapaAtiva)
+
+  const totalCustoOrcado = orcExec.reduce((s: number, i: any) => s + Number(i.custo_total_item || 0), 0)
+  const totalVendaOrcado = orcExec.reduce((s: number, i: any) => s + Number(i.preco_venda_total || 0), 0)
+  const totalRealizado   = orcExec.reduce((s: number, i: any) => s + Number(i.custo_realizado || 0), 0)
+  const percRealizado    = totalCustoOrcado > 0 ? (totalRealizado / totalCustoOrcado) * 100 : 0
+  const saldoRestante    = totalCustoOrcado - totalRealizado
+  const percDesvioGeral  = totalCustoOrcado > 0 ? ((totalRealizado - totalCustoOrcado) / totalCustoOrcado) * 100 : 0
+
+  const totaisEtapa = etapas.map(et => {
+    const its = orcExec.filter((i: any) => i.etapa === et)
+    return { etapa: et, orcado: its.reduce((s: number, i: any) => s + Number(i.custo_total_item || 0), 0), venda: its.reduce((s: number, i: any) => s + Number(i.preco_venda_total || 0), 0), realizado: its.reduce((s: number, i: any) => s + Number(i.custo_realizado || 0), 0), qtens: its.length }
+  })
+
+  const UNIDADES = ['m²','m³','kg','un','vb','m','L','ponto','Kw','h','cx','pc','jg','gl','t']
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20, overflow: 'hidden' }}>
+      {/* HEADER */}
+      <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap' as const, gap: 12 }}>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0 }}>📊 Orçamento Executivo</h3>
+          <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Previsto vs Realizado · {orcExec.length} item(s)</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+          <label style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {importandoOrc ? '⏳ Importando...' : '📥 Importar XLS/CSV'}
+            <input type="file" accept=".xlsx,.xls,.csv" onChange={importarXLSCSV} style={{ display: 'none' }} disabled={importandoOrc} />
+          </label>
+          <button onClick={() => setMostrarFormOrc(!mostrarFormOrc)}
+            style={{ background: mostrarFormOrc ? '#f1f5f9' : '#0f172a', color: mostrarFormOrc ? '#64748b' : '#fff', border: 'none', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            {mostrarFormOrc ? '✕ Cancelar' : '+ Item Manual'}
+          </button>
+        </div>
+      </div>
+
+      {/* CARDS RESUMO */}
+      {orcExec.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, padding: '16px 24px', borderBottom: '1px solid #f1f5f9' }}>
+          {[
+            { label: 'CUSTO ORÇADO', value: totalCustoOrcado, bg: '#EFF6FF', border: '#BFDBFE', cor: '#1E40AF' },
+            { label: 'PREÇO DE VENDA', value: totalVendaOrcado, bg: '#F0FDF4', border: '#BBF7D0', cor: '#15803D' },
+            { label: 'REALIZADO', value: totalRealizado, bg: totalRealizado > totalCustoOrcado ? '#FEF2F2' : '#FFF7ED', border: totalRealizado > totalCustoOrcado ? '#FECACA' : '#FED7AA', cor: totalRealizado > totalCustoOrcado ? '#DC2626' : '#D97706' },
+            { label: 'SALDO', value: saldoRestante, bg: saldoRestante < 0 ? '#FEF2F2' : '#F8FAFC', border: saldoRestante < 0 ? '#FECACA' : '#E2E8F0', cor: saldoRestante < 0 ? '#DC2626' : '#0F172A' },
+          ].map(c => (
+            <div key={c.label} style={{ background: c.bg, borderRadius: 10, padding: 14, border: `1px solid ${c.border}` }}>
+              <p style={{ fontSize: 10, color: '#64748b', fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>{c.label}</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: c.cor }}>{fmt(c.value)}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* BARRA PROGRESSO */}
+      {orcExec.length > 0 && totalCustoOrcado > 0 && (
+        <div style={{ padding: '12px 24px', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Execução: {fmtN(percRealizado)}% realizado</span>
+            {percDesvioGeral !== 0 && <span style={{ fontSize: 11, fontWeight: 700, color: percDesvioGeral > 0 ? '#DC2626' : '#16A34A' }}>{percDesvioGeral > 0 ? `▲ Acima ${fmtN(Math.abs(percDesvioGeral))}%` : `▼ Abaixo ${fmtN(Math.abs(percDesvioGeral))}%`}</span>}
+          </div>
+          <div style={{ height: 10, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${Math.min(percRealizado, 100)}%`, background: percRealizado > 100 ? '#DC2626' : percRealizado > 80 ? '#F59E0B' : '#2563EB', borderRadius: 999, transition: 'width 0.4s' }} />
+          </div>
+        </div>
+      )}
+
+      {/* RESUMO POR ETAPA */}
+      {totaisEtapa.length > 0 && (
+        <div style={{ padding: '12px 24px', borderBottom: '1px solid #f1f5f9' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 10, letterSpacing: 1 }}>RESUMO POR ETAPA</p>
+          {totaisEtapa.map(et => (
+            <div key={et.etapa} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 6, flexWrap: 'wrap' as const, gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{et.etapa}</span>
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>{et.qtens} itens</span>
+              </div>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' as const }}>
+                <span style={{ fontSize: 12, color: '#3b82f6', fontWeight: 600 }}>Custo: {fmt(et.orcado)}</span>
+                <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>Venda: {fmt(et.venda)}</span>
+                {et.realizado > 0 && <span style={{ fontSize: 12, color: et.realizado > et.orcado ? '#dc2626' : '#d97706', fontWeight: 700 }}>Realiz.: {fmt(et.realizado)}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* FORMULÁRIO NOVO ITEM */}
+      {mostrarFormOrc && (
+        <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 14 }}>+ Novo Item</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 12 }}>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>DESCRIÇÃO *</label>
+              <input value={orcForm.descricao} onChange={(e: any) => setOrcForm((f: any) => ({ ...f, descricao: e.target.value }))} placeholder="Ex: Concreto fck 25 MPa usinado" style={{ width: '100%', padding: '9px 11px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' as const }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>ETAPA *</label>
+              <input value={orcForm.etapa} onChange={(e: any) => setOrcForm((f: any) => ({ ...f, etapa: e.target.value }))} placeholder="Ex: Fundação" list="etapas-orc" style={{ width: '100%', padding: '9px 11px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' as const }} />
+              <datalist id="etapas-orc">{['Fundação','Estrutura','Alvenaria','Cobertura','Instalações','Acabamento'].map(e => <option key={e} value={e} />)}</datalist>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>CÓDIGO</label>
+              <input value={orcForm.codigo} onChange={(e: any) => setOrcForm((f: any) => ({ ...f, codigo: e.target.value }))} placeholder="SINAPI-1234" style={{ width: '100%', padding: '9px 11px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' as const }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>UNIDADE *</label>
+              <select value={orcForm.unidade} onChange={(e: any) => setOrcForm((f: any) => ({ ...f, unidade: e.target.value }))} style={{ width: '100%', padding: '9px 11px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff', boxSizing: 'border-box' as const }}>
+                {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>QUANTIDADE *</label>
+              <input type="number" value={orcForm.quantidade} onChange={(e: any) => setOrcForm((f: any) => ({ ...f, quantidade: e.target.value }))} placeholder="0.00" min="0" step="0.01" style={{ width: '100%', padding: '9px 11px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' as const }} />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 12, marginBottom: 14 }}>
+            {[{ key: 'custo_material', label: 'MATERIAL R$' }, { key: 'custo_mao_obra', label: 'MÃO OBRA R$' }, { key: 'custo_equipamento', label: 'EQUIPAM. R$' }, { key: 'bdi', label: 'BDI %' }].map(f => (
+              <div key={f.key}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>{f.label}</label>
+                <input type="number" value={(orcForm as any)[f.key]} onChange={(e: any) => setOrcForm((fm: any) => ({ ...fm, [f.key]: e.target.value }))} placeholder="0" min="0" step="0.01" style={{ width: '100%', padding: '9px 11px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box' as const }} />
+              </div>
+            ))}
+          </div>
+          {/* Preview cálculo */}
+          {(orcForm.custo_material || orcForm.custo_mao_obra || orcForm.custo_equipamento) && orcForm.quantidade && (() => {
+            const mat = Number(orcForm.custo_material)||0, mo = Number(orcForm.custo_mao_obra)||0, eq = Number(orcForm.custo_equipamento)||0
+            const bdi = Number(orcForm.bdi)||0, qtd = Number(orcForm.quantidade)||0
+            const cUnit = mat+mo+eq, pvUnit = cUnit*(1+bdi/100)
+            return <div style={{ display: 'flex', gap: 16, marginBottom: 14, padding: '10px 14px', background: '#eff6ff', borderRadius: 8, border: '1px solid #bfdbfe', flexWrap: 'wrap' as const }}>
+              <span style={{ fontSize: 12, color: '#3b82f6' }}>Custo unit.: <strong>{fmt(cUnit)}</strong></span>
+              <span style={{ fontSize: 12, color: '#16a34a' }}>P.V. unit.: <strong>{fmt(pvUnit)}</strong></span>
+              <span style={{ fontSize: 12, color: '#0f172a' }}>Custo total: <strong>{fmt(cUnit*qtd)}</strong></span>
+              <span style={{ fontSize: 12, color: '#15803d', fontWeight: 700 }}>P.V. total: <strong>{fmt(pvUnit*qtd)}</strong></span>
+            </div>
+          })()}
+          <input value={orcForm.observacoes} onChange={(e: any) => setOrcForm((f: any) => ({ ...f, observacoes: e.target.value }))} placeholder="Observações (opcional)" style={{ width: '100%', padding: '9px 11px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 13, marginBottom: 14, boxSizing: 'border-box' as const }} />
+          <button onClick={salvarItemOrc} disabled={salvandoOrcItem} style={{ background: '#0f172a', color: '#fff', border: 'none', padding: '11px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+            {salvandoOrcItem ? '⏳ Salvando...' : '+ Adicionar Item'}
+          </button>
+        </div>
+      )}
+
+      {/* FILTRO ETAPAS */}
+      {etapas.length > 1 && (
+        <div style={{ padding: '10px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+          {etapasComTodas.map(et => (
+            <button key={et} onClick={() => setOrcExecEtapaAtiva(et)} style={{ padding: '5px 14px', borderRadius: 999, border: '1px solid', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: orcExecEtapaAtiva === et ? '#0f172a' : '#f8fafc', color: orcExecEtapaAtiva === et ? '#fff' : '#64748b', borderColor: orcExecEtapaAtiva === et ? '#0f172a' : '#e2e8f0' }}>{et}</button>
+          ))}
+        </div>
+      )}
+
+      {/* LISTA */}
+      {itens.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center' as const, color: '#94a3b8' }}>
+          <p style={{ fontSize: 24, marginBottom: 8 }}>📊</p>
+          <p style={{ fontWeight: 600, marginBottom: 4 }}>Nenhum item cadastrado</p>
+          <p style={{ fontSize: 13 }}>Importe XLS/CSV ou adicione manualmente</p>
+        </div>
+      ) : (<>
+        {/* Cabeçalho */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 0.7fr 0.7fr 1fr 1fr 1fr 1fr 60px', padding: '10px 24px', background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+          {['DESCRIÇÃO','UNID','QTDE','CUSTO UNIT.','CUSTO TOTAL','P.V. TOTAL','REALIZADO',''].map((h, i) => (
+            <span key={i} style={{ fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: 0.5, textAlign: i > 1 ? 'right' as const : 'left' as const, paddingRight: i > 1 ? 8 : 0 }}>{h}</span>
+          ))}
+        </div>
+        {itens.map((item: any) => {
+          const isExp = orcExecExpandida === item.id
+          const desvio = item.custo_realizado > 0 && item.custo_total_item > 0 ? ((item.custo_realizado - item.custo_total_item) / item.custo_total_item) * 100 : 0
+          return (
+            <div key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 0.7fr 0.7fr 1fr 1fr 1fr 1fr 60px', padding: '12px 24px', cursor: 'pointer', background: isExp ? '#f8fafc' : '#fff' }} onClick={() => setOrcExecExpandida(isExp ? null : item.id)}>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', margin: 0 }}>{item.descricao}</p>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 3 }}>
+                    <span style={{ fontSize: 10, background: '#eff6ff', color: '#3b82f6', padding: '1px 7px', borderRadius: 4, fontWeight: 700 }}>{item.etapa}</span>
+                    {item.codigo && <span style={{ fontSize: 10, color: '#94a3b8' }}>{item.codigo}</span>}
+                  </div>
+                </div>
+                <span style={{ fontSize: 12, color: '#374151', textAlign: 'right' as const, paddingRight: 8, alignSelf: 'center' }}>{item.unidade}</span>
+                <span style={{ fontSize: 12, color: '#374151', textAlign: 'right' as const, paddingRight: 8, alignSelf: 'center' }}>{fmtN(item.quantidade)}</span>
+                <span style={{ fontSize: 11, color: '#374151', textAlign: 'right' as const, paddingRight: 8, alignSelf: 'center' }}>{fmt(item.custo_total_unitario)}</span>
+                <span style={{ fontSize: 12, color: '#1e40af', fontWeight: 700, textAlign: 'right' as const, paddingRight: 8, alignSelf: 'center' }}>{fmt(item.custo_total_item)}</span>
+                <span style={{ fontSize: 12, color: '#15803d', fontWeight: 700, textAlign: 'right' as const, paddingRight: 8, alignSelf: 'center' }}>{fmt(item.preco_venda_total)}</span>
+                <span style={{ fontSize: 12, textAlign: 'right' as const, paddingRight: 8, fontWeight: item.custo_realizado > 0 ? 700 : 400, color: item.custo_realizado > item.custo_total_item ? '#dc2626' : item.custo_realizado > 0 ? '#d97706' : '#cbd5e1', alignSelf: 'center' }}>{item.custo_realizado > 0 ? fmt(item.custo_realizado) : '—'}</span>
+                <span style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center' as const, alignSelf: 'center' }}>{isExp ? '▲' : '▼'}</span>
+              </div>
+              {isExp && (
+                <div style={{ padding: '14px 24px 16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginBottom: 14 }}>
+                    {[
+                      { label: 'MATERIAL / UN', val: item.custo_material, cor: '#0f172a', bg: '#fff' },
+                      { label: 'MÃO OBRA / UN', val: item.custo_mao_obra, cor: '#0f172a', bg: '#fff' },
+                      { label: 'EQUIPAM. / UN', val: item.custo_equipamento, cor: '#0f172a', bg: '#fff' },
+                      { label: 'BDI', val: null, extra: `${fmtN(item.bdi)}%`, cor: '#0f172a', bg: '#fff' },
+                      { label: 'P.V. UNITÁRIO', val: item.preco_venda_unitario, cor: '#1e40af', bg: '#eff6ff' },
+                    ].map((c, ci) => (
+                      <div key={ci} style={{ background: c.bg, borderRadius: 8, padding: 10, border: '1px solid #e2e8f0' }}>
+                        <p style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>{c.label}</p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: c.cor }}>{c.extra || fmt(c.val)}</p>
+                      </div>
+                    ))}
+                    {desvio !== 0 && (
+                      <div style={{ background: desvio > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 8, padding: 10, border: `1px solid ${desvio > 0 ? '#fecaca' : '#bbf7d0'}` }}>
+                        <p style={{ fontSize: 10, color: desvio > 0 ? '#dc2626' : '#16a34a', marginBottom: 4 }}>DESVIO</p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: desvio > 0 ? '#dc2626' : '#16a34a' }}>{desvio > 0 ? '+' : ''}{fmtN(desvio)}%</p>
+                      </div>
+                    )}
+                  </div>
+                  {item.observacoes && <p style={{ fontSize: 12, color: '#64748b', marginBottom: 12, fontStyle: 'italic' }}>💬 {item.observacoes}</p>}
+                  {/* Registrar Realizado */}
+                  <details style={{ marginBottom: 12 }}>
+                    <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8 }}>📝 Registrar Custo Realizado</summary>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' as const }}>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 3 }}>Qtd realizada</label>
+                        <input type="number" id={`qtd-${item.id}`} defaultValue={item.qtd_realizada || ''} min="0" step="0.01" placeholder={fmtN(item.quantidade)} style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, width: 110 }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 3 }}>Custo realizado R$</label>
+                        <input type="number" id={`custo-${item.id}`} defaultValue={item.custo_realizado || ''} min="0" step="0.01" placeholder="0.00" style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, width: 130 }} />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                        <button onClick={() => {
+                          const q = (document.getElementById(`qtd-${item.id}`) as HTMLInputElement)?.value
+                          const c = (document.getElementById(`custo-${item.id}`) as HTMLInputElement)?.value
+                          atualizarRealizadoOrc(item.id, Number(q)||0, Number(c)||0)
+                        }} style={{ background: '#0f172a', color: '#fff', border: 'none', padding: '7px 16px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>✓ Salvar</button>
+                      </div>
+                    </div>
+                  </details>
+                  <button onClick={() => excluirItemOrc(item.id)} style={{ background: 'transparent', border: '1px solid #fecaca', color: '#dc2626', padding: '5px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>🗑 Excluir</button>
+                </div>
+              )}
+            </div>
+          )
+        })}
+        {/* Rodapé totais */}
+        <div style={{ padding: '14px 24px', background: '#0f172a', display: 'flex', justifyContent: 'flex-end', gap: 24, flexWrap: 'wrap' as const }}>
+          <span style={{ fontSize: 13, color: '#94a3b8' }}>Custo: <strong style={{ color: '#93c5fd' }}>{fmt(itens.reduce((s: number, i: any) => s+Number(i.custo_total_item||0),0))}</strong></span>
+          <span style={{ fontSize: 13, color: '#94a3b8' }}>Venda: <strong style={{ color: '#86efac' }}>{fmt(itens.reduce((s: number, i: any) => s+Number(i.preco_venda_total||0),0))}</strong></span>
+          {itens.some((i: any) => i.custo_realizado > 0) && <span style={{ fontSize: 13, color: '#94a3b8' }}>Realizado: <strong style={{ color: '#fcd34d' }}>{fmt(itens.reduce((s: number, i: any) => s+Number(i.custo_realizado||0),0))}</strong></span>}
+        </div>
+      </>)}
+    </div>
+  )
+}
 
 function Card({ titulo, valor, cor, tipo }: any) {
   return (
