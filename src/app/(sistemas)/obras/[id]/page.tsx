@@ -86,15 +86,28 @@ export default function DetalheObra() {
   const [salvandoOrcItem,   setSalvandoOrcItem]   = useState(false)
   const [mostrarFormOrc,    setMostrarFormOrc]    = useState(false)
   const [orcForm, setOrcForm] = useState({
-    etapa: '', codigo: '', descricao: '', unidade: 'm00b2',
+    etapa: '', codigo: '', descricao: '', unidade: 'm²',
     quantidade: '', custo_material: '', custo_mao_obra: '',
     custo_equipamento: '', bdi: '25', observacoes: '',
   })
+
+  // Aba ativa da obra — persiste no localStorage
+  type AbaObra = 'resumo' | 'cronograma' | 'financeiro' | 'diario' | 'orcamento'
+  const [abaObra, setAbaObraState] = useState<AbaObra>('resumo')
+  function setAbaObra(aba: AbaObra) {
+    setAbaObraState(aba)
+    if (typeof window !== 'undefined') localStorage.setItem('obra_aba_' + id, aba)
+  }
 
   useEffect(() => {
     if (loadingEmpresa) return
     if (!empresaId) { router.push('/login'); return }
     if (!id) return
+    // Restaurar aba salva no localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('obra_aba_' + id) as AbaObra | null
+      if (saved) setAbaObraState(saved)
+    }
     carregar()
   }, [id, empresaId, loadingEmpresa])
 
@@ -520,10 +533,21 @@ export default function DetalheObra() {
         </div>
       )}
 
+      {/* MINI RESUMO FINANCEIRO — ABA RESUMO */}
+      {abaObra === 'resumo' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 20 }}>
+          <Card titulo="Receita"   valor={totalEntradas} cor="#22c55e" />
+          <Card titulo="Custos"    valor={totalSaidas}   cor="#ef4444" />
+          <Card titulo="Lucro"     valor={lucro}         cor="#3b82f6" />
+          <Card titulo="A Receber" valor={restReceber}   cor="#f59e0b" />
+          {custoPorMetro > 0 && <Card titulo="Custo/m²" valor={custoPorMetro} cor="#f97316" />}
+        </div>
+      )}
+
       {/* ALERTAS */}
-      {lucro < 0      && <Alerta cor="#fee2e2" borda="#fca5a5" texto="🚨 Obra em prejuízo — revise os custos imediatamente" />}
-      {atrasada       && <Alerta cor="#fef3c7" borda="#fcd34d" texto={`⏰ Obra atrasada — prazo venceu há ${Math.abs(diasRestantes!)} dias`} />}
-      {alertaOrcamento && <Alerta cor="#fff7ed" borda="#fdba74" texto={`⚠️ Custo atingiu ${percOrcado.toFixed(0)}% do orçamento previsto`} />}
+      {abaObra === 'resumo' && lucro < 0      && <Alerta cor="#fee2e2" borda="#fca5a5" texto="🚨 Obra em prejuízo — revise os custos imediatamente" />}
+      {abaObra === 'resumo' && atrasada       && <Alerta cor="#fef3c7" borda="#fcd34d" texto={`⏰ Obra atrasada — prazo venceu há ${Math.abs(diasRestantes!)} dias`} />}
+      {abaObra === 'resumo' && alertaOrcamento && <Alerta cor="#fff7ed" borda="#fdba74" texto={`⚠️ Custo atingiu ${percOrcado.toFixed(0)}% do orçamento previsto`} />}
 
       {/* MODAL FINALIZAR OBRA */}
       {mostrarFinalizar && (
@@ -588,8 +612,31 @@ export default function DetalheObra() {
         </div>
       </div>
 
-      {/* PROGRESSO */}
-      <div style={progressoCard}>
+      {/* ── ABAS ── */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e2e8f0', marginBottom: 24, overflowX: 'auto' as const }}>
+        {([
+          { key: 'resumo',      icon: '📊', label: 'Resumo' },
+          { key: 'cronograma',  icon: '📋', label: 'Cronograma' },
+          { key: 'financeiro',  icon: '💰', label: 'Financeiro' },
+          { key: 'diario',      icon: '📓', label: 'Diário' },
+          { key: 'orcamento',   icon: '📐', label: 'Orç. Executivo' },
+        ] as { key: AbaObra; icon: string; label: string }[]).map(aba => (
+          <button key={aba.key} onClick={() => setAbaObra(aba.key)}
+            style={{
+              padding: '12px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
+              fontSize: 13, fontWeight: abaObra === aba.key ? 700 : 500,
+              color: abaObra === aba.key ? '#0f172a' : '#94a3b8',
+              borderBottom: abaObra === aba.key ? '2px solid #C9A96A' : '2px solid transparent',
+              marginBottom: -2, whiteSpace: 'nowrap' as const,
+              transition: 'all 0.15s',
+            }}>
+            {aba.icon} {aba.label}
+          </button>
+        ))}
+      </div>
+
+      {/* PROGRESSO — visível no resumo e sempre */}
+      {(abaObra === 'resumo') && <div style={progressoCard}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <div>
             <p style={{ fontWeight: 700, fontSize: 15 }}>📐 Progresso da Obra</p>
@@ -619,10 +666,10 @@ export default function DetalheObra() {
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── CRONOGRAMA FÍSICO ── */}
-      {perfil !== 'financeiro' && <div style={graficoBox}>
+      {abaObra === 'cronograma' && perfil !== 'financeiro' && <div style={graficoBox}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>📋 Cronograma Físico</h3>
@@ -935,7 +982,7 @@ export default function DetalheObra() {
       </div>}
 
       {/* CARDS FINANCEIROS */}
-      <div style={grid}>
+      {abaObra === 'financeiro' && <><div style={grid}>
         <Card titulo="Receita"        valor={totalEntradas}   cor="#22c55e" />
         <Card titulo="Custos"         valor={totalSaidas}     cor="#ef4444" />
         <Card titulo="Lucro"          valor={lucro}           cor="#3b82f6" />
@@ -943,10 +990,10 @@ export default function DetalheObra() {
         <Card titulo="A Receber"      valor={restReceber}     cor="#f59e0b" />
         <Card titulo="Lucro Previsto" valor={lucroPrevisto}   cor="#10b981" />
         {custoPorMetro > 0 && <Card titulo="Custo/m²" valor={custoPorMetro} cor="#f97316" />}
-      </div>
+      </div></>}
 
       {/* GRÁFICO */}
-      {dadosGrafico.length > 0 && (
+      {abaObra === 'financeiro' && dadosGrafico.length > 0 && (
         <div style={graficoBox}>
           <h3 style={{ marginBottom: 12 }}>📈 Fluxo Financeiro da Obra</h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -960,7 +1007,7 @@ export default function DetalheObra() {
       )}
 
       {/* ── DIÁRIO DE OBRA ── */}
-      {perfil !== 'financeiro' && <div style={graficoBox}>
+      {abaObra === 'diario' && perfil !== 'financeiro' && <div style={graficoBox}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>📓 Diário de Obra</h3>
@@ -1100,7 +1147,7 @@ export default function DetalheObra() {
       </div>}
 
       {/* FORMULÁRIO LANÇAMENTO */}
-      <div style={formCard}>
+      {abaObra === 'financeiro' && <div style={formCard}>
         <h3 style={formTitulo}>➕ Novo Lançamento</h3>
         <div style={tipoToggle}>
           <button onClick={() => { setTipo('entrada'); setCategoria('') }} style={tipo === 'entrada' ? btnTipoAtivo('#16a34a') : btnTipoInativo}>↑ Entrada</button>
@@ -1130,7 +1177,7 @@ export default function DetalheObra() {
       </div>
 
       {/* LISTA LANÇAMENTOS */}
-      <div style={listaCard}>
+      {abaObra === 'financeiro' && <div style={listaCard}>
         <div style={abaRow}>
           <button onClick={() => setAbaAtiva('entrada')} style={abaAtiva === 'entrada' ? abaAtivaStyle('#16a34a') : abaInativa}>Entradas ({entradas.length})</button>
           <button onClick={() => setAbaAtiva('saida')}   style={abaAtiva === 'saida'   ? abaAtivaStyle('#dc2626') : abaInativa}>Saídas ({saidas.length})</button>
@@ -1152,10 +1199,10 @@ export default function DetalheObra() {
             </div>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* RANKING CUSTOS */}
-      {rankingCategorias.length > 0 && (
+      {abaObra === 'financeiro' && rankingCategorias.length > 0 && (
         <div style={{ ...graficoBox, marginTop: 20 }}>
           <h3 style={{ marginBottom: 14 }}>💸 Breakdown de Custos</h3>
           {rankingCategorias.map((c, i) => (
@@ -1173,7 +1220,7 @@ export default function DetalheObra() {
       )}
 
       {/* ── ORÇAMENTO EXECUTIVO ── */}
-      {perfil !== 'mestre_obra' && <OrcamentoExecutivo
+      {abaObra === 'orcamento' && perfil !== 'mestre_obra' && <OrcamentoExecutivo
         id={id} empresaId={empresaId} perfil={perfil}
         orcExec={orcExec}
         orcExecEtapaAtiva={orcExecEtapaAtiva} setOrcExecEtapaAtiva={setOrcExecEtapaAtiva}
