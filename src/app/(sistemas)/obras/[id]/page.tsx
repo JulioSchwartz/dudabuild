@@ -1174,7 +1174,7 @@ export default function DetalheObra() {
         <button onClick={lancar} style={btnLancar(tipo)} disabled={salvando}>
           {salvando ? 'Salvando...' : tipo === 'entrada' ? '↑ Registrar Entrada' : '↓ Registrar Saída'}
         </button>
-      </div>
+      </div>}
 
       {/* LISTA LANÇAMENTOS */}
       {abaObra === 'financeiro' && <div style={listaCard}>
