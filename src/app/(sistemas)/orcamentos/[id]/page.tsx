@@ -15,6 +15,8 @@ export default function VerOrcamento() {
   const [itens,       setItens]       = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [aprovando,   setAprovando]   = useState(false)
+  const [nomeEmpresa,  setNomeEmpresa]  = useState('Zynplan')
+  const [emailEmpresa, setEmailEmpresa] = useState('contato@zynplan.com.br')
 
   useEffect(() => {
     if (id) carregar()
@@ -29,6 +31,14 @@ export default function VerOrcamento() {
       if (!orcData) { alert('Orçamento não encontrado'); router.push('/orcamentos'); return }
 
       setOrc(orcData)
+
+      // Buscar dados da empresa para o PDF
+      if (orcData.empresa_id) {
+        const { data: emp } = await supabase
+          .from('empresas').select('nome, email').eq('id', orcData.empresa_id).single()
+        if (emp?.nome) setNomeEmpresa(emp.nome)
+        if (emp?.email) setEmailEmpresa(emp.email)
+      }
 
       const { data: itensData } = await supabase
         .from('orcamento_itens').select('*').eq('orcamento_id', id)
@@ -115,7 +125,7 @@ export default function VerOrcamento() {
       el.innerHTML = `
         <div style="font-family:Arial;color:#0f172a">
           <div style="height:160px;background:#0f172a;color:white;display:flex;flex-direction:column;justify-content:center;align-items:center">
-            <h1 style="margin:0;font-size:24px">DudaBuild Engenharia</h1>
+            <h1 style="margin:0;font-size:24px">${nomeEmpresa}</h1>
             <p style="margin:6px 0 0;opacity:0.7">Proposta Comercial</p>
           </div>
           <div style="padding:40px">
@@ -162,10 +172,10 @@ export default function VerOrcamento() {
             </div>
             <div style="margin-top:50px">
               <p>______________________________________</p>
-              <p><strong>DudaBuild Engenharia</strong> · Responsável Técnico</p>
+              <p><strong>${nomeEmpresa}</strong> · Responsável Técnico</p>
             </div>
             <p style="margin-top:30px;text-align:center;font-size:11px;color:#94a3b8">
-              Proposta válida por 7 dias · contato@dudabuild.com
+              Proposta válida por 7 dias · ${emailEmpresa}
             </p>
           </div>
         </div>
