@@ -243,6 +243,13 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
 	      {podeVerFornecedores && <MenuItem texto="📋" label="Composições" rota="/composicoes" ativo={pathname.startsWith('/composicoes')} />}
               {podeVerPerfil       && <MenuItem texto="🏢" label="Perfil da Empresa" rota="/perfil"      ativo={pathname.startsWith('/perfil')} />}
               {podeVerPlanos       && <MenuItem texto="💳" label="Planos & Upgrade"  rota="/planos"      ativo={pathname.startsWith('/planos')} destaque />}
+              <div style={divider} />
+              <a href="https://cpyvksnsfihybemvxvap.supabase.co/storage/v1/object/public/manuais/zynplan_manual.pdf"
+                target="_blank" rel="noopener noreferrer"
+                style={{ ...menuItem, color: '#93c5fd', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                <span style={{ fontSize: 16, minWidth: 20, textAlign: 'center' }}>&#128214;</span>
+                <span>Manual</span>
+              </a>
             </nav>
           </div>
 
