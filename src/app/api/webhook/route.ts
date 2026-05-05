@@ -28,7 +28,7 @@ async function notificar(assunto: string, corpo: string) {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY!)
     await resend.emails.send({
-      from: 'Zynplan <noreply@zynplan.com.br>',
+      from: 'Zynplan <noreply@zyncompany.com.br>',
       to:   ['suportezynplan@gmail.com'],
       subject: assunto,
       html: `

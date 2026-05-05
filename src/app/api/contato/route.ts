@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const msgWhatsApp = `Olá, ${nome}! Meu nome é Julio Cesar Schwartz, fundador da Zynplan. Identifiquei seu interesse em nossa plataforma de gestão para construção civil e gostaria de apresentar como podemos transformar a gestão das suas obras — do orçamento à entrega. Teria disponibilidade para uma conversa rápida esta semana?`
 
     await resend.emails.send({
-      from: 'Zynplan <noreply@zynplan.com.br>',
+      from: 'Zynplan <noreply@zyncompany.com.br>',
       to: ['suportezynplan@gmail.com'],
       subject: `Novo lead: ${nome}`,
       html: `

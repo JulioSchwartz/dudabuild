@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY!)
       await resend.emails.send({
-        from: 'Zynplan <noreply@zynplan.com.br>',
+        from: 'Zynplan <noreply@zyncompany.com.br>',
         to: ['suportezynplan@gmail.com'],
         subject: `🎉 Novo cadastro: ${nomeEmpresa || email}`,
         html: `

@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
         if (usuarios && usuarios.length > 0) {
           const emails = usuarios.map((u: any) => u.email)
           await resend.emails.send({
-            from:    'Zynplan <noreply@zynplan.com.br>',
+            from:    'Zynplan <noreply@zyncompany.com.br>',
             to:      emails,
             subject: titulo,
             html: `
