@@ -1,8 +1,9 @@
 'use client'
-
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+
+const MANUAL_URL = 'https://cpyvksnsfihybemvxvap.supabase.co/storage/v1/object/public/manuais/zynplan_manual.pdf'
 
 export default function ClientLayout({ children }: any) {
   const pathname = usePathname()
@@ -17,41 +18,34 @@ export default function ClientLayout({ children }: any) {
 
   async function verificarAcesso() {
     const empresa_id = localStorage.getItem('empresa_id')
-
     if (pathname === '/login') {
       setLiberado(true)
       return
     }
-
     if (!empresa_id) {
       router.push('/login')
       return
     }
-
     const { data } = await supabase
       .from('assinaturas')
       .select('*')
       .eq('empresa_id', empresa_id)
       .eq('status', 'ativa')
-
     if (!data || data.length === 0) {
       router.push('/pagar')
       return
     }
-
     setLiberado(true)
   }
 
   async function carregarPendentes() {
     const empresa_id = localStorage.getItem('empresa_id')
     if (!empresa_id) return
-
     const { data } = await supabase
       .from('orcamentos')
       .select('*')
       .eq('empresa_id', empresa_id)
       .eq('status', 'pendente')
-
     setPendentes(data?.length || 0)
   }
 
@@ -66,30 +60,35 @@ export default function ClientLayout({ children }: any) {
     <div style={container}>
       <aside style={sidebar}>
         <div style={logo}>DudaBuild</div>
-
         <NavItem label="Dashboard" path="/dashboard" active={pathname === '/dashboard'} />
         <NavItem label="Obras" path="/obras" active={pathname.startsWith('/obras')} />
         <NavItem label="Financeiro" path="/financeiro" active={pathname.startsWith('/financeiro')} />
-
         <NavItem
           label={`Orçamentos ${pendentes > 0 ? `(${pendentes})` : ''}`}
           path="/orcamentos"
           active={pathname.startsWith('/orcamentos')}
         />
-
         <div style={{ marginTop: '20px' }}>
           <button style={btnUpgrade} onClick={() => router.push('/pagar')}>
-            💎 Assinar Plano
+            🚀 Assinar Plano
           </button>
         </div>
-
+        <div style={{ marginTop: '8px' }}>
+          
+            href={MANUAL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={btnManual}
+          >
+            📖 Manual
+          </a>
+        </div>
         <div style={{ marginTop: 'auto' }}>
           <button style={btnLogout} onClick={logout}>
             🚪 Sair
           </button>
         </div>
       </aside>
-
       <main style={content}>{children}</main>
     </div>
   )
@@ -97,7 +96,6 @@ export default function ClientLayout({ children }: any) {
 
 function NavItem({ label, path, active }: any) {
   const router = useRouter()
-
   return (
     <button
       onClick={() => router.push(path)}
@@ -113,12 +111,10 @@ function NavItem({ label, path, active }: any) {
 }
 
 /* ESTILO */
-
 const container = {
   display: 'flex',
   minHeight: '100vh',
 }
-
 const sidebar = {
   width: '240px',
   background: '#0f172a',
@@ -128,21 +124,19 @@ const sidebar = {
   padding: '25px 15px',
   gap: '8px',
 }
-
 const logo = {
   fontSize: '20px',
   fontWeight: 'bold',
   marginBottom: '20px',
 }
-
 const navItem = {
   padding: '12px',
   borderRadius: '8px',
   border: 'none',
   textAlign: 'left' as const,
   cursor: 'pointer',
+  width: '100%',
 }
-
 const btnUpgrade = {
   background: '#22c55e',
   color: '#fff',
@@ -151,8 +145,22 @@ const btnUpgrade = {
   borderRadius: '8px',
   cursor: 'pointer',
   fontWeight: 'bold',
+  width: '100%',
 }
-
+const btnManual = {
+  display: 'block',
+  background: '#1e3a5f',
+  color: '#93c5fd',
+  padding: '12px',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontWeight: 'bold' as const,
+  width: '100%',
+  textDecoration: 'none',
+  textAlign: 'left' as const,
+  fontSize: '14px',
+  boxSizing: 'border-box' as const,
+}
 const btnLogout = {
   background: '#ef4444',
   color: '#fff',
@@ -163,7 +171,6 @@ const btnLogout = {
   fontWeight: 'bold',
   width: '100%',
 }
-
 const content = {
   flex: 1,
   padding: '25px',
