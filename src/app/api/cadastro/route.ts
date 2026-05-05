@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: false, // Supabase vai enviar o email de confirmação
+      email_confirm: false,
     })
 
     if (authError) {
@@ -48,7 +48,6 @@ export async function POST(req: Request) {
       .single()
 
     if (erroEmpresa || !empresa) {
-      // Rollback — deleta o usuário do auth
       await supabaseAdmin.auth.admin.deleteUser(user.id)
       return NextResponse.json({ error: 'Erro ao criar empresa.' }, { status: 500 })
     }
@@ -64,21 +63,57 @@ export async function POST(req: Request) {
       })
 
     if (erroUsuario) {
-      // Rollback — deleta empresa e usuário do auth
       await supabaseAdmin.from('empresas').delete().eq('id', empresa.id)
       await supabaseAdmin.auth.admin.deleteUser(user.id)
       return NextResponse.json({ error: 'Erro ao vincular usuário.' }, { status: 500 })
     }
 
-    // 4. Envia email de confirmação
+    // 4. Gera link de confirmação
     await supabaseAdmin.auth.admin.generateLink({
       type: 'signup',
       email,
     })
 
-    // 5. Notifica você sobre o novo cadastro
+    const resend = new Resend(process.env.RESEND_API_KEY!)
+
+    // 5. Email de boas-vindas para o usuário
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY!)
+      await resend.emails.send({
+        from: 'Zynplan <noreply@zyncompany.com.br>',
+        to: [email],
+        subject: `Bem-vindo à Zynplan, ${nomeEmpresa || ''}!`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background: #0f172a; color: #fff; border-radius: 12px;">
+            <h2 style="color: #d4a843; margin-bottom: 8px;">Bem-vindo à Zynplan! 🎉</h2>
+            <p style="color: #94a3b8; margin-bottom: 24px;">Sua conta foi criada com sucesso. Você tem <strong style="color:#fff;">14 dias de trial gratuito</strong> no plano Premium.</p>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+              <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; color: #94a3b8; width: 140px;">Empresa</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; font-weight: 600;">${nomeEmpresa || '—'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; color: #94a3b8;">E-mail</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #1e293b; font-weight: 600;">${email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; color: #94a3b8;">Plano</td>
+                <td style="padding: 12px 0; font-weight: 600;">Trial Premium (14 dias)</td>
+              </tr>
+            </table>
+            <a href="https://app.zynplan.com.br/login"
+               style="display: inline-block; background: #d4a843; color: #000; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700;">
+              Acessar minha conta →
+            </a>
+            <p style="color: #475569; font-size: 13px; margin-top: 32px;">Qualquer dúvida, responda este email ou fale com a gente em <a href="https://zyncompany.com.br/contato" style="color: #d4a843;">zyncompany.com.br/contato</a>.</p>
+          </div>
+        `,
+      })
+    } catch (emailErr) {
+      console.error('Erro ao enviar boas-vindas para usuário:', emailErr)
+    }
+
+    // 6. Notificação interna para você
+    try {
       await resend.emails.send({
         from: 'Zynplan <noreply@zyncompany.com.br>',
         to: ['suportezynplan@gmail.com'],
@@ -104,7 +139,7 @@ export async function POST(req: Request) {
                 <td style="padding: 12px 0; font-weight: 600;">${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
               </tr>
             </table>
-            <a href="https://wa.me/55${email}?text=Ol%C3%A1%2C%20seja%20bem-vindo%20%C3%A0%20Zynplan!%20Sou%20o%20J%C3%BAlio%2C%20fundador%20da%20plataforma.%20Posso%20te%20ajudar%20com%20alguma%20d%C3%BAvida%3F"
+            <a href="https://app.zynplan.com.br"
                style="display: inline-block; margin-top: 24px; background: #d4a843; color: #000; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700;">
               Ver painel Zynplan →
             </a>
@@ -112,7 +147,6 @@ export async function POST(req: Request) {
         `,
       })
     } catch (emailErr) {
-      // Não falha o cadastro se o email de notificação falhar
       console.error('Erro ao enviar notificação de cadastro:', emailErr)
     }
 
