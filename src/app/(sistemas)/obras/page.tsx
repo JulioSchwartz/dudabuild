@@ -198,14 +198,14 @@ const header: React.CSSProperties       = { display: 'flex', justifyContent: 'sp
 const secaoWrapper: React.CSSProperties = { marginBottom: 32 }
 const secaoHeader: React.CSSProperties  = { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }
 const secaoTitulo: React.CSSProperties  = { fontSize: 15, fontWeight: 700, color: '#0f172a', margin: 0 }
-const secaoBadge = (cor: string, bg: string): React.CSSProperties => ({ background: bg, color: cor, fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999 })
+const secaoBadge = (cor: string, bg: string): React.CSSProperties => ({ background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999 })
 const grid: React.CSSProperties         = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }
 const cardBase: React.CSSProperties     = { background: '#fff', padding: 20, borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
-const cardAndamento = (lucro: number): React.CSSProperties => ({ ...cardBase, borderLeft: `4px solid ${lucro >= 0 ? '#22c55e' : '#ef4444'}` })
-const cardConcluida: React.CSSProperties = { ...cardBase, borderLeft: '4px solid #16a34a', background: '#f0fdf4' }
+const cardAndamento = (lucro: number): React.CSSProperties => ({ ...cardBase, borderLeft: '4px solid #C9A96A' })
+const cardConcluida: React.CSSProperties = { ...cardBase, borderLeft: '4px solid #94a3b8', background: '#fafafa' }
 const botoes: React.CSSProperties       = { marginTop: 14, display: 'flex', gap: 8 }
 const vazioCard: React.CSSProperties    = { textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }
-const btnNova: React.CSSProperties      = { background: '#2563eb', color: '#fff', padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600 }
-const btnVer: React.CSSProperties       = { background: '#22c55e', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
-const btnEditar: React.CSSProperties    = { background: '#f59e0b', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
-const btnExcluir: React.CSSProperties   = { background: '#ef4444', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }
+const btnNova: React.CSSProperties      = { background: '#C9A96A', color: '#fff', padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600 }
+const btnVer: React.CSSProperties       = { background: '#0f172a', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13 }
+const btnEditar: React.CSSProperties    = { background: 'transparent', color: '#475569', border: '1px solid #cbd5e1', padding: '7px 14px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13 }
+const btnExcluir: React.CSSProperties   = { background: 'transparent', color: '#94a3b8', border: '1px solid #e2e8f0', padding: '7px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13 }

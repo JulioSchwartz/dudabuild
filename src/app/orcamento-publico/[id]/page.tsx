@@ -218,14 +218,13 @@ export default function OrcamentoPublico() {
         {/* HEADER */}
         <div style={headerStyle}>
           <div>
-            <h1 style={titulo}>Proposta Comercial</h1>
-            <p style={{ color: '#64748b', fontSize: 14, marginTop: 4 }}>
-              {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-            </p>
+            <h1 style={titulo}>{orcamento.empresa_nome || 'Proposta Comercial'}</h1>
+            <p style={{ color: '#64748b', fontSize: 14, marginTop: 4 }}>Proposta Comercial</p>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontWeight: 700, color: '#0f172a', fontSize: 16 }}>Zynplan</p>
-            <p style={{ color: '#64748b', fontSize: 13 }}>Planejamento Inteligente</p>
+            <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>
+              {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </p>
           </div>
         </div>
 
@@ -322,9 +321,22 @@ export default function OrcamentoPublico() {
         )}
 
         {/* RODAPÉ */}
-        <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <p style={{ fontSize: 12, color: '#94a3b8' }}>
-            Proposta gerada pela plataforma Zynplan · app.zynplan.com.br
+        <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 20, height: 20, background: 'linear-gradient(135deg, #C9A96A, #f0c040)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: '#000', fontWeight: 900, fontSize: 11 }}>Z</span>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', letterSpacing: 1 }}>ZYNPLAN</span>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>· Planejamento Inteligente</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: '#cbd5e1' }}>Powered by</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: 0.5 }}>ZYNCOMPANY</span>
+            </div>
+          </div>
+          <p style={{ fontSize: 11, color: '#cbd5e1', marginTop: 8, textAlign: 'center' }}>
+            app.zynplan.com.br · Documento gerado em {new Date().toLocaleDateString('pt-BR')}
           </p>
         </div>
 
@@ -345,7 +357,7 @@ const titulo: React.CSSProperties       = { fontSize: 28, fontWeight: 800, color
 const clienteBox: React.CSSProperties   = { background: '#f8fafc', padding: 20, borderRadius: 10, marginBottom: 20, border: '1px solid #e2e8f0' }
 const bloco: React.CSSProperties        = { border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', marginBottom: 20 }
 const itemStyle: React.CSSProperties    = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 12px', borderBottom: '1px solid #f1f5f9' }
-const totalBox: React.CSSProperties     = { marginTop: 8, padding: 25, background: 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', borderRadius: 12, textAlign: 'center' }
+const totalBox: React.CSSProperties     = { marginTop: 8, padding: 25, background: 'linear-gradient(135deg, #C9A96A, #f0c040)', color: '#0f172a', borderRadius: 12, textAlign: 'center' }
 const acoes: React.CSSProperties        = { display: 'flex', gap: 10, marginTop: 24 }
 const btnAprovar: React.CSSProperties   = { background: '#16a34a', color: '#fff', padding: 16, borderRadius: 10, flex: 1, border: 'none', fontWeight: 700, fontSize: 15, cursor: 'pointer' }
 const btnRecusar: React.CSSProperties   = { background: '#fee2e2', color: '#dc2626', padding: 16, borderRadius: 10, width: 120, border: '1px solid #fecaca', fontWeight: 600, cursor: 'pointer', fontSize: 14 }
