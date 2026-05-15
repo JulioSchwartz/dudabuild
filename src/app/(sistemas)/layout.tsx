@@ -157,7 +157,7 @@ export default function SistemaLayout({ children }: { children: React.ReactNode 
     return (
       <div style={loadingScreen}>
         <img src="/Logotipo_fundo_transparente_-_Zynplan.png" alt="Zynplan"
-          style={{ width: 160, marginBottom: 20, mixBlendMode: 'screen' }} />
+          style={{ width: 240, marginBottom: 24, mixBlendMode: 'screen' }} />
         <div style={loadingSpinner} />
         <p style={{ color: '#64748b', marginTop: 16, fontSize: 13 }}>Carregando...</p>
       </div>
