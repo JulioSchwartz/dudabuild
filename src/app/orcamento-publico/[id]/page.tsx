@@ -31,7 +31,7 @@ export default function OrcamentoPublico() {
   async function carregar() {
     const { data: orc } = await supabase
       .from('orcamentos')
-      .select('*, empresa:empresas(nome, email)')
+      .select('*')
       .eq('id', id)
       .eq('token', token)
       .maybeSingle()
@@ -43,13 +43,18 @@ export default function OrcamentoPublico() {
       .select('*')
       .eq('orcamento_id', id)
 
-    // Injeta nome da empresa no objeto para usar no template
-    const orcComEmpresa = {
-      ...orc,
-      empresa_nome: orc.empresa?.nome || orc.empresa_nome || 'Proposta Comercial',
+    // Busca nome da empresa separadamente
+    let empresaNome = 'Proposta Comercial'
+    if (orc.empresa_id) {
+      const { data: emp } = await supabase
+        .from('empresas')
+        .select('nome')
+        .eq('id', orc.empresa_id)
+        .maybeSingle()
+      if (emp?.nome) empresaNome = emp.nome
     }
 
-    setOrcamento(orcComEmpresa)
+    setOrcamento({ ...orc, empresa_nome: empresaNome })
     setItens(itensData || [])
     setLoading(false)
   }
