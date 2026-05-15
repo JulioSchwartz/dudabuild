@@ -166,16 +166,27 @@ export default function VerOrcamento() {
               <span>M.O.: <strong>${format(totalMaoObra())}</strong></span>
               <span>Equip.: <strong>${format(totalEquip())}</strong></span>
             </div>
-            <div style="margin-top:30px;padding:24px;background:#16a34a;color:white;border-radius:10px;text-align:center">
-              <p style="margin:0;font-size:14px;opacity:0.8">Total do Investimento</p>
-              <h1 style="margin:8px 0 0;font-size:32px">${format(totalGeral())}</h1>
+            <div style="margin-top:30px;padding:24px;background:linear-gradient(135deg,#C9A96A,#f0c040);color:#0f172a;border-radius:10px;text-align:center">
+              <p style="margin:0;font-size:14px;opacity:0.7">Total do Investimento</p>
+              <h1 style="margin:8px 0 0;font-size:32px;font-weight:900">${format(totalGeral())}</h1>
             </div>
             <div style="margin-top:50px">
               <p>______________________________________</p>
               <p><strong>${nomeEmpresa}</strong> · Responsável Técnico</p>
             </div>
-            <p style="margin-top:30px;text-align:center;font-size:11px;color:#94a3b8">
-              Proposta válida por 7 dias · ${emailEmpresa}
+            <div style="margin-top:30px;padding:16px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:22px;height:22px;background:linear-gradient(135deg,#C9A96A,#f0c040);border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#0f172a">Z</div>
+                <span style="font-size:12px;font-weight:700;color:#0f172a;letter-spacing:1px">ZYNPLAN</span>
+                <span style="font-size:12px;color:#94a3b8">· Planejamento Inteligente</span>
+              </div>
+              <div style="text-align:right">
+                <span style="font-size:10px;color:#cbd5e1">Powered by </span>
+                <span style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:0.5px">ZYNCOMPANY</span>
+              </div>
+            </div>
+            <p style="margin-top:8px;text-align:center;font-size:11px;color:#94a3b8">
+              Proposta válida por 7 dias · ${emailEmpresa} · app.zynplan.com.br
             </p>
           </div>
         </div>
