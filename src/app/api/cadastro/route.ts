@@ -20,12 +20,14 @@ export async function POST(req: Request) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true,
     })
 
     if (authError) {
       if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
-        return NextResponse.json({ error: 'Este email já está cadastrado. Faça login.' }, { status: 409 })
+        return NextResponse.json({
+          error: 'Este e-mail já está cadastrado em um produto Zyncompany. Use outro e-mail para realizar o cadastro.'
+        }, { status: 409 })
       }
       return NextResponse.json({ error: authError.message }, { status: 400 })
     }
@@ -68,15 +70,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Erro ao vincular usuário.' }, { status: 500 })
     }
 
-    // 4. Gera link de confirmação
-    await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
+    // 4. Gera sessão para login automático
+    const { data: sessionData } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
       email,
     })
 
     const resend = new Resend(process.env.RESEND_API_KEY!)
 
-    // 5. Email de boas-vindas para o usuário
+    // 5. Email de boas-vindas
     try {
       await resend.emails.send({
         from: 'Zynplan <noreply@zyncompany.com.br>',
@@ -104,15 +106,15 @@ export async function POST(req: Request) {
                style="display: inline-block; background: #d4a843; color: #000; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700;">
               Acessar minha conta →
             </a>
-            <p style="color: #475569; font-size: 13px; margin-top: 32px;">Qualquer dúvida, responda este email ou fale com a gente em <a href="https://zyncompany.com.br/contato" style="color: #d4a843;">zyncompany.com.br/contato</a>.</p>
+            <p style="color: #475569; font-size: 13px; margin-top: 32px;">Qualquer dúvida, fale com a gente em <a href="https://zyncompany.com.br/contato" style="color: #d4a843;">zyncompany.com.br/contato</a>.</p>
           </div>
         `,
       })
     } catch (emailErr) {
-      console.error('Erro ao enviar boas-vindas para usuário:', emailErr)
+      console.error('Erro ao enviar boas-vindas:', emailErr)
     }
 
-    // 6. Notificação interna para você
+    // 6. Notificação interna
     try {
       await resend.emails.send({
         from: 'Zynplan <noreply@zyncompany.com.br>',
@@ -139,18 +141,18 @@ export async function POST(req: Request) {
                 <td style="padding: 12px 0; font-weight: 600;">${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
               </tr>
             </table>
-            <a href="https://app.zynplan.com.br"
-               style="display: inline-block; margin-top: 24px; background: #d4a843; color: #000; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700;">
-              Ver painel Zynplan →
-            </a>
           </div>
         `,
       })
     } catch (emailErr) {
-      console.error('Erro ao enviar notificação de cadastro:', emailErr)
+      console.error('Erro ao enviar notificação:', emailErr)
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      accessToken: (sessionData?.properties as any)?.access_token || null,
+      refreshToken: (sessionData?.properties as any)?.refresh_token || null,
+    })
 
   } catch (err) {
     console.error('Erro cadastro:', err)
