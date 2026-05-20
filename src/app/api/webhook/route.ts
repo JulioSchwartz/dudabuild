@@ -61,7 +61,8 @@ function tabelaHtml(linhas: string) {
  
 export async function POST(req: Request) {
   const body = await req.text()
-  const sig  = headers().get('stripe-signature')
+  const headersList = await headers()
+  const sig = headersList.get('stripe-signature')
  
   if (!sig) {
     return new Response('Sem assinatura Stripe', { status: 400 })
