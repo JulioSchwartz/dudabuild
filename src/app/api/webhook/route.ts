@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2026-04-22.dahlia',
 })
 
 const supabase = createClient(
@@ -82,19 +82,16 @@ export async function POST(req: Request) {
  
   try {
  
-    // ✅ PAGAMENTO CONFIRMADO
+    // ✅ PAGAMENTO CONFIRMADO (checkout)
     if (event.type === 'checkout.session.completed') {
-      const session      = event.data.object as Stripe.Checkout.Session
-      const customerId   = session.customer as string
+      const session        = event.data.object as Stripe.Checkout.Session
+      const customerId     = session.customer as string
       const subscriptionId = session.subscription as string
  
-      // Pega o price ID dos line items para determinar o plano
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id)
       const priceId   = lineItems.data[0]?.price?.id || ''
       const plano     = PRICE_PARA_PLANO[priceId] || 'basico'
  
-      // 🔑 Estratégia: usa empresa_id da metadata (mais confiável)
-      //    Se não tiver, cai para stripe_customer_id
       const empresaId = session.metadata?.empresa_id
  
       if (empresaId) {
@@ -108,7 +105,6 @@ export async function POST(req: Request) {
           })
           .eq('id', empresaId)
       } else {
-        // Fallback: busca pela customer_id (clientes já existentes)
         await supabase
           .from('empresas')
           .update({
@@ -121,7 +117,6 @@ export async function POST(req: Request) {
  
       console.log(`✅ Empresa ativada: ${empresaId || customerId} → plano ${plano}`)
 
-      // Busca email da empresa para notificar
       const { data: empresaData } = await supabase
         .from('empresas').select('nome').eq('id', empresaId || '').maybeSingle()
       const { data: usuarioData } = await supabase
@@ -133,6 +128,20 @@ export async function POST(req: Request) {
         linhaTabela('Plano contratado', PLANO_LABEL[plano] || plano) +
         linhaTabela('Status', '✅ Ativo')
       ))
+    }
+
+    // ✅ FATURA PAGA (renovação mensal — apenas loga, não reprocessa)
+    if (event.type === 'invoice.payment_succeeded') {
+      const invoice    = event.data.object as Stripe.Invoice
+      const customerId = invoice.customer as string
+
+      // Garante que o status continua active (caso tenha ficado past_due)
+      await supabase
+        .from('empresas')
+        .update({ status: 'active' })
+        .eq('stripe_customer_id', customerId)
+
+      console.log(`✅ Fatura paga: ${customerId} — R$ ${((invoice.amount_paid || 0) / 100).toFixed(2)}`)
     }
  
     // ✅ ASSINATURA ATUALIZADA (upgrade/downgrade)
@@ -233,7 +242,6 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error('Webhook processing error:', err)
     // Retorna 200 mesmo com erro interno para o Stripe não reenviar
-    // O erro já foi logado para investigação
   }
  
   return new Response('OK', { status: 200 })
