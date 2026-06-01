@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: 'Zynplan — Planejamento Inteligente',
   description: 'Sistema de Gestão para Construção Civil',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -19,10 +23,6 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <head>
-        <link rel="icon" href="/icons/icon-192x192.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-      </head>
       <body>
         {children}
       </body>
