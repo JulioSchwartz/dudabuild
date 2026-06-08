@@ -43,10 +43,20 @@ export default function Obras() {
   }
 
   async function excluir(id: number, nomeObra: string) {
-    if (!confirm(`Excluir a obra "${nomeObra}"?\n\nEsta ação irá remover a obra da listagem. Os dados financeiros serão mantidos para controle de limites do plano.`)) return
-    if (!confirm(`⚠️ Confirme novamente:\n\nDeseja excluir permanentemente a obra "${nomeObra}"?\n\nEsta ação não pode ser desfeita.`)) return
+    if (!confirm(`Excluir a obra "${nomeObra}"?\n\nEsta ação irá remover a obra e todos os dados vinculados (financeiro, contas, compras, diário, etapas, orçamento e fotos).`)) return
+    if (!confirm(`⚠️ Confirme novamente:\n\nDeseja excluir permanentemente a obra "${nomeObra}" e TODOS os seus dados?\n\nEsta ação não pode ser desfeita.`)) return
     try {
-      await supabase.from('obras').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+      await supabase.from('etapa_medicoes').delete().eq('obra_id', id)
+      await supabase.from('obra_etapas').delete().eq('obra_id', id)
+      await supabase.from('orcamento_executivo').delete().eq('obra_id', id)
+      await supabase.from('diario_obra').delete().eq('obra_id', id)
+      await supabase.from('obra_fotos').delete().eq('obra_id', id)
+      await supabase.from('cotacoes').delete().eq('obra_id', id)
+      await supabase.from('historico_m2').delete().eq('obra_id', id)
+      await supabase.from('compras').delete().eq('obra_id', id)
+      await supabase.from('contas').delete().eq('obra_id', id)
+      await supabase.from('financeiro').delete().eq('obra_id', id)
+      await supabase.from('obras').delete().eq('id', id)
       carregar()
     } catch (err) {
       alert('Erro ao excluir obra')
