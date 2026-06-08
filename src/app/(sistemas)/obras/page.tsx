@@ -42,10 +42,10 @@ export default function Obras() {
     }
   }
 
-  async function excluir(id: number) {
-    if (!confirm('Excluir obra? Os dados serão mantidos para controle de limites do plano.')) return
+  async function excluir(id: number, nomeObra: string) {
+    if (!confirm(`Excluir a obra "${nomeObra}"?\n\nEsta ação irá remover a obra da listagem. Os dados financeiros serão mantidos para controle de limites do plano.`)) return
+    if (!confirm(`⚠️ Confirme novamente:\n\nDeseja excluir permanentemente a obra "${nomeObra}"?\n\nEsta ação não pode ser desfeita.`)) return
     try {
-      // Soft delete — mantém no banco mas marca como deletado
       await supabase.from('obras').update({ deleted_at: new Date().toISOString() }).eq('id', id)
       carregar()
     } catch (err) {
@@ -133,7 +133,7 @@ export default function Obras() {
                       <button style={btnVer}>{somenteNavegacao ? '💰 Lançar' : 'Ver'}</button>
                     </Link>
                     {podeEditarObra  && <button onClick={() => router.push(`/obras/${obra.id}/editar`)} style={btnEditar}>Editar</button>}
-                    {podeExcluirObra && <button onClick={() => excluir(obra.id)} style={btnExcluir}>Excluir</button>}
+                    {podeExcluirObra && <button onClick={() => excluir(obra.id, obra.nome)} style={btnExcluir}>Excluir</button>}
                   </div>
                 </div>
               )
@@ -178,7 +178,7 @@ export default function Obras() {
                     <Link href={`/obras/${obra.id}`}>
                       <button style={btnVer}>{somenteNavegacao ? '💰 Lançar' : 'Ver'}</button>
                     </Link>
-                    {podeExcluirObra && <button onClick={() => excluir(obra.id)} style={btnExcluir}>Excluir</button>}
+                    {podeExcluirObra && <button onClick={() => excluir(obra.id, obra.nome)} style={btnExcluir}>Excluir</button>}
                   </div>
                 </div>
               )
